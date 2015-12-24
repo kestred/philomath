@@ -77,7 +77,7 @@ Concerns:
   hard to switch to from other languages using "string"
   Char is more intuitive to students than rune
 
-### [5] Comment syntax
+### [5] Line comments
 Decision:
   Line comments start with "#"
 
@@ -87,7 +87,23 @@ Reasoning:
   Using "#" with directives (as in rust) feels strange to
   me except at the beginning of a line (as in the C preprocessor)
 
-### [6] Variable initialization
+### [6] Block comments
+Decision:
+  Block comments start with "#-" and end with "-#"
+  Block comments are nestable
+
+Reasoning:
+  Feels similar to // vs /* */, so should be more familiar
+  Looks better than for example "#*" and "*#"
+  Using `#-` instead of `/*`, `"""`, etc because it reduces the
+  number of symbols we use as part of our primary PL syntax,
+  allowing those to be used elsewhere for something else
+  Its easy to turn a line comment into a block comment
+  Nesting allows the programmer to comment out large sections
+  even when a smaller section was already block commented
+  (for example for documentation, or to temporarily disable a change)
+
+### [7] Variable initialization
 Decision:
   Variables are initialized to 0 by default
   Variables can be explicitly declared uninitialized
@@ -99,7 +115,7 @@ Reasoning:
   within tight loops, although the compiler should also attempt
   to detect and optimize away unnecessary initialization
 
-### [7] Macros, Meta-programming, DSLs, etc
+### [8] Macros, Meta-programming, DSLs, etc
 Decision:
   The compiler is self-extensible from within a project's source
   Extensions can generate/modify code at multiple stages possibly
