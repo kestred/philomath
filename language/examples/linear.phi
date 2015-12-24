@@ -1,0 +1,65 @@
+# TODO: meta-programming and formula library
+#NetInput     := formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
+#MeanSqError  := formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
+
+NetInput := (inputs: []real, weights: []real) -> real {
+  result := 0
+  for input, index in inputs
+    # TODO: add and assign operator
+    #result += input * weights[index]
+    result = result + input * weights[index]
+  return result
+}
+
+#- TODO: dynamic arrays [..]
+linear_node :: struct {
+  Output: real
+  Weights: [..]real
+}
+
+linear_network :: struct {
+  LearningRate: real
+  Outputs: [..]linear_node
+}
+-#
+
+linear_node :: struct {
+  Bias: real
+  BiasDelta: real
+  Weights: [1]real
+  WeightDeltas: [1]real
+}
+
+# a linear neural network with online learning
+#
+# useful for calculating a linear regression in an "online" environment,
+# like from a stream of application events
+linear_network :: struct {
+  LearningRate: real
+  Outputs: [1]linear_node
+}
+
+TrainLinear := (net: *linear_network, inputs: [1]real, outputs: [1]real) {
+  for node, index in net.Outputs {
+    # TODO: keyword arguments
+    #node.Output = NetInput(inputs=inputs, weights=node.Weights)
+    node.Output = NetInput(inputs, node.Weights)
+    target := outputs[index]
+    error := target - node.Output
+
+    node.BiasDelta = node.BiasDelta + error
+    node.Bias = node.Bias + (node.BiasDelta * net.LearningRate)
+    for weight, index in node.WeightDeltas {
+      weightDelta := node.WeightDeltas[index] + (error * inputs[index])
+      node.Weights[index] = weight + (weightDelta * net.LearningRate)
+      node.WeightDeltas[index] = weightDelta
+    }
+  }
+}
+
+Main := () {
+  neuralNet : linear_network
+  for example in examples {
+    TrainLinear(neuralNet, example.Inputs, example.Outputs)
+  }
+}

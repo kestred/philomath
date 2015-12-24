@@ -1,0 +1,123 @@
+# TODO: meta-programming and formula library
+#NetInput    := formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
+#TanhError   := formula { (1 - output²) Σ[e in |errors|] (errors[e] × weights[e]) }
+
+NetInput := (inputs: []real, weights: []real) -> real {
+  result := 0.0
+  for input, index in inputs:
+    # TODO: add and assign operator
+    #result += input * weights[index]
+    result = result + input * weights[index]
+  return result
+}
+
+TanhError := (output: real, errors: []real, weights: []real) -> real {
+  result := 0.0
+  for error, index in errors:
+    # TODO: add and assign operator
+    #result += input * weights[index]
+    result = result + error * weights[index]
+  return result * (1 - output * output)
+}
+
+#- TODO: modules (ie. namespaces), this might be a good syntax?
+feedfoward :: module {
+  input_node :: struct {
+    Output: real
+  }
+
+  hidden_node :: struct {
+    Output: real
+    Bias: real
+    BiasDelta: real
+    Weights: [1]real
+    WeightDeltas: [1]real
+  }
+
+  output_node :: struct {
+    Output: real
+    Error: real
+    Bias: real
+    BiasDelta: real
+    Weights: [2]real
+    WeightDeltas: [2]real
+  }
+
+  network :: struct {
+    LearningRate: real
+    Inputs: [1]input_node
+    Hidden: [2]hidden_node
+    Outputs: [1]output_node
+  }
+}
+-#
+
+hidden_node :: struct {
+  Output: real
+  Bias: real
+  BiasDelta: real
+  Weights: [1]real
+  WeightDeltas: [1]real
+}
+
+output_node :: struct {
+  Bias: real
+  BiasDelta: real
+  Weights: [2]real
+  WeightDeltas: [2]real
+}
+
+# a feedfoward neural network with a hidden layer, back propogation, and online learning
+feedforward_network :: struct {
+  LearningRate: real
+  Hidden: [2]hidden_node
+  Outputs: [1]output_node
+}
+
+TrainFeedforward := (net: *feedforward_network, inputs: [1]real, outputs: [1]real) {
+  hiddenOutputs : [2] real
+  for node, index in net.Hidden:
+    # 1. Compute net input and output for hidden nodes (tanh)
+    # TODO: intrinsics, modulize math?, etc
+    hiddenOutputs[index] = Math_Tanh(NetInput(inputs, node.Weights))
+
+  outputErrors : [1] real
+  for node, index in net.Outputs {
+    # 2. Compute net input and ouput for output nodes (identity)
+    output := NetInput(net.Inputs, node.Weights)
+
+    # 3. Compute error for outputs nodes
+    error := outputs[index] - output
+    outputErrors[index] = error
+
+    # 4. Update weights for output nodes (online learning)
+    node.BiasDelta = node.BiasDelta + error
+    node.Bias = node.Bias + (node.BiasDelta * net.LearningRate)
+    for weight, index in node.Weights {
+      weightDelta := node.WeightDeltas[index] + (error * hiddenOutputs[index])
+      node.Weights[index] = weight + (weightDelta * net.LearningRate)
+      node.WeightDeltas[index] = weightDelta
+    }
+  }
+
+  for node, index in net.Hidden {
+    # 5. Compute error for hidden nodes
+    error := TanhError(node.Output errors)
+
+    # 6. Update weights for hidden nodes (online learning)
+    node.BiasDelta = node.BiasDelta + error
+    node.Bias = node.Bias + (node.BiasDelta * net.LearningRate)
+    for weight, index in node.Weights {
+      weightDelta := node.WeightDeltas[index] + (error * inputs[index])
+      node.Weights[index] = weight + (weightDelta * net.LearningRate)
+      node.WeightDeltas[index] = weightDelta
+    }
+  }
+}
+
+Main := () {
+  neuralNet : feedforward_network
+  for example in examples {
+    TrainFeedforward(*neuralNet, example.Inputs, example.Outputs)
+  }
+}
