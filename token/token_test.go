@@ -64,6 +64,7 @@ func TestTokenString(t *testing.T) {
 	assert.Equal(t, "/", SLASH.String())
 	assert.Equal(t, "+", PLUS.String())
 	assert.Equal(t, "-", MINUS.String())
+	assert.Equal(t, "->", ARROW.String())
 	assert.Equal(t, ",", COMMA.String())
 	assert.Equal(t, ".", PERIOD.String())
 
@@ -98,9 +99,9 @@ func TestHasLiteral(t *testing.T) {
 	assert.Equal(t, false, SLASH.HasLiteral())
 	assert.Equal(t, false, PLUS.HasLiteral())
 	assert.Equal(t, false, MINUS.HasLiteral())
+	assert.Equal(t, false, ARROW.HasLiteral())
 	assert.Equal(t, false, COMMA.HasLiteral())
 	assert.Equal(t, false, PERIOD.HasLiteral())
-	assert.Equal(t, false, ARROW.HasLiteral())
 
 	assert.Equal(t, false, LEFT_PAREN.HasLiteral())
 	assert.Equal(t, false, LEFT_BRACKET.HasLiteral())
@@ -135,9 +136,9 @@ func TestIsKeyword(t *testing.T) {
 	assert.Equal(t, false, SLASH.IsKeyword())
 	assert.Equal(t, false, PLUS.IsKeyword())
 	assert.Equal(t, false, MINUS.IsKeyword())
+	assert.Equal(t, false, ARROW.IsKeyword())
 	assert.Equal(t, false, COMMA.IsKeyword())
 	assert.Equal(t, false, PERIOD.IsKeyword())
-	assert.Equal(t, false, ARROW.IsKeyword())
 
 	assert.Equal(t, false, LEFT_PAREN.IsKeyword())
 	assert.Equal(t, false, LEFT_BRACKET.IsKeyword())

@@ -61,9 +61,9 @@ const (
 	SLASH    // /
 	PLUS     // +
 	MINUS    // -
+	ARROW    // ->
 	COMMA    // ,
 	PERIOD   // .
-	ARROW    // ->
 
 	// Delimiters
 	LEFT_PAREN    // (
@@ -104,9 +104,9 @@ var tokens = [...]string{
 	SLASH:    "/",
 	PLUS:     "+",
 	MINUS:    "-",
+	ARROW:    "->",
 	COMMA:    ",",
 	PERIOD:   ".",
-	ARROW:    "->",
 
 	LEFT_PAREN:    "(",
 	LEFT_BRACKET:  "[",
