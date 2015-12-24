@@ -1,0 +1,70 @@
+# TODO: meta-programming and formula syntax
+#NetInput     := formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
+#MeanSqError  := formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
+#TanhGradient := formula { (1 - y²) Σ[n in |nodes|] }
+NetInput := (inputs: []real, weights: []real) real {
+  result := 0
+  for input, index in inputs
+    # TODO: post-fix operator
+    #result += input * weights[index]
+    result = result + input * weights[index]
+  return result
+}
+
+
+#- TODO: Dynamic arrays [..] and array slices [:]
+linear_node :: struct {
+  Output: real
+  Weights: [..]real
+}
+
+linear_network :: struct {
+  Inputs: [..]linear_node
+  Outputs: [..]linear_node
+}
+-#
+
+linear_node :: struct {
+  Output: real
+  Weights: [2]real
+}
+
+linear_network :: struct {
+  Inputs: [1]linear_node
+  Outputs: [1]linear_node
+}
+
+# TODO: Generic array conversion
+#TrainLinear := (net: *linear_network, inputs: []real, outputs: []real) {
+TrainLinear := (net: *linear_network, inputs: [2]real, outputs: [1]real) {
+  Assert(inputs.Length == net.Inputs.Length)
+  Assert(outputs.Length == net.Outputs.Length)
+
+  for node, index in net.Inputs
+    node.Output = inputs[index]
+
+  for node, index in net.Outputs {
+    Assert(inputs.Length == node.Weights.Length)
+
+    # TODO: keyword arguments
+    #node.Output = NetInput(inputs=net.Inputs, weights=node.Weights)
+    node.Output = NetInput(net.Inputs, node.Weights)
+    target := outputs[index]
+    error := target - node.Output
+
+    node.BiasDelta = node.BiasDelta + error
+    node.Bias = node.Bias + (node.BiasDelta * net.LearningRate)
+    for weight, index in node.Weights {
+      weightDelta := node.Deltas[index] + (error * inputs[index])
+      node.Weights[index] = weight + (weightDelta * net.LearningRate)
+      node.Deltas[index] = weightDelta
+    }
+  }
+}
+
+Main := () {
+  neuralNet : linear_network
+  for example in examples {
+    TrainLinear(neuralNet)
+  }
+}
