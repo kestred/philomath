@@ -25,11 +25,6 @@ func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9'
 }
 
-type lineInfo struct {
-	Line int
-	Offset int
-}
-
 // An ErrorHandler may be provided to Scanner.Init. If a syntax error is
 // encountered and a handler was installed, the handler is called with a
 // position and an error message. The position points to the beginning of
@@ -46,12 +41,12 @@ type Scanner struct {
 	filename string
 
 	// scanning state
-	char       rune // current character
-	offset     int  // byte offset to current char
-	readOffset int  // reading offset (position after current character)
-	lineOffset int  // current line offset
-	line       int  // current line number
-	lines      []lineInfo // previous line numbers and offsets
+	char       rune         // current character
+	offset     int          // byte offset to current char
+	readOffset int          // reading offset (position after current character)
+	lineOffset int          // current line offset
+	line       int          // current line number
+	lines      []token.Line // previous line numbers and offsets
 
 	// public state
 	ErrorCount int // number of errors encountered
@@ -197,12 +192,12 @@ func (s *Scanner) Pos() token.Position {
 	}
 }
 
-func (s *Scanner) lineInfoAt(offset int) lineInfo {
+func (s *Scanner) LineAt(offset int) token.Line {
 	if offset >= s.lineOffset {
-		return lineInfo{s.line, s.lineOffset}
+		return token.Line{s.line, s.lineOffset, string(s.src[s.lineOffset:offset])}
 	}
 
-	for i := len(s.lines)-1; i >= 0; i-- {
+	for i := len(s.lines) - 1; i >= 0; i-- {
 		if s.lines[i].Offset <= offset {
 			return s.lines[i]
 		}
@@ -215,12 +210,12 @@ func (s *Scanner) error(offset int, msg string) {
 	s.ErrorCount++
 
 	if s.err != nil {
-		info := s.lineInfoAt(offset)
-		column := 1 + utf8.RuneCount(s.src[info.Offset:offset])
+		line := s.LineAt(offset)
+		column := 1 + utf8.RuneCount(s.src[line.Offset:offset])
 		pos := token.Position{
 			Name:   s.filename,
 			Offset: offset,
-			Line:   info.Line + 1,
+			Line:   line.Line + 1,
 			Column: column,
 		}
 
@@ -234,12 +229,14 @@ func (s *Scanner) next() {
 
 		wasCarriageReturn := false
 		if s.char == '\n' {
-			s.lines = append(s.lines, lineInfo{s.line, s.lineOffset})
+			line := token.Line{s.line, s.lineOffset, string(s.src[s.lineOffset:s.offset])}
+			s.lines = append(s.lines, line)
 			s.line += 1
 			s.lineOffset = s.offset
 		} else if s.char == '\r' {
 			wasCarriageReturn = true
-			s.lines = append(s.lines, lineInfo{s.line, s.lineOffset})
+			line := token.Line{s.line, s.lineOffset, string(s.src[s.lineOffset:s.offset])}
+			s.lines = append(s.lines, line)
 			s.line += 1
 			s.lineOffset = s.offset
 		}
@@ -291,7 +288,7 @@ func (s *Scanner) scanIdentifier() string {
 // In case of an error, it returns false. Otherwise it returns true.
 func (s *Scanner) scanComment() bool {
 	// initial '#' already consumed
-	offset := s.offset-1
+	offset := s.offset - 1
 	if s.char == '-' {
 		// #- block comment -#
 		s.next()
@@ -382,7 +379,7 @@ func (s *Scanner) scanNumber(afterDecimal bool) (token.Token, string) {
 
 		// check if it seems like a number (exponent, decimal point, etc)
 		// also, if it is a long number (say, longer than a year), guess it is a number
-		if likeNumber || (charOffset - offset > 4) {
+		if likeNumber || (charOffset-offset > 4) {
 			name := string(s.src[charOffset:s.offset])
 			msg := fmt.Sprintf(`missing space after number before "%s"`, name)
 			s.error(charOffset, msg)

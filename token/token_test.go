@@ -53,8 +53,7 @@ func TestTokenString(t *testing.T) {
 
 	assert.Equal(t, "Identifier", IDENT.String())
 
-	assert.Equal(t, "Integer", INTEGER.String())
-	assert.Equal(t, "Real", REAL.String())
+	assert.Equal(t, "Number", NUMBER.String())
 	assert.Equal(t, "Text", TEXT.String())
 
 	assert.Equal(t, ":", COLON.String())

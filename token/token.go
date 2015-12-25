@@ -38,6 +38,12 @@ func (pos Position) String() string {
 	return s
 }
 
+type Line struct {
+	Line   int
+	Offset int
+	Text   string
+}
+
 // Token is the set of lexical tokens in Philomath
 type Token int
 

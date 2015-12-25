@@ -43,8 +43,8 @@ type scanToken struct {
 }
 
 type scanError struct {
-	pos token.Position
-	msg string
+	pos  token.Position
+	msg  string
 	prev *scanError
 }
 
