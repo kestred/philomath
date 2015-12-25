@@ -60,7 +60,7 @@ const (
 	ASTERISK // *
 	SLASH    // /
 	PLUS     // +
-	MINUS    // -
+	HYPHEN   // -
 	ARROW    // ->
 	COMMA    // ,
 	PERIOD   // .
@@ -103,7 +103,7 @@ var tokens = [...]string{
 	ASTERISK: "*",
 	SLASH:    "/",
 	PLUS:     "+",
-	MINUS:    "-",
+	HYPHEN:   "-",
 	ARROW:    "->",
 	COMMA:    ",",
 	PERIOD:   ".",
