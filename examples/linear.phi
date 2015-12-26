@@ -1,8 +1,8 @@
-# TODO: meta-programming and formula library
-#NetInput     := formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
-#MeanSqError  := formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
+# TODO: formula user-defined DSL
+#netInput    :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
+#meanSqError :: formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
 
-NetInput := (inputs: []real, weights: []real) -> real {
+netInput :: (inputs: []real, weights: []real) -> real {
   result := 0
   for input, index in inputs
     # TODO: add and assign operator
@@ -13,21 +13,21 @@ NetInput := (inputs: []real, weights: []real) -> real {
 
 #- TODO: dynamic arrays [..]
 linear_node :: struct {
-  Output: real
-  Weights: [..]real
+  output: real
+  weights: [..]real
 }
 
 linear_network :: struct {
-  LearningRate: real
-  Outputs: [..]linear_node
+  learningRate: real
+  outputs: [..]linear_node
 }
 -#
 
 linear_node :: struct {
-  Bias: real
-  BiasDelta: real
-  Weights: [1]real
-  WeightDeltas: [1]real
+  bias: real
+  biasDelta: real
+  weights: [1]real
+  weightDeltas: [1]real
 }
 
 # a linear neural network with online learning
@@ -35,31 +35,31 @@ linear_node :: struct {
 # useful for calculating a linear regression in an "online" environment,
 # like from a stream of application events
 linear_network :: struct {
-  LearningRate: real
-  Outputs: [1]linear_node
+  learningRate: real
+  outputs: [1]linear_node
 }
 
-TrainLinear := (net: *linear_network, inputs: [1]real, outputs: [1]real) {
-  for node, index in net.Outputs {
+trainLinear :: (net: *linear_network, inputs: [1]real, outputs: [1]real) {
+  for node, index in net.outputs {
     # TODO: keyword arguments
-    #node.Output = NetInput(inputs=inputs, weights=node.Weights)
-    node.Output = NetInput(inputs, node.Weights)
+    #node.output = netInput(inputs=inputs, weights=node.weights)
+    node.output = netInput(inputs, node.weights)
     target := outputs[index]
-    error := target - node.Output
+    error := target - node.output
 
-    node.BiasDelta = node.BiasDelta + error
-    node.Bias = node.Bias + (node.BiasDelta * net.LearningRate)
-    for weight, index in node.WeightDeltas {
-      weightDelta := node.WeightDeltas[index] + (error * inputs[index])
-      node.Weights[index] = weight + (weightDelta * net.LearningRate)
-      node.WeightDeltas[index] = weightDelta
+    node.biasDelta = node.biasDelta + error
+    node.bias = node.bias + (node.biasDelta * net.learningRate)
+    for weight, index in node.weightDeltas {
+      weightDelta := node.weightDeltas[index] + (error * inputs[index])
+      node.weights[index] = weight + (weightDelta * net.learningRate)
+      node.weightDeltas[index] = weightDelta
     }
   }
 }
 
-Main := () {
+main :: () {
   neuralNet : linear_network
   for example in examples {
-    TrainLinear(neuralNet, example.Inputs, example.Outputs)
+    trainLinear(neuralNet, example.inputs, example.outputs)
   }
 }

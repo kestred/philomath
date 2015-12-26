@@ -1,0 +1,79 @@
+token :: enum {
+  > Specials
+  Invalid 0 "Invalid character"
+  End       "End of source"
+
+  > Literals
+  Ident     "Identifier"
+  Source    "Source code"
+  Number
+  Text
+
+  > Operators
+  Colon     ":"
+  Cons      "::"
+  Equals    "="
+  Asterisk  "*"
+  Slash     "/"
+  Plus      "+"
+  Hyphen     "-"
+  Arrow     "->"
+  Comma     ","
+  Period    "."
+  Range     ".."
+
+  > Delimiters
+  LeftParen    "("
+  RightParen   ")"
+  LeftBracket  "["
+  RightBracket "]"
+  LeftBrace    "{"
+  RightBrace   "}"
+
+  > Keywords
+  If     "if"
+  For    "for"
+  In     "in"
+  Break  "break"
+  Return "return"
+
+  Struct "struct"
+  Module "module"
+}
+
+#- maybe below is a good syntax for tagged unions?
+   the question of tagging vs untagged is also uncertain
+
+     :: variant ?
+
+-#
+# abstract nodes
+node :: union { decl|defn|expr|type }
+decl :: union { *constant_decl|*mutable_decl }
+defn :: union { *struct_defn|*union_defn|*user_defn|*value_defn }
+expr :: union { *ident|*scoped_ident }
+type :: union { *array_type|*function_type|*named_type|*pointer_type }
+
+# concrete nodes
+constant_decl :: struct { name: ident, definition: defn }
+mutable_decl  :: struct { name: ident, definition: defn }
+
+struct_defn  :: struct { fields: []struct_field }
+struct_field :: struct { name: ident, type: type }
+union_defn   :: struct { types: []type }
+user_defn    :: struct { name: ident, keyword: ident, source: text }
+value_defn   :: struct { type: type, value: expr }
+
+ident        :: struct { literal: text }
+scoped_ident :: struct { scope: text, name: ident }
+# ... some other expression nodes
+
+array_type    :: struct { length: expr, element: type }
+function_type :: struct { params: []type, return: type }
+named_type    :: struct { name: scoped_ident }
+pointer_type  :: struct { type: type }
+
+# parser "global" node references
+ast_context :: context {
+  inferred_type : named_type
+}
