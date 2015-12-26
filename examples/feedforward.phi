@@ -115,6 +115,17 @@ trainFeedforward :: (net: *feedforward_network, inputs: [1]real, outputs: [1]rea
   }
 }
 
+example_pattern :: struct {
+  inputs: []real
+  outputs: []real
+}
+
+# not really sure what the best syntax for array and struct "literals" is
+examples : []example_pattern = [
+  {[ 0.4,  0.1,  0.2, 0.7, 0.3], [0.1, 0.2, 0.3, 0.4, 0.5]},
+  {[0.25, 0.35, 0.45, 0.6, 1.1], [0.1, 0.2, 0.3, 0.4, 0.5]},
+]
+
 main :: () {
   neuralNet : feedforward_network
   for example in examples {
