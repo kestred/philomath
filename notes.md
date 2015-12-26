@@ -209,40 +209,44 @@ Reasoning:
 Examples:
  * An example with emoticons
 
-       emoticons :: enum {
-         Invalid 0 ""
+   ```
+   emoticons :: enum {
+       Invalid 0 ""
 
-         > Emotions
-         Smiling  ":-)"
-         Winking  ";-)"
-         Laughing "X-D"
-         Frowning ":-("
-         Crying   ":'("
+       > Emotions
+       Smiling  ":-)"
+       Winking  ";-)"
+       Laughing "X-D"
+       Frowning ":-("
+       Crying   ":'("
 
-         > Things
-         Heart       "<3"
-         BrokenHeart "</3"
-         Rose        "@~)~~~~"
-         Bicycle     "(*)/(*)"
-       }
+       > Things
+       Heart       "<3"
+       BrokenHeart "</3"
+       Rose        "@~)~~~~"
+       Bicycle     "(*)/(*)"
+   }
+   ```
 
  * An example with game asset types
 
-       assetType :: enum {
-         Invalid 0
+   ```
+   assetType :: enum {
+       Invalid 0
 
-         > Sounds
-         Attack
-         Yelp
-         Growl
-         Wind
-         Chime
+       > Sounds
+       Attack
+       Yelp
+       Growl
+       Wind
+       Chime
 
-         > Bitmaps
-         Hero
-         Sword
-         Monster
-       }
+       > Bitmaps
+       Hero
+       Sword
+       Monster
+   }
+    ```
 
 ### [9] User-defined definitions
 Decisions:
@@ -263,13 +267,17 @@ Examples:
  * It should be possible to define "formula", such that when used
    elsewhere in the source, the following sentences:
 
-       meanSqError :: formula { 0.5 Σ[o in |outputs|] (targetsₒ - outputsₒ)² }
-       meanSqError :: formula { 0.5 Sum[o in |outputs|] Square[targets[o] - outputs[o]] }
+   ```
+   meanSqError :: formula { 0.5 Σ[o in |outputs|] (targetsₒ - outputsₒ)² }
+   meanSqError :: formula { 0.5 Sum[o in |outputs|] Square[targets[o] - outputs[o]] }
+   ```
 
    are syntactically valid, checkable for correct semantics, with behavior similar to example python:
 
-       def meanSqError(outputs, targets):
-         return 0.5 * sum([(targets[o] - outputs[o])**2 for o in range(len(outputs))])
+   ```
+   def meanSqError(outputs, targets):
+      return 0.5 * sum([(targets[o] - outputs[o])**2 for o in range(len(outputs))])
+   ```
 
 ### [10] User defined context
 Decisions:
@@ -289,33 +297,35 @@ Reasoning:
 Examples:
  * Four ways of defining functions that expect a context
 
-       # Some file
-       game_context :: context {
-         debugLogger  : logger
-         screenBuffer : buffer2d
-         audioBuffer  : audioloop
-       }
+   ```
+   # Some file
+   game_context :: context {
+       debugLogger  : logger
+       screenBuffer : buffer2d
+       audioBuffer  : audioloop
+   }
 
-       # Another file (or a module)
+   # Another file (or a module)
+   using game_context
+
+   runGameStep :: () {
+      logTo(debugLogger, "Ran game")
+   }
+
+   # A third option
+   updateAudio :: () {
        using game_context
 
-       runGameStep :: () {
-         logTo(debugLogger, "Ran game")
-       }
+       audioBuffer.samples[0] = 1.0
+   }
 
-       # A third option
-       updateAudio :: () {
-         using game_context
+   # A fourth file/option
+   ast_context :: context {
+       nullNode : *node
 
-         audioBuffer.samples[0] = 1.0
-       }
-
-       # A fourth file/option
-       ast_context :: context {
-         nullNode : *node
-
-         parseFile :: (path: text) -> root { ... }
-       }
+       parseFile :: (path: text) -> root { ... }
+   }
+   ```
 
 ### [A] Naming conventions for types
 Decisions:
@@ -353,8 +363,10 @@ Reasoning:
  * I personally feel it looks more beautiful as a prefix,
    although I'm on the fence about underscores
 
-       somemodule.type_name
-       somemodule.functionName()
+   ```
+   somemodule.type_name
+   somemodule.functionName()
+   ```
 
 ### [D] Naming conventions for acronyms in identifiers
 Decisions:
