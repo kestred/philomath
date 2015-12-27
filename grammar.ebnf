@@ -16,16 +16,16 @@ character      = text_character | newline | carriage_return ;
 letter         = unicode_letter | "_" ;
 
 (* Literals *)
-identifier = letter { letter | unicode_digit } ;
-scoped_identifier = [ identifier "." ] identifier ;
+identifier        = letter , { letter | unicode_digit } ;
+scoped_identifier = [ identifier , "." ] , identifier ;
 
-hex_literal      = "0" ( "x" | "X" ) { hex_digit } ;
-octal_literal    = "0" { octal_digit } ;
-decimal_literal  = ( "1" ;. "9" ) { decimal_digit } ;
+hex_literal      = "0" , ( "x" | "X" ) , { hex_digit } ;
+octal_literal    = "0" , { octal_digit } ;
+decimal_literal  = ( "1" , "9" ) , { decimal_digit } ;
 
 mantissa = "0" | decimal_literal ;
-decimals = decimal_digit { decimal_digit } ;
-exponent = ( "e" | "E" ) [ "+" | "-" ] decimals ;
+decimals = decimal_digit , { decimal_digit } ;
+exponent = ( "e" | "E" ) , [ "+" | "-" ] , decimals ;
 
 integer_literal = hex_literal | decimal_literal | octal_literal ;
 real_literal    = mantissa , "." , [ decimals ] , [ exponent ]
@@ -50,23 +50,44 @@ each_range  = identifier , [ "," , identifier ] , "in" , ( expr | range_literal 
 for_range   = expr , ";" , expr , ";" , expr ;
 for_stmt    = "for" , ( for_range | each_range ) , stmt ;
 while_stmt  = "while" , expr , stmt ;
-else_stmt   = "else" , stmt ;
-if_stmt     = "if" , expr , stmt , [ else_stmt ] ;
+if_stmt     = "if" , expr , stmt , [ "else" , stmt ] ;
 block       = "{" , { stmt } , "}" ;
 stmt        = block | decl | expr , ";" | if_stmt | for_stmt ;
 
 (* Expressions *)
 function_param = identifier , ":" , type
-function_call  = expr , "(" , [ expr , { "," , expr } ] , ")" ; (* TODO: fix left recursion *)
 function_expr  = "(" , [ function_param , { "," , function_param } ] , ")" , [ "->" , type ] , stmt ;
+group_expr     = "(" , expr , ")";
+value_expr    = scoped_ident | text_literal | number_literal ;
+
+base_expr   = value_expr | group_expr | function_expr ;
+call_expr   = base_expr , { "(" , [ expr , { "," , expr } ] , ")" } ;
+prefix_expr = { operator } , prefix_expr ;
+infix_expr  = prefix_expr , { operator , infix_expr } ;
+expr        = infix_expr ;
+
+(* Notes:
+     Above is the non-left-recurive grammar which can be used to verify that a
+     given sentence matches the grammar (with an LL(3) parser).
+
+     TODO: Evaluate whether function_expr should be prefixed with a keyword
+     (like "func") to simplify the grammar to be parsable by an LL(1) parser.
+     This will probably improve the ability of syntax highlighters to
+     distinguish between the rules for group_expr and function_expr.
+
+     The abstract syntax tree is more lenient than the grammar and is better
+     represented by the following left-recursive definition of "expr".
+
+call_expr      = expr , { "(" , [ expr , { "," , expr } ] , ")" } ;
 prefix_expr    = operator , expr ;
 infix_expr     = expr , operator , expr ; (* TODO: fix left recursion *)
-expr           = scoped_identifier | infix_expr | prefix_expr | function_expr | function_call ;
+expr           = value_expr | group_expr | function_expr | call_expr | prefix_expr | infix_expr ;
+ *)
 
 (* Definitions *)
 enum_separator = ">" , identifier ;
-enum_item      = identifier , [ integer_literal ] , [ text_literal ] ;
-enum_defn      = "enum" , [ type ] , "{" , { enum_item | enum_separator } , "}" ;
+enum_value     = identifier , [ integer_literal ] , [ text_literal ] ;
+enum_defn      = "enum" , [ type ] , "{" , { enum_value | enum_separator } , "}" ;
 struct_field   = identifier , ":" , type , ";" ;
 struct_defn    = "struct" , "{" , { struct_field } , "}" ;
 defn           = struct_defn | enum_defn ;
