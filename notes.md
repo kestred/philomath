@@ -193,7 +193,7 @@ Decisions:
    to the text of the identifier
  * Items may be separated by `> IDENT` (or other syntax?), which allows the
    user to check whether a given enum value is in that set of following values
-   (up to the next seperator)
+   (up to the next separator)
  * Enums will not be intentionally designed extra functionality to support flag
    values like `0x2`, `0x4`, etc
 
