@@ -1,0 +1,77 @@
+(* Notes:
+     In character categories and literals, whitespace must be absent.
+     In all other rules whitespace is ignored.
+*)
+
+(* Character categories *)
+hex_digit      = "0" ;.. "9" | "A" ;.. "F" | "a" ;.. "f" ;
+octal_digit    = "0" ;.. "7" ;
+decimal_digit  = "0" ;.. "9" ;
+unicode_digit  = ? a Unicode character categorized as "Decimal Digit" ? ;
+unicode_math   = ? a Unicode character categorized as "Symbol, Math" ? ;
+unicode_letter = ? a Unicode character categorized as "Letter" ? ;
+text_character = ? space, tab, or any Unicode character greater than U+0020 ? ;
+math_symbol    = ( unicode_math - "=" ) | "%" | "*" | "/" ;
+character      = text_character | newline | carriage_return ;
+letter         = unicode_letter | "_" ;
+
+(* Literals *)
+identifier = letter { letter | unicode_digit } ;
+scoped_identifier = [ identifier "." ] identifier ;
+
+hex_literal      = "0" ( "x" | "X" ) { hex_digit } ;
+octal_literal    = "0" { octal_digit } ;
+decimal_literal  = ( "1" ;. "9" ) { decimal_digit } ;
+
+mantissa = "0" | decimal_literal ;
+decimals = decimal_digit { decimal_digit } ;
+exponent = ( "e" | "E" ) [ "+" | "-" ] decimals ;
+
+integer_literal = hex_literal | decimal_literal | octal_literal ;
+real_literal    = mantissa , "." , [ decimals ] , [ exponent ]
+                | mantissa , exponent
+                | "." , decimals | [ exponent ] ;
+
+number_literal  = integer_literal | real_literal ;
+range_literal   = number_literal , ".." , number_literal ;
+text_literal    = '"' , { text_character } , '"' ;
+
+operator = math_symbol , { math_symbol } ;
+
+(* Types *)
+named_type    = scoped_identifier ;
+array_type    = "[" , [ ".." | number_literal ] , "]" , type ;
+pointer_type  = "*" , type ;
+function_type = "(" , [ type , { "," , type } ] , ")" , [ "->" , type ] ;
+type          = array_type | function_type | named_type | pointer_type ;
+
+(* Statements *)
+each_range  = identifier , [ "," , identifier ] , "in" , ( expr | range_literal ) ;
+for_range   = expr , ";" , expr , ";" , expr ;
+for_stmt    = "for" , ( for_range | each_range ) , stmt ;
+while_stmt  = "while" , expr , stmt ;
+else_stmt   = "else" , stmt ;
+if_stmt     = "if" , expr , stmt , [ else_stmt ] ;
+block       = "{" , { stmt } , "}" ;
+stmt        = block | decl | expr , ";" | if_stmt | for_stmt ;
+
+(* Expressions *)
+function_param = identifier , ":" , type
+function_call  = expr , "(" , [ expr , { "," , expr } ] , ")" ; (* TODO: fix left recursion *)
+function_expr  = "(" , [ function_param , { "," , function_param } ] , ")" , [ "->" , type ] , stmt ;
+prefix_expr    = operator , expr ;
+infix_expr     = expr , operator , expr ; (* TODO: fix left recursion *)
+expr           = scoped_identifier | infix_expr | prefix_expr | function_expr | function_call ;
+
+(* Definitions *)
+enum_separator = ">" , identifier ;
+enum_item      = identifier , [ integer_literal ] , [ text_literal ] ;
+enum_defn      = "enum" , [ type ] , "{" , { enum_item | enum_separator } , "}" ;
+struct_field   = identifier , ":" , type , ";" ;
+struct_defn    = "struct" , "{" , { struct_field } , "}" ;
+defn           = struct_defn | enum_defn ;
+
+(* Declarations *)
+constant_decl = identifier , "::" , ( defn | expr , ";" ) ;
+mutable_decl  = identifier , ":" , ( type | "=" , expr | type , "=" , expr ) , ";" ;
+decl = constant_decl | mutable_decl ;
