@@ -33,10 +33,9 @@ real_literal    = mantissa , "." , [ decimals ] , [ exponent ]
                 | "." , decimals | [ exponent ] ;
 
 number_literal  = integer_literal | real_literal ;
-range_literal   = number_literal , ".." , number_literal ;
 text_literal    = '"' , { text_character } , '"' ;
 
-operator = math_symbol , { math_symbol } ;
+operator   = math_symbol , { math_symbol } ;
 
 (* Types *)
 named_type    = scoped_identifier ;
@@ -46,13 +45,15 @@ function_type = "(" , [ type , { "," , type } ] , ")" , [ "->" , type ] ;
 type          = array_type | function_type | named_type | pointer_type ;
 
 (* Statements *)
-each_range  = identifier , [ "," , identifier ] , "in" , ( expr | range_literal ) ;
-for_range   = expr , ";" , expr , ";" , expr ;
-for_stmt    = "for" , ( for_range | each_range ) , stmt ;
+assign_stmt = scoped_identifier , [ operator ] , "=" , expr ;
+expr_range  = expr , ".." , expr ;
+each_range  = identifier , [ "," , identifier ] , "in" , ( expr | expr_range ) ;
+for_range   = mutable_decl , expr , ";" , assign_stmt ;
+for_stmt    = "for" , ( for_range | each_range ) , assign_stmt ;
 while_stmt  = "while" , expr , stmt ;
 if_stmt     = "if" , expr , stmt , [ "else" , stmt ] ;
 block       = "{" , { stmt } , "}" ;
-stmt        = block | decl | expr , ";" | if_stmt | for_stmt ;
+stmt        = block | decl | expr , ";" | if_stmt | for_stmt | assign_stmt , ";" ;
 
 (* Expressions *)
 function_param = identifier , ":" , type
