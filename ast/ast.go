@@ -3,127 +3,131 @@ package ast
 /* Abstract Nodes */
 
 type Node interface {
-	IsNode()
+	ImplementsNode()
 }
 
-func (r *Root) IsNode() {}
+func (r *Root) ImplementsNode() {}
 
 // Declarations
-func (d *ConstantDecl) IsNode() {}
-func (d *MutableDecl) IsNode()  {}
+func (d *ConstantDecl) ImplementsNode() {}
+func (d *MutableDecl) ImplementsNode()  {}
 
 // Definitions (and related nodes)
-func (d *EnumDefn) IsNode()      {}
-func (v *EnumValue) IsNode()     {}
-func (s *EnumSeparator) IsNode() {}
-func (d *StructDefn) IsNode()    {}
-func (f *StructField) IsNode()   {}
-func (d *ValueDefn) IsNode()     {}
+func (d *EnumDefn) ImplementsNode()      {}
+func (v *EnumValue) ImplementsNode()     {}
+func (s *EnumSeparator) ImplementsNode() {}
+func (d *StructDefn) ImplementsNode()    {}
+func (f *StructField) ImplementsNode()   {}
+func (d *ValueDefn) ImplementsNode()     {}
 
 // Expressions (and related nodes)
-func (e *InfixExpr) IsNode()     {}
-func (e *PrefixExpr) IsNode()    {}
-func (e *CallExpr) IsNode()      {}
-func (e *GroupExpr) IsNode()     {}
-func (e *FunctionExpr) IsNode()  {}
-func (p *FunctionParam) IsNode() {}
-func (e *ValueExpr) IsNode()     {}
+func (e *InfixExpr) ImplementsNode()     {}
+func (e *PrefixExpr) ImplementsNode()    {}
+func (e *CallExpr) ImplementsNode()      {}
+func (e *GroupExpr) ImplementsNode()     {}
+func (e *FunctionExpr) ImplementsNode()  {}
+func (p *FunctionParam) ImplementsNode() {}
+func (e *ValueExpr) ImplementsNode()     {}
 
 // Statements (and related nodes)
-func (b *Block) IsNode()      {}
-func (s *IfStmt) IsNode()     {}
-func (s *WhileStmt) IsNode()  {}
-func (s *ForStmt) IsNode()    {}
-func (r *ForRange) IsNode()   {}
-func (r *EachRange) IsNode()  {}
-func (r *ExprRange) IsNode()  {}
-func (s *AssignStmt) IsNode() {}
+func (b *Block) ImplementsNode()      {}
+func (s *IfStmt) ImplementsNode()     {}
+func (s *WhileStmt) ImplementsNode()  {}
+func (s *ForStmt) ImplementsNode()    {}
+func (r *ForRange) ImplementsNode()   {}
+func (r *EachRange) ImplementsNode()  {}
+func (r *ExprRange) ImplementsNode()  {}
+func (s *AssignStmt) ImplementsNode() {}
+func (s *ReturnStmt) ImplementsNode() {}
 
 // Types
-func (t *ArrayType) IsNode()    {}
-func (t *FunctionType) IsNode() {}
-func (t *NamedType) IsNode()    {}
-func (t *PointerType) IsNode()  {}
+func (t *ArrayType) ImplementsNode()    {}
+func (t *FunctionType) ImplementsNode() {}
+func (t *NamedType) ImplementsNode()    {}
+func (t *PointerType) ImplementsNode()  {}
 
 // Literals
-func (l *NumberLiteral) IsNode() {}
-func (l *TextLiteral) IsNode()   {}
-func (o *Operator) IsNode()      {}
-func (i *ScopedIdent) IsNode()   {}
-func (i *Ident) IsNode()         {}
+func (l *NumberLiteral) ImplementsNode() {}
+func (l *TextLiteral) ImplementsNode()   {}
+func (o *Operator) ImplementsNode()      {}
+func (i *ScopedIdent) ImplementsNode()   {}
+func (i *Ident) ImplementsNode()         {}
 
 type Decl interface {
 	Node
-	IsDecl()
+	ImplementsDecl()
 }
 
-func (d *ConstantDecl) IsDecl() {}
-func (d *MutableDecl) IsDecl()  {}
+func (d *ConstantDecl) ImplementsDecl() {}
+func (d *MutableDecl) ImplementsDecl()  {}
 
 type Defn interface {
 	Node
-	IsDefn()
+	ImplementsDefn()
 }
 
-func (d *EnumDefn) IsDefn()   {}
-func (d *StructDefn) IsDefn() {}
-func (d *ValueDefn) IsDefn()  {}
+func (d *EnumDefn) ImplementsDefn()   {}
+func (d *StructDefn) ImplementsDefn() {}
+func (d *ValueDefn) ImplementsDefn()  {}
 
 type Expr interface {
 	Node
-	IsExpr()
+	ImplementsExpr()
 }
 
-func (e *InfixExpr) IsExpr()    {}
-func (e *PrefixExpr) IsExpr()   {}
-func (e *CallExpr) IsExpr()     {}
-func (e *GroupExpr) IsExpr()    {}
-func (e *FunctionExpr) IsExpr() {}
-func (e *ValueExpr) IsExpr()    {}
+func (e *InfixExpr) ImplementsExpr()    {}
+func (e *PrefixExpr) ImplementsExpr()   {}
+func (e *CallExpr) ImplementsExpr()     {}
+func (e *GroupExpr) ImplementsExpr()    {}
+func (e *FunctionExpr) ImplementsExpr() {}
+func (e *ValueExpr) ImplementsExpr()    {}
 
 type Stmt interface {
 	Node
-	IsStmt()
+	ImplementsStmt()
 }
 
-func (b *Block) IsStmt()      {}
-func (s *IfStmt) IsStmt()     {}
-func (s *WhileStmt) IsStmt()  {}
-func (s *ForStmt) IsStmt()    {}
-func (s *AssignStmt) IsStmt() {}
+func (b *Block) ImplementsStmt()      {}
+func (s *IfStmt) ImplementsStmt()     {}
+func (s *WhileStmt) ImplementsStmt()  {}
+func (s *ForStmt) ImplementsStmt()    {}
+func (s *AssignStmt) ImplementsStmt() {}
+func (s *ReturnStmt) ImplementsStmt() {}
 
 type Type interface {
 	Node
-	IsType()
+	ImplementsType()
 }
 
-func (t *ArrayType) IsType()    {}
-func (t *FunctionType) IsType() {}
-func (t *NamedType) IsType()    {}
-func (t *PointerType) IsType()  {}
+func (t *ArrayType) ImplementsType()    {}
+func (t *FunctionType) ImplementsType() {}
+func (t *NamedType) ImplementsType()    {}
+func (t *PointerType) ImplementsType()  {}
 
 type Literal interface {
 	Node
-	IsLiteral()
+	ImplementsLiteral()
 }
 
-func (l *NumberLiteral) IsLiteral() {}
-func (l *TextLiteral) IsLiteral()   {}
-func (i *ScopedIdent) IsLiteral()   {}
+func (l *NumberLiteral) ImplementsLiteral() {}
+func (l *TextLiteral) ImplementsLiteral()   {}
+func (i *ScopedIdent) ImplementsLiteral()   {}
 
 type EnumItem interface {
-	IsEnumItem()
+	Node
+	ImplementsEnumItem()
 }
 
-func (d *EnumDefn) IsEnumItem()  {}
-func (v *EnumValue) IsEnumItem() {}
+func (d *EnumDefn) ImplementsEnumItem()  {}
+func (v *EnumValue) ImplementsEnumItem() {}
 
 type LoopRange interface {
-	IsLoopRange()
+	Node
+	ImplementsLoopRange()
 }
 
-func (r *ForRange) IsLoopRange()  {}
-func (r *EachRange) IsLoopRange() {}
+func (r *ForRange) ImplementsLoopRange()  {}
+func (r *EachRange) ImplementsLoopRange() {}
 
 /* Concrete Nodes */
 
