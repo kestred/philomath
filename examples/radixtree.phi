@@ -1,11 +1,10 @@
-radix_tree   :: union { *radix_branch|*radix_leaf }
+radix_tree   :: union { ^radix_branch|^radix_leaf }
 radix_leaf   :: struct { label: text; value: any; }
 radix_branch :: struct { label: text; edges: [..]radix_tree; }
 
-walkRadix :: (tree: radix_tree, walkFunc: (*radix_leaf)) {
-  if tree.type == *radix_leaf
+walkRadix :: func(tree: radix_tree, walkFunc: (^radix_leaf)):
+  if tree.type == type(^radix_leaf):
     walkFunc(tree);
-  else
-    for edge in tree.edges
+  else:
+    for edge in tree.edges:
       walkRadix(edge, func);
-}

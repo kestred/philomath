@@ -2,9 +2,9 @@
 #netInput    :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
 #meanSqError :: formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
 
-netInput :: (inputs: []real, weights: []real) -> real {
-  result := 0;
-  for input, index in inputs
+netInput :: func(inputs: []real, weights: []real) -> real {
+  result := 0.0;
+  for input, index in inputs:
     # TODO: add and assign operator
     #result += input * weights[index];
     result = result + input * weights[index];
@@ -39,8 +39,8 @@ linear_network :: struct {
   outputs: [1]linear_node;
 }
 
-trainLinear :: (net: *linear_network, inputs: [1]real, outputs: [1]real) {
-  for node, index in net.outputs {
+trainLinear :: func(net: ^linear_network, inputs: [1]real, outputs: [1]real) {
+  for ^node, index in net.outputs {
     # TODO: keyword arguments
     #node.output = netInput(inputs=inputs, weights=node.weights);
     node.output = netInput(inputs, node.weights);
@@ -59,6 +59,6 @@ trainLinear :: (net: *linear_network, inputs: [1]real, outputs: [1]real) {
 
 main :: () {
   neuralNet : linear_network;
-  for example in examples
+  for example in examples:
     trainLinear(neuralNet, example.inputs, example.outputs);
 }

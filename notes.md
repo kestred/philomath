@@ -281,9 +281,9 @@ Examples:
 
 Concerns:
  * I'm not convinced this feature is actually required.
-   For example, the same could be accomplished with some directive "~run", eg:
+   For example, the same could be accomplished with some directive "@run", eg:
 
-   ```~run DefineFormula("meanSqError", "0.5 Σ[o in |outputs|] (targetsₒ - outputsₒ)²")```
+   ```@run DefineFormula("meanSqError", "0.5 Σ[o in |outputs|] (targetsₒ - outputsₒ)²")```
 
    However, I intuit it may still be valuable to support having
    user-defined definitions (in addition to user-defined operators, etc),

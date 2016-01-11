@@ -2,16 +2,16 @@
 #netInput  :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
 #tanhError :: formula { (1 - output²) Σ[e in |errors|] (errors[e] × weights[e]) }
 
-netInput :: (inputs: []real, weights: []real) -> real {
+netInput :: func(inputs: []real, weights: []real) -> real {
   result := 0.0;
-  for input, index in inputs
+  for input, index in inputs:
     # TODO: add and assign operator
     #result += input * weights[index];
     result = result + input * weights[index];
   return result;
 }
 
-tanhError :: (output: real, errors: []real, weights: []real) -> real {
+tanhError :: func(output: real, errors: []real, weights: []real) -> real {
   result := 0.0;
   for error, index in errors
     # TODO: add and assign operator
@@ -22,10 +22,6 @@ tanhError :: (output: real, errors: []real, weights: []real) -> real {
 
 #- TODO: modules (ie. namespaces), this might be a good syntax?
 feedfoward :: module {
-  input_node :: struct {
-    output: real;
-  }
-
   hidden_node :: struct {
     output: real;
     bias: real;
@@ -74,7 +70,7 @@ feedforward_network :: struct {
   outputs: [1]output_node;
 }
 
-trainFeedforward :: (net: *feedforward_network, inputs: [1]real, outputs: [1]real) {
+trainFeedforward :: func(net: ^feedforward_network, inputs: [1]real, outputs: [1]real) {
   hiddenOutputs : [2] real;
   for node, index in net.hidden
     # 1. Compute net input and output for hidden nodes (tanh)
@@ -100,7 +96,7 @@ trainFeedforward :: (net: *feedforward_network, inputs: [1]real, outputs: [1]rea
     }
   }
 
-  for node, index in net.hidden {
+  for ^node, index in net.hidden {
     # 5. Compute error for hidden nodes
     error := tanhError(node.output, errors, node.weights);
 
@@ -130,6 +126,6 @@ examples : []example_pattern;
 
 main :: () {
   neuralNet : feedforward_network;
-  for example in examples
-    trainFeedforward(*neuralNet, example.inputs, example.outputs);
+  for example in examples:
+    trainFeedforward(^neuralNet, example.inputs, example.outputs);
 }

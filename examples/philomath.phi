@@ -9,18 +9,16 @@ token :: enum {
   Number
   Text
 
-  > Operators
-  Colon     ":"
-  Cons      "::"
-  Equals    "="
-  Asterisk  "*"
-  Slash     "/"
-  Plus      "+"
-  Hyphen    "-"
-  Arrow     "->"
-  Comma     ","
-  Period    "."
-  Range     ".."
+  > Symbols
+  Colon  ":"
+  Cons   "::"
+  Equals "="
+  Caret  "^"
+  Tilde  "~"
+  Comma  ","
+  Period "."
+  Range  ".."
+  Arrow  "->"
 
   > Delimiters
   LeftParen    "("
@@ -34,8 +32,9 @@ token :: enum {
   If     "if"
   For    "for"
   In     "in"
-  Break  "break"
+  While  "while"
   Return "return"
+  Done   "done"
 
   Struct "struct"
   Module "module"
@@ -49,10 +48,10 @@ token :: enum {
 -#
 # abstract nodes
 node :: union { decl|defn|expr|type }
-decl :: union { *constant_decl|*mutable_decl }
-defn :: union { *struct_defn|*union_defn|*user_defn|*value_defn }
-expr :: union { *ident|*scoped_ident }
-type :: union { *array_type|*function_type|*named_type|*pointer_type }
+decl :: union { ^constant_decl|^mutable_decl }
+defn :: union { ^struct_defn|^union_defn|^user_defn|^value_defn }
+expr :: union { ^ident|^scoped_ident }
+type :: union { ^array_type|^function_type|^named_type|^pointer_type }
 
 # concrete nodes
 constant_decl :: struct { name: ident; definition: defn; }
