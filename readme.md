@@ -1,5 +1,5 @@
- Philomath
------------
+ Philomath (.φ)
+----------------
 Philomath is a toy language implementation to learn/play-with programming
 language design, compiler architectures, byte code generation, virtual machines
 and byte code interpretation, byte-code to assembly conversion, and optimizing
