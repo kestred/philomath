@@ -18,7 +18,7 @@ func isValid(ch rune) bool {
 }
 
 func isLetter(ch rune) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z'
 }
 
 func isDigit(ch rune) bool {
@@ -79,14 +79,7 @@ func (s *Scanner) Init(filename string, src []byte, err ErrorHandler) {
 }
 
 // Scan scans the next token and returns the token position, the token, and its
-// literal string if applicable. The source end is indicated by the END token.
-//
-// If the returned token is an identifier, the literal string is the identifier.
-// If the returned token is a keyword, the literal string is the keyword.
-// If the returned token is a literal the literal string has the corresponding value.
-// If the returned token is invalid, the literal string is the offending text.
-//
-// In all other cases, Scan returns an empty literal string.
+// literal string. The source end is indicated by the END token.
 func (s *Scanner) Scan() (pos int, tok token.Token, lit string) {
 scanAgain:
 	s.skipWhitespace()
@@ -94,6 +87,9 @@ scanAgain:
 	pos = s.offset
 	ch := s.char
 	switch {
+	case ch == '_':
+		lit = s.scanOperator()
+		tok = token.OPERATOR
 	case isLetter(ch):
 		lit = s.scanIdentifier()
 		tok = token.IDENT
@@ -104,6 +100,8 @@ scanAgain:
 		tok, lit = s.scanNumber(false)
 	default:
 		s.next() // always make progress
+		lit = string(ch)
+
 		switch ch {
 		case -1:
 			tok = token.END
@@ -115,6 +113,22 @@ scanAgain:
 			}
 		case '"':
 			tok, lit = s.scanText()
+		case '.':
+			if isDigit(s.char) {
+				tok, lit = s.scanNumber(true)
+			} else {
+				tok = token.PERIOD
+			}
+		case '+', '*', '/', '%':
+			tok = token.OPERATOR
+		case '-':
+			if s.char == '>' {
+				s.next()
+				tok = token.ARROW
+				lit = "->"
+			} else {
+				tok = token.OPERATOR
+			}
 		case ':':
 			numColons := 1
 			for s.char == ':' {
@@ -127,34 +141,16 @@ scanAgain:
 				tok = token.COLON
 			case 2:
 				tok = token.CONS
+				lit = "::"
 			default:
 				s.error(pos, "too many colons for '::'")
 				tok = token.INVALID
 				lit = string(s.src[pos:s.offset])
 			}
-		case '=':
-			tok = token.EQUALS
-		case '*':
-			tok = token.ASTERISK
-		case '/':
-			tok = token.SLASH
-		case '+':
-			tok = token.PLUS
-		case '-':
-			if s.char == '>' {
-				s.next()
-				tok = token.ARROW
-			} else {
-				tok = token.HYPHEN
-			}
 		case ',':
 			tok = token.COMMA
-		case '.':
-			if isDigit(s.char) {
-				tok, lit = s.scanNumber(true)
-			} else {
-				tok = token.PERIOD
-			}
+		case '=':
+			tok = token.EQUALS
 		case '(':
 			tok = token.LEFT_PAREN
 		case '[':
@@ -174,7 +170,6 @@ scanAgain:
 				s.error(pos, fmt.Sprintf("invalid character %#U", ch))
 			}
 			tok = token.INVALID
-			lit = string(ch)
 		}
 	}
 
@@ -275,9 +270,18 @@ func (s *Scanner) skipWhitespace() {
 	}
 }
 
+func (s *Scanner) scanOperator() string {
+	offset := s.offset
+	for isLetter(s.char) || s.char == '_' {
+		s.next()
+	}
+
+	return string(s.src[offset:s.offset])
+}
+
 func (s *Scanner) scanIdentifier() string {
 	offset := s.offset
-	for isLetter(s.char) || isDigit(s.char) {
+	for isLetter(s.char) || isDigit(s.char) || s.char == '_' {
 		s.next()
 	}
 
@@ -373,7 +377,7 @@ func (s *Scanner) scanNumber(afterDecimal bool) (token.Token, string) {
 
 	if isLetter(s.char) {
 		charOffset := s.offset
-		for isLetter(s.char) {
+		for isLetter(s.char) || s.char == '_' {
 			s.next()
 		}
 

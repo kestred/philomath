@@ -162,12 +162,6 @@ func TestScansIdentifier(t *testing.T) {
 	assert.Equal(t, 0, scan.pos)
 	assert.Equal(t, `snake_case`, scan.lit)
 
-	scan, err = scanOnce(`_leading_underscore`)
-	assert.Nil(t, err)
-	assert.Equal(t, token.IDENT, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, `_leading_underscore`, scan.lit)
-
 	scan, err = scanOnce(`with123`)
 	assert.Nil(t, err)
 	assert.Equal(t, token.IDENT, scan.tok)
@@ -556,17 +550,65 @@ func TestReportsUsefulNumberErrors(t *testing.T) {
 }
 
 func TestScansOperators(t *testing.T) {
-	scan, err := scanOnce(":")
+	scan, err := scanOnce(`_dot_`)
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, `_dot_`, scan.lit)
+
+	scan, err = scanOnce(`_cross_`)
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, `_cross_`, scan.lit)
+
+	scan, err = scanOnce(`_seconds`)
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, `_seconds`, scan.lit)
+
+	scan, err = scanOnce("*")
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, "*", scan.lit)
+
+	scan, err = scanOnce("/")
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, "/", scan.lit)
+
+	scan, err = scanOnce("+")
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, "+", scan.lit)
+
+	scan, err = scanOnce("-")
+	assert.Nil(t, err)
+	assert.Equal(t, token.OPERATOR, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, "-", scan.lit)
+
+	scan, err = scanOnce(".")
+	assert.Nil(t, err)
+	assert.Equal(t, token.PERIOD, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, ".", scan.lit)
+
+	scan, err = scanOnce(":")
 	assert.Nil(t, err)
 	assert.Equal(t, token.COLON, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, ":", scan.lit)
 
 	scan, err = scanOnce("::")
 	assert.Nil(t, err)
 	assert.Equal(t, token.CONS, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "::", scan.lit)
 
 	scan, err = scanOnce(":::")
 	assert.Equal(t, token.INVALID, scan.tok)
@@ -577,53 +619,23 @@ func TestScansOperators(t *testing.T) {
 		assert.Equal(t, `too many colons for '::'`, err.msg)
 	}
 
+	scan, err = scanOnce(",")
+	assert.Nil(t, err)
+	assert.Equal(t, token.COMMA, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, ",", scan.lit)
+
 	scan, err = scanOnce("=")
 	assert.Nil(t, err)
 	assert.Equal(t, token.EQUALS, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
-
-	scan, err = scanOnce("*")
-	assert.Nil(t, err)
-	assert.Equal(t, token.ASTERISK, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
-
-	scan, err = scanOnce("/")
-	assert.Nil(t, err)
-	assert.Equal(t, token.SLASH, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
-
-	scan, err = scanOnce("+")
-	assert.Nil(t, err)
-	assert.Equal(t, token.PLUS, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
-
-	scan, err = scanOnce("-")
-	assert.Nil(t, err)
-	assert.Equal(t, token.HYPHEN, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "=", scan.lit)
 
 	scan, err = scanOnce("->")
 	assert.Nil(t, err)
 	assert.Equal(t, token.ARROW, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
-
-	scan, err = scanOnce(",")
-	assert.Nil(t, err)
-	assert.Equal(t, token.COMMA, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
-
-	scan, err = scanOnce(".")
-	assert.Nil(t, err)
-	assert.Equal(t, token.PERIOD, scan.tok)
-	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "->", scan.lit)
 }
 
 func TestScansDelimiters(t *testing.T) {
@@ -631,37 +643,37 @@ func TestScansDelimiters(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, token.LEFT_PAREN, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "(", scan.lit)
 
 	scan, err = scanOnce(")")
 	assert.Nil(t, err)
 	assert.Equal(t, token.RIGHT_PAREN, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, ")", scan.lit)
 
 	scan, err = scanOnce("[")
 	assert.Nil(t, err)
 	assert.Equal(t, token.LEFT_BRACKET, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "[", scan.lit)
 
 	scan, err = scanOnce("]")
 	assert.Nil(t, err)
 	assert.Equal(t, token.RIGHT_BRACKET, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "]", scan.lit)
 
 	scan, err = scanOnce("{")
 	assert.Nil(t, err)
 	assert.Equal(t, token.LEFT_BRACE, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "{", scan.lit)
 
 	scan, err = scanOnce("}")
 	assert.Nil(t, err)
 	assert.Equal(t, token.RIGHT_BRACE, scan.tok)
 	assert.Equal(t, 0, scan.pos)
-	assert.Equal(t, "", scan.lit)
+	assert.Equal(t, "}", scan.lit)
 }
 
 func TestReportsUsefulUnknownCharacter(t *testing.T) {

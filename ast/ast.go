@@ -21,6 +21,7 @@ func (f *StructField) ImplementsNode()   {}
 func (d *ValueDefn) ImplementsNode()     {}
 
 // Expressions (and related nodes)
+func (e *PostfixExpr) ImplementsNode()   {}
 func (e *InfixExpr) ImplementsNode()     {}
 func (e *PrefixExpr) ImplementsNode()    {}
 func (e *CallExpr) ImplementsNode()      {}
@@ -39,6 +40,7 @@ func (r *EachRange) ImplementsNode()  {}
 func (r *ExprRange) ImplementsNode()  {}
 func (s *AssignStmt) ImplementsNode() {}
 func (s *ReturnStmt) ImplementsNode() {}
+func (s *DoneStmt) ImplementsNode()   {}
 
 // Types
 func (t *ArrayType) ImplementsNode()    {}
@@ -75,6 +77,7 @@ type Expr interface {
 	ImplementsExpr()
 }
 
+func (e *PostfixExpr) ImplementsExpr()  {}
 func (e *InfixExpr) ImplementsExpr()    {}
 func (e *PrefixExpr) ImplementsExpr()   {}
 func (e *CallExpr) ImplementsExpr()     {}
@@ -93,6 +96,7 @@ func (s *WhileStmt) ImplementsStmt()  {}
 func (s *ForStmt) ImplementsStmt()    {}
 func (s *AssignStmt) ImplementsStmt() {}
 func (s *ReturnStmt) ImplementsStmt() {}
+func (s *DoneStmt) ImplementsStmt()   {}
 
 type Type interface {
 	Node
@@ -182,6 +186,11 @@ type (
 
 // An expression is represented by a tree of one or more of the following
 type (
+	PostfixExpr struct {
+		Subexpr  Expr
+		Operator Operator
+	}
+
 	InfixExpr struct {
 		Left     Expr
 		Operator Operator
@@ -262,6 +271,12 @@ type (
 		Operator Operator
 		Value    Expr
 	}
+
+	ReturnStmt struct {
+		Value Expr
+	}
+
+	DoneStmt struct{}
 )
 
 // A type is represented by a tree of one or more of the following

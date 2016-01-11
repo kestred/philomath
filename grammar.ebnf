@@ -11,8 +11,8 @@ unicode_digit  = ? a Unicode character categorized as "Decimal Digit" ? ;
 unicode_math   = ? a Unicode character categorized as "Symbol, Math" ? ;
 unicode_letter = ? a Unicode character categorized as "Letter" ? ;
 text_character = ? space, tab, or any Unicode character greater than U+0020 ? ;
-math_symbol    = ( unicode_math - ( "=" | ">" | "<" | "~" ) ) | "%" | "*" | "/" ;
 character      = text_character | newline | carriage_return ;
+
 
 (* Literals *)
 identifier        = unicode_letter , { unicode_letter | unicode_digit | "_" } ;
@@ -34,8 +34,17 @@ real_literal    = mantissa , "." , [ decimals ] , [ exponent ]
 number_literal  = integer_literal | real_literal ;
 text_literal    = '"' , { text_character } , '"' ;
 
-operator   = math_symbol , { math_symbol }
-           | "_" , identifier , [ "_" ] ;
+
+(* Notes:
+     Maybe eventually we'll accept any unicode math symbol, for now I'm just
+     using the reduced symbol set after this comment.
+
+math_symbol = ( unicode_math - ( "=" | ">" | "<" | "~" ) ) | "%" | "*" | "/" ;
+operator    = math_symbol , { math_symbol } | "_" , identifier , [ "_" ] ;
+
+*)
+math_symbol = "+", "-", "*", "/", "%" ;
+operator   = math_symbol | "_" , { unicode_letter | "_" } ;
 
 (* Types *)
 named_type    = scoped_identifier ;
@@ -67,9 +76,10 @@ group_expr     = "(" , expr , ")";
 value_expr    = scoped_ident | text_literal | number_literal ;
 
 base_expr     = value_expr | group_expr | function_expr ;
-call_expr     = base_expr , { "(" , [ expr , { "," , expr } ] , ")" } ;
-prefix_expr   = { operator | "~" | "^" |  } , call_expr ;
-postfix_expr  = prefix_expr , { operator } ;
+member_expr   = base_expr , "." , call_expr ;
+call_expr     = member_expr , {  } ;
+postfix_expr  = prefix_expr , { operator | "(" , [ expr , { "," , expr } ] , ")" | "[" expr "]" } ;
+prefix_expr   = { operator | "~" | "^" |  } , postfix_expr ;
 infix_expr    = postfix_expr , { operator , infix_expr } ;
 greater_expr  = { ( ">=" | ">" ) , infix_expr } ;
 lesser_expr   = { ( "<=" | "<" ) , infix_expr } ;
@@ -86,14 +96,15 @@ expr          = logical_expr;
      Valid abstract syntax trees are more lenient than the grammar and can be
      better represented by the following ambiguous left-recursive grammar rules.
 
+member_expr   = expr , "." , expr ;
 call_expr     = expr , { "(" , [ expr , { "," , expr } ] , ")" } ;
 indirect_expr = "~" , expr ;
 address_expr  = "^" , expr ;
-prefix_expr   = operator , expr ;
 postfix_expr  = expr , operator ;
+prefix_expr   = operator , expr ;
 infix_expr    = expr , ( operator ) , expr ;
-normal_expr   = value_expr | group_expr | function_expr | call_expr | indirect_expr
-              | address_expr | prefix_expr | postfix_expr | infix_expr ;
+normal_expr   = value_expr | group_expr | function_expr | member_expr | call_expr
+              | indirect_expr | address_expr | prefix_expr | postfix_expr | infix_expr ;
 
      The grammar for comparison expressions in philomath is somewhat unusual
      compared to other languages in that it allows expression of relations in

@@ -56,16 +56,14 @@ func TestTokenString(t *testing.T) {
 	assert.Equal(t, "Number", NUMBER.String())
 	assert.Equal(t, "Text", TEXT.String())
 
+	assert.Equal(t, "Operator", OPERATOR.String())
+	assert.Equal(t, ".", PERIOD.String())
+
 	assert.Equal(t, ":", COLON.String())
 	assert.Equal(t, "::", CONS.String())
-	assert.Equal(t, "=", EQUALS.String())
-	assert.Equal(t, "*", ASTERISK.String())
-	assert.Equal(t, "/", SLASH.String())
-	assert.Equal(t, "+", PLUS.String())
-	assert.Equal(t, "-", HYPHEN.String())
-	assert.Equal(t, "->", ARROW.String())
 	assert.Equal(t, ",", COMMA.String())
-	assert.Equal(t, ".", PERIOD.String())
+	assert.Equal(t, "=", EQUALS.String())
+	assert.Equal(t, "->", ARROW.String())
 
 	assert.Equal(t, "(", LEFT_PAREN.String())
 	assert.Equal(t, "[", LEFT_BRACKET.String())
@@ -82,41 +80,39 @@ func TestTokenString(t *testing.T) {
 	assert.Equal(t, "Token(2000)", Token(2000).String())
 }
 
-func TestHasLiteral(t *testing.T) {
-	assert.Equal(t, false, INVALID.HasLiteral())
-	assert.Equal(t, false, END.HasLiteral())
+func TestIsOperator(t *testing.T) {
+	assert.Equal(t, false, INVALID.IsOperator())
+	assert.Equal(t, false, END.IsOperator())
 
-	assert.Equal(t, true, IDENT.HasLiteral())
+	assert.Equal(t, false, IDENT.IsOperator())
 
-	assert.Equal(t, true, NUMBER.HasLiteral())
-	assert.Equal(t, true, TEXT.HasLiteral())
+	assert.Equal(t, false, NUMBER.IsOperator())
+	assert.Equal(t, false, TEXT.IsOperator())
 
-	assert.Equal(t, false, COLON.HasLiteral())
-	assert.Equal(t, false, CONS.HasLiteral())
-	assert.Equal(t, false, EQUALS.HasLiteral())
-	assert.Equal(t, false, ASTERISK.HasLiteral())
-	assert.Equal(t, false, SLASH.HasLiteral())
-	assert.Equal(t, false, PLUS.HasLiteral())
-	assert.Equal(t, false, HYPHEN.HasLiteral())
-	assert.Equal(t, false, ARROW.HasLiteral())
-	assert.Equal(t, false, COMMA.HasLiteral())
-	assert.Equal(t, false, PERIOD.HasLiteral())
+	assert.Equal(t, true, OPERATOR.IsOperator())
+	assert.Equal(t, true, PERIOD.IsOperator())
 
-	assert.Equal(t, false, LEFT_PAREN.HasLiteral())
-	assert.Equal(t, false, LEFT_BRACKET.HasLiteral())
-	assert.Equal(t, false, LEFT_BRACE.HasLiteral())
-	assert.Equal(t, false, RIGHT_PAREN.HasLiteral())
-	assert.Equal(t, false, RIGHT_BRACKET.HasLiteral())
-	assert.Equal(t, false, RIGHT_BRACE.HasLiteral())
+	assert.Equal(t, false, COLON.IsOperator())
+	assert.Equal(t, false, CONS.IsOperator())
+	assert.Equal(t, false, COMMA.IsOperator())
+	assert.Equal(t, false, EQUALS.IsOperator())
+	assert.Equal(t, false, ARROW.IsOperator())
 
-	assert.Equal(t, true, IF.HasLiteral())
-	assert.Equal(t, true, FOR.HasLiteral())
-	assert.Equal(t, true, IN.HasLiteral())
-	assert.Equal(t, true, BREAK.HasLiteral())
-	assert.Equal(t, true, RETURN.HasLiteral())
+	assert.Equal(t, false, LEFT_PAREN.IsOperator())
+	assert.Equal(t, false, LEFT_BRACKET.IsOperator())
+	assert.Equal(t, false, LEFT_BRACE.IsOperator())
+	assert.Equal(t, false, RIGHT_PAREN.IsOperator())
+	assert.Equal(t, false, RIGHT_BRACKET.IsOperator())
+	assert.Equal(t, false, RIGHT_BRACE.IsOperator())
 
-	assert.Equal(t, true, STRUCT.HasLiteral())
-	assert.Equal(t, true, MODULE.HasLiteral())
+	assert.Equal(t, false, IF.IsOperator())
+	assert.Equal(t, false, FOR.IsOperator())
+	assert.Equal(t, false, IN.IsOperator())
+	assert.Equal(t, false, BREAK.IsOperator())
+	assert.Equal(t, false, RETURN.IsOperator())
+
+	assert.Equal(t, false, STRUCT.IsOperator())
+	assert.Equal(t, false, MODULE.IsOperator())
 }
 
 func TestIsKeyword(t *testing.T) {
@@ -128,16 +124,14 @@ func TestIsKeyword(t *testing.T) {
 	assert.Equal(t, false, NUMBER.IsKeyword())
 	assert.Equal(t, false, TEXT.IsKeyword())
 
+	assert.Equal(t, false, OPERATOR.IsKeyword())
+	assert.Equal(t, false, PERIOD.IsKeyword())
+
 	assert.Equal(t, false, COLON.IsKeyword())
 	assert.Equal(t, false, CONS.IsKeyword())
-	assert.Equal(t, false, EQUALS.IsKeyword())
-	assert.Equal(t, false, ASTERISK.IsKeyword())
-	assert.Equal(t, false, SLASH.IsKeyword())
-	assert.Equal(t, false, PLUS.IsKeyword())
-	assert.Equal(t, false, HYPHEN.IsKeyword())
-	assert.Equal(t, false, ARROW.IsKeyword())
 	assert.Equal(t, false, COMMA.IsKeyword())
-	assert.Equal(t, false, PERIOD.IsKeyword())
+	assert.Equal(t, false, EQUALS.IsKeyword())
+	assert.Equal(t, false, ARROW.IsKeyword())
 
 	assert.Equal(t, false, LEFT_PAREN.IsKeyword())
 	assert.Equal(t, false, LEFT_BRACKET.IsKeyword())

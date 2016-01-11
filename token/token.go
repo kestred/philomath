@@ -60,16 +60,17 @@ const (
 	TEXT
 
 	// Operators
-	COLON    // :
-	CONS     // ::
-	EQUALS   // =
-	ASTERISK // *
-	SLASH    // /
-	PLUS     // +
-	HYPHEN   // -
-	ARROW    // ->
-	COMMA    // ,
-	PERIOD   // .
+	operators_begin
+	OPERATOR
+	PERIOD // .
+	operators_end
+
+	// Punctuation
+	COLON  // :
+	CONS   // ::
+	COMMA  // ,
+	EQUALS // =
+	ARROW  // ->
 
 	// Delimiters
 	LEFT_PAREN    // (
@@ -103,16 +104,14 @@ var tokens = [...]string{
 	NUMBER: "Number",
 	TEXT:   "Text",
 
-	COLON:    ":",
-	CONS:     "::",
-	EQUALS:   "=",
-	ASTERISK: "*",
-	SLASH:    "/",
-	PLUS:     "+",
-	HYPHEN:   "-",
-	ARROW:    "->",
-	COMMA:    ",",
+	OPERATOR: "Operator",
 	PERIOD:   ".",
+
+	COLON:  ":",
+	CONS:   "::",
+	COMMA:  ",",
+	EQUALS: "=",
+	ARROW:  "->",
 
 	LEFT_PAREN:    "(",
 	LEFT_BRACKET:  "[",
@@ -159,8 +158,8 @@ func Lookup(ident string) Token {
 	return IDENT
 }
 
-func (tok Token) HasLiteral() bool {
-	return (IDENT <= tok && tok <= TEXT) || tok.IsKeyword()
+func (tok Token) IsOperator() bool {
+	return operators_begin < tok && tok < operators_end
 }
 
 func (tok Token) IsKeyword() bool {
