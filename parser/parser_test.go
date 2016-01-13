@@ -7,11 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const traceEnabled = false
-
 func parseExpression(input string) ast.Expr {
 	var parser Parser
-	parser.Init("test", traceEnabled, []byte(input))
+	parser.Init("test", false, []byte(input))
 	return parser.ParseExpression()
 }
 

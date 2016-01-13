@@ -24,7 +24,7 @@ user-defined operators, and compile-time code execution.
     syntax tree and dependency graph
     4. Expression Parsing - Parse run-time declarations into an abstract syntax
     tree and dependency graph
- 3. Semantic analytics - Transform an AST into metadata and control flow graphs
+ 3. Semantic Analysis - Transform an AST into metadata and control flow graphs
     1. Declaration uniqueness - Verify each declaration name is unique in its scope
     2. Declaration ordering - Verify that variables are declared before use
     3. Type inference - Infer the type of each untyped declaration
