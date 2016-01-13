@@ -23,7 +23,7 @@ const OutOfRegisters = 65535
 const (
 	NOOP Code = iota
 
-	STORE_CONST
+	LOAD_CONST
 
 	INT64_ADD
 	INT64_SUBTRACT
@@ -44,8 +44,8 @@ const (
 )
 
 var opcodes = [...]string{
-	NOOP:        "No operation",
-	STORE_CONST: "Constant",
+	NOOP:       "No operation",
+	LOAD_CONST: "Load constant",
 
 	INT64_ADD:      "Addition",
 	INT64_SUBTRACT: "Subtraction",
@@ -65,14 +65,13 @@ func (code Code) String() string {
 }
 
 type Scope struct {
-	Constants map[Register]Data
-
+	Constants    []Data
 	Registers    map[string]Register
 	NextRegister Register
 }
 
 func (s *Scope) Init() {
-	s.Constants = make(map[Register]Data)
+	s.Constants = []Data{0}
 	s.Registers = make(map[string]Register)
 	s.NextRegister = 1 // skip the 0th register
 }
@@ -91,15 +90,17 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 	switch node := expr.(type) {
 
 	case *ast.ValueExpr:
-		var register Register
 		switch literal := node.Literal.(type) {
 		case *ast.NumberLiteral:
-			register = scope.AssignRegister()
+			register := scope.AssignRegister()
 			value, err := strconv.Atoi(literal.Literal)
 			if err != nil {
 				panic("TODO: Actually perform type checking, etc")
 			}
-			scope.Constants[register] = Data(value)
+
+			constIndex := Register(len(scope.Constants))
+			scope.Constants = append(scope.Constants, Data(value))
+			return []Instruction{{Code: LOAD_CONST, Out: register, Left: constIndex}}
 		case *ast.ScopedIdent:
 			panic("TODO: I haven't done declarations... so this identifier isn't that useful")
 			// NOTE: Find or assign register
@@ -114,8 +115,6 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		default:
 			panic("TODO: Unhandled value literal")
 		}
-
-		return []Instruction{{Code: STORE_CONST, Out: register}}
 
 	case *ast.GroupExpr:
 		return FromExpr(node.Subexpr, scope)
@@ -138,16 +137,12 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		// bytecode to evaluate left
 		left := FromExpr(node.Left, scope)
 		infix.Left = left[len(left)-1].Out
-		if len(left) > 1 || left[0].Code != STORE_CONST {
-			insts = append(insts, left...)
-		}
+		insts = append(insts, left...)
 
 		// bytecode to evaluate right
 		right := FromExpr(node.Right, scope)
 		infix.Right = right[len(right)-1].Out
-		if len(right) > 1 || right[0].Code != STORE_CONST {
-			insts = append(insts, right...)
-		}
+		insts = append(insts, right...)
 
 		// bytecode to evaluate operator
 		infix.Out = scope.AssignRegister()
