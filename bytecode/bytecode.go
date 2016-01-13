@@ -101,7 +101,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 			constIndex := Register(len(scope.Constants))
 			scope.Constants = append(scope.Constants, Data(value))
 			return []Instruction{{Code: LOAD_CONST, Out: register, Left: constIndex}}
-		case *ast.ScopedIdent:
+		case *ast.Ident:
 			panic("TODO: I haven't done declarations... so this identifier isn't that useful")
 			// NOTE: Find or assign register
 			/*

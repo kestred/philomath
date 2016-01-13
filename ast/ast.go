@@ -1,5 +1,9 @@
 package ast
 
+/* Null Nodes */
+var Undefined = &struct{}{}
+var Inferred = &NamedType{Name: &ValueExpr{Literal: &Ident{"<Inferred>"}}}
+
 /* Abstract Nodes */
 
 type Node interface {
@@ -28,6 +32,7 @@ func (e *CallExpr) ImplementsNode()      {}
 func (e *GroupExpr) ImplementsNode()     {}
 func (e *FunctionExpr) ImplementsNode()  {}
 func (p *FunctionParam) ImplementsNode() {}
+func (e *MemberExpr) ImplementsNode()    {}
 func (e *ValueExpr) ImplementsNode()     {}
 
 // Statements (and related nodes)
@@ -52,7 +57,6 @@ func (t *PointerType) ImplementsNode()  {}
 func (l *NumberLiteral) ImplementsNode() {}
 func (l *TextLiteral) ImplementsNode()   {}
 func (o *Operator) ImplementsNode()      {}
-func (i *ScopedIdent) ImplementsNode()   {}
 func (i *Ident) ImplementsNode()         {}
 
 type Decl interface {
@@ -83,6 +87,7 @@ func (e *PrefixExpr) ImplementsExpr()   {}
 func (e *CallExpr) ImplementsExpr()     {}
 func (e *GroupExpr) ImplementsExpr()    {}
 func (e *FunctionExpr) ImplementsExpr() {}
+func (e *MemberExpr) ImplementsExpr()   {}
 func (e *ValueExpr) ImplementsExpr()    {}
 
 type Stmt interface {
@@ -90,7 +95,6 @@ type Stmt interface {
 	ImplementsStmt()
 }
 
-func (b *Block) ImplementsStmt()      {}
 func (s *IfStmt) ImplementsStmt()     {}
 func (s *WhileStmt) ImplementsStmt()  {}
 func (s *ForStmt) ImplementsStmt()    {}
@@ -115,7 +119,7 @@ type Literal interface {
 
 func (l *NumberLiteral) ImplementsLiteral() {}
 func (l *TextLiteral) ImplementsLiteral()   {}
-func (i *ScopedIdent) ImplementsLiteral()   {}
+func (i *Ident) ImplementsLiteral()         {}
 
 type EnumItem interface {
 	Node
@@ -187,30 +191,50 @@ type (
 // An expression is represented by a tree of one or more of the following
 type (
 	PostfixExpr struct {
+		// syntax
 		Subexpr  Expr
 		Operator Operator
+
+		// semantics
+		Type Type
 	}
 
 	InfixExpr struct {
+		// syntax
 		Left     Expr
 		Operator Operator
 		Right    Expr
+
+		// semantics
+		Type Type
 	}
 
 	PrefixExpr struct {
+		// syntax
 		Operator Operator
 		Subexpr  Expr
+
+		// semantics
+		Type Type
 	}
 
 	CallExpr struct {
+		// syntax
 		Function  Expr
 		Arguments []Expr
+
+		// semantics
+		Type Type
 	}
 
 	FunctionExpr struct {
+		// syntax
 		Params []FunctionParam
 		Return Type
-		Stmt   Stmt
+		Block Block
+
+		// semantics
+		Type Type
 	}
 
 	FunctionParam struct {
@@ -219,13 +243,94 @@ type (
 	}
 
 	GroupExpr struct {
+		// syntax
 		Subexpr Expr
+
+		// semantics
+		Type Type
+	}
+
+	MemberExpr struct {
+		// syntax
+		Left Expr
+		Member Ident
+
+		// semantics
+		Type Type
 	}
 
 	ValueExpr struct {
+		// syntax
 		Literal Literal
+
+		// semantics
+		Type  Type
 	}
 )
+
+func NewPostfixExpr(subexpr Expr, op Operator) *PostfixExpr {
+	return &PostfixExpr{
+		Subexpr: subexpr,
+		Operator: op,
+		Type: Inferred,
+	}
+}
+
+func NewInfixExpr(left Expr, op Operator, right Expr) *InfixExpr {
+	return &InfixExpr{
+		Left: left,
+		Operator: op,
+		Right: right,
+		Type: Inferred,
+	}
+}
+
+func NewPrefixExpr(op Operator, subexpr Expr) *PrefixExpr {
+	return &PrefixExpr{
+		Operator: op,
+		Subexpr: subexpr,
+		Type: Inferred,
+	}
+}
+
+func NewCallExpr(fn Expr, args []Expr) *CallExpr {
+	return &CallExpr{
+		Function: fn,
+		Arguments: args,
+		Type: Inferred,
+	}
+}
+
+func NewFunctionExpr(params []FunctionParam, ret Type, block Block) *FunctionExpr {
+	return &FunctionExpr {
+		Params: params,
+		Return: ret,
+		Block: block,
+		Type: Inferred,
+	}
+}
+
+func NewGroupExpr(subexpr Expr) *GroupExpr {
+	return &GroupExpr{
+		Subexpr: subexpr,
+		Type: Inferred,
+	}
+}
+
+func NewMemberExpr(left Expr, member Ident) *MemberExpr {
+	return &MemberExpr{
+		Left: left,
+		Member: member,
+		Type: Inferred,
+	}
+}
+
+func NewValueExpr(literal Literal) *ValueExpr {
+	return &ValueExpr{
+		Literal: literal,
+		Type: Inferred,
+	}
+}
 
 // A statement is represented by a tree of one or more of the following
 type (
@@ -235,18 +340,18 @@ type (
 
 	IfStmt struct {
 		Cond Expr
-		Then Stmt
-		Else Stmt
+		Then Block
+		Else Block
 	}
 
 	WhileStmt struct {
 		Cond Expr
-		Do   Stmt
+		Do   Block
 	}
 
 	ForStmt struct {
 		Range LoopRange
-		Expr  Expr
+		Do Block
 	}
 
 	ForRange struct {
@@ -267,7 +372,7 @@ type (
 	}
 
 	AssignStmt struct {
-		Assignee ScopedIdent
+		Assignee Expr
 		Operator Operator
 		Value    Expr
 	}
@@ -294,27 +399,38 @@ type (
 	}
 
 	NamedType struct {
-		Name ScopedIdent
+		Name Expr
 	}
 
 	PointerType struct {
-		Reference Type
+		PointerTo Type
 	}
 )
+
+func NewNamedType(name Expr) *NamedType {
+	return &NamedType{Name: name}
+}
+
+func NewPointerType(pointerTo Type) *PointerType {
+	return &PointerType{PointerTo: pointerTo}
+}
 
 // A literal is represented by one of the following
 type (
 	NumberLiteral struct {
+		// syntax
 		Literal string
+
+		// semantics
+		Value interface{}
 	}
 
 	TextLiteral struct {
+		// syntax
 		Literal string
-	}
 
-	ScopedIdent struct {
-		Scope string
-		Name  Ident
+		// semantics
+		Value interface{}
 	}
 
 	Ident struct {
@@ -325,3 +441,17 @@ type (
 		Literal string
 	}
 )
+
+func NewNumberLiteral(literal string) *NumberLiteral {
+	return &NumberLiteral{
+		Literal: literal,
+		Value: Undefined,
+	}
+}
+
+func NewTextLiteral(literal string) *TextLiteral {
+	return &TextLiteral{
+		Literal: literal,
+		Value: Undefined,
+	}
+}

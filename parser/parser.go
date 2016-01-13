@@ -155,9 +155,9 @@ func (p *Parser) parseOperators(precedence Precedence) ast.Expr {
 		p.next() // consume operator
 		if op.Type == BinaryInfix {
 			rhs := p.parseOperators(rightPrec(op))
-			lhs = &ast.InfixExpr{lhs, ast.Operator{op.Literal}, rhs}
+			lhs = ast.NewInfixExpr(lhs, ast.Operator{op.Literal}, rhs)
 		} else {
-			lhs = &ast.PostfixExpr{lhs, ast.Operator{op.Literal}}
+			lhs = ast.NewPostfixExpr(lhs, ast.Operator{op.Literal})
 		}
 
 		if p.tok.IsOperator() {
@@ -230,7 +230,7 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 
 		p.next() // consume operator
 		expr := p.parseOperators(PrefixPrecedence)
-		return &ast.PrefixExpr{ast.Operator{op.Literal}, expr}
+		return ast.NewPrefixExpr(ast.Operator{op.Literal}, expr)
 	}
 
 	switch p.tok {
@@ -246,14 +246,14 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 		}
 		p.next()
 
-		return &ast.GroupExpr{expr}
+		return ast.NewGroupExpr(expr)
 
 	// handle literals
 	case token.IDENT, token.TEXT:
 		panic("TODO: I'll handle these eventually")
 
 	case token.NUMBER:
-		expr := &ast.ValueExpr{&ast.NumberLiteral{p.lit}}
+		expr := ast.NewValueExpr(ast.NewNumberLiteral(p.lit))
 		p.next()
 		return expr
 	}
