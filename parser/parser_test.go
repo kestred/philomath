@@ -13,6 +13,15 @@ func parseExpression(input string) ast.Expr {
 	return parser.ParseExpression()
 }
 
+func TestParseError(t *testing.T) {
+	var parser Parser
+	parser.Init("error.phi", false, []byte(`1 * (2 + 3} - 4`))
+	parser.ParseExpression()
+	if assert.True(t, len(parser.Errors) > 0, "Expected some errors but found none.") {
+		assert.Equal(t, "error.phi:1:12: Expected '}' but recieved ')'.", parser.Errors[0].Error())
+	}
+}
+
 func TestParseArithmetic(t *testing.T) {
 	var expected ast.Expr
 

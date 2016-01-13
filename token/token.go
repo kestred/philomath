@@ -14,7 +14,7 @@ type Position struct {
 	Column int    // column number, starting at 1
 }
 
-// IsValid reports whether the position is valid.
+// IsValid reports whether the Position is valid.
 func (pos *Position) IsValid() bool { return pos.Line > 0 }
 
 // String returns a string in one of several forms:
@@ -39,10 +39,13 @@ func (pos Position) String() string {
 }
 
 type Line struct {
-	Line   int
-	Offset int
+	Line   int // line number, starting at 1
+	Offset int // offset, starting at 0
 	Text   string
 }
+
+// IsValid reports whether the Line is valid.
+func (l *Line) IsValid() bool { return l.Line > 0 }
 
 // Token is the set of lexical tokens in Philomath
 type Token int

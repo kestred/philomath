@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/kestred/philomath/token"
+	"github.com/kestred/philomath/utils"
 )
 
 const bom = 0xFEFF // byte order mark, only permitted as very first character
@@ -70,7 +71,7 @@ func (s *Scanner) Init(filename string, src []byte, err ErrorHandler) {
 	s.offset = 0
 	s.readOffset = 0
 	s.lineOffset = 0
-	s.line = 0
+	s.line = 1
 
 	s.next()
 	if s.char == bom {
@@ -182,7 +183,7 @@ func (s *Scanner) Pos() token.Position {
 	return token.Position{
 		Name:   s.filename,
 		Offset: s.offset,
-		Line:   s.line + 1,
+		Line:   s.line,
 		Column: column,
 	}
 }
@@ -192,13 +193,16 @@ func (s *Scanner) LineAt(offset int) token.Line {
 		return token.Line{s.line, s.lineOffset, string(s.src[s.lineOffset:offset])}
 	}
 
+	var result token.Line
 	for i := len(s.lines) - 1; i >= 0; i-- {
 		if s.lines[i].Offset <= offset {
-			return s.lines[i]
+			result = s.lines[i]
+			break
 		}
 	}
 
-	panic(fmt.Sprintf("failed to find line info at file[%s]:%d", s.filename, offset))
+	utils.Assert(result.IsValid(), fmt.Sprintf("Failed to find line info at file[%s]:%d", s.filename, offset))
+	return result
 }
 
 func (s *Scanner) error(offset int, msg string) {
@@ -210,7 +214,7 @@ func (s *Scanner) error(offset int, msg string) {
 		pos := token.Position{
 			Name:   s.filename,
 			Offset: offset,
-			Line:   line.Line + 1,
+			Line:   line.Line,
 			Column: column,
 		}
 

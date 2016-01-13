@@ -231,7 +231,7 @@ type (
 		// syntax
 		Params []FunctionParam
 		Return Type
-		Block Block
+		Block  Block
 
 		// semantics
 		Type Type
@@ -252,7 +252,7 @@ type (
 
 	MemberExpr struct {
 		// syntax
-		Left Expr
+		Left   Expr
 		Member Ident
 
 		// semantics
@@ -264,71 +264,71 @@ type (
 		Literal Literal
 
 		// semantics
-		Type  Type
+		Type Type
 	}
 )
 
 func NewPostfixExpr(subexpr Expr, op Operator) *PostfixExpr {
 	return &PostfixExpr{
-		Subexpr: subexpr,
+		Subexpr:  subexpr,
 		Operator: op,
-		Type: Inferred,
+		Type:     Inferred,
 	}
 }
 
 func NewInfixExpr(left Expr, op Operator, right Expr) *InfixExpr {
 	return &InfixExpr{
-		Left: left,
+		Left:     left,
 		Operator: op,
-		Right: right,
-		Type: Inferred,
+		Right:    right,
+		Type:     Inferred,
 	}
 }
 
 func NewPrefixExpr(op Operator, subexpr Expr) *PrefixExpr {
 	return &PrefixExpr{
 		Operator: op,
-		Subexpr: subexpr,
-		Type: Inferred,
+		Subexpr:  subexpr,
+		Type:     Inferred,
 	}
 }
 
 func NewCallExpr(fn Expr, args []Expr) *CallExpr {
 	return &CallExpr{
-		Function: fn,
+		Function:  fn,
 		Arguments: args,
-		Type: Inferred,
+		Type:      Inferred,
 	}
 }
 
 func NewFunctionExpr(params []FunctionParam, ret Type, block Block) *FunctionExpr {
-	return &FunctionExpr {
+	return &FunctionExpr{
 		Params: params,
 		Return: ret,
-		Block: block,
-		Type: Inferred,
+		Block:  block,
+		Type:   Inferred,
 	}
 }
 
 func NewGroupExpr(subexpr Expr) *GroupExpr {
 	return &GroupExpr{
 		Subexpr: subexpr,
-		Type: Inferred,
+		Type:    Inferred,
 	}
 }
 
 func NewMemberExpr(left Expr, member Ident) *MemberExpr {
 	return &MemberExpr{
-		Left: left,
+		Left:   left,
 		Member: member,
-		Type: Inferred,
+		Type:   Inferred,
 	}
 }
 
 func NewValueExpr(literal Literal) *ValueExpr {
 	return &ValueExpr{
 		Literal: literal,
-		Type: Inferred,
+		Type:    Inferred,
 	}
 }
 
@@ -351,7 +351,7 @@ type (
 
 	ForStmt struct {
 		Range LoopRange
-		Do Block
+		Do    Block
 	}
 
 	ForRange struct {
@@ -445,13 +445,13 @@ type (
 func NewNumberLiteral(literal string) *NumberLiteral {
 	return &NumberLiteral{
 		Literal: literal,
-		Value: Undefined,
+		Value:   Undefined,
 	}
 }
 
 func NewTextLiteral(literal string) *TextLiteral {
 	return &TextLiteral{
 		Literal: literal,
-		Value: Undefined,
+		Value:   Undefined,
 	}
 }

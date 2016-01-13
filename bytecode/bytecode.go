@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/kestred/philomath/ast"
+	"github.com/kestred/philomath/utils"
 )
 
 type Code uint16
@@ -77,10 +78,7 @@ func (s *Scope) Init() {
 }
 
 func (s *Scope) AssignRegister() Register {
-	if s.NextRegister == OutOfRegisters {
-		panic("Ran out of registers.  TODO: Register re-use")
-	}
-
+	utils.Assert(s.NextRegister < OutOfRegisters, "Ran out of assignable registers.")
 	register := s.NextRegister
 	s.NextRegister += 1
 	return register
