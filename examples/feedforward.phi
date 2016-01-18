@@ -2,24 +2,6 @@
 #netInput  :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
 #tanhError :: formula { (1 - output²) Σ[e in |errors|] (errors[e] × weights[e]) }
 
-netInput :: func(inputs: []real, weights: []real) -> real {
-  result := 0.0;
-  for input, index in inputs:
-    # TODO: add and assign operator
-    #result += input * weights[index];
-    result = result + input * weights[index];
-  return result;
-}
-
-tanhError :: func(output: real, errors: []real, weights: []real) -> real {
-  result := 0.0;
-  for error, index in errors
-    # TODO: add and assign operator
-    #result += input * weights[index];
-    result = result + error * weights[index];
-  return result * (1 - output * output);
-}
-
 #- TODO: modules (ie. namespaces), this might be a good syntax?
 feedfoward :: module {
   hidden_node :: struct {
@@ -48,6 +30,20 @@ feedfoward :: module {
 }
 -#
 
+netInput :: func(inputs: []real, weights: []real) -> real {
+  result := 0.0;
+  for input, index in inputs:
+    result += input * weights[index];
+  return result;
+}
+
+tanhError :: func(output: real, errors: []real, weights: []real) -> real {
+  result := 0.0;
+  for error, index in errors:
+    result += input * weights[index];
+  return result * (1 - output * output);
+}
+
 hidden_node :: struct {
   output: real;
   bias: real;
@@ -72,7 +68,7 @@ feedforward_network :: struct {
 
 trainFeedforward :: func(net: ^feedforward_network, inputs: [1]real, outputs: [1]real) {
   hiddenOutputs : [2] real;
-  for node, index in net.hidden
+  for node, index in net.hidden:
     # 1. Compute net input and output for hidden nodes (tanh)
     # TODO: intrinsics, modulize math?, etc
     hiddenOutputs[index] = math_tanh(netInput(inputs, node.weights));
@@ -124,7 +120,7 @@ examples : []example_pattern = [
 -#
 examples : []example_pattern;
 
-main :: () {
+main :: func() {
   neuralNet : feedforward_network;
   for example in examples:
     trainFeedforward(^neuralNet, example.inputs, example.outputs);

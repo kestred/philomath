@@ -141,14 +141,8 @@ func inferInfixType(op ast.Operator, left ast.Type, right ast.Type) ast.Type {
 }
 
 func promoteNumber(left ast.Type, right ast.Type) ast.Type {
-	if !isNumber(left) {
-		if !isNumber(right) {
-			return ast.InferredNumber
-		} else {
-			return right
-		}
-	} else if !isNumber(right) {
-		return ast.InferredNumber
+	if !isNumber(left) || !isNumber(right) {
+		return ast.UnknownType
 	}
 
 	if isReal(left) {

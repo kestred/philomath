@@ -70,18 +70,18 @@ func TestEvaluateArithmetic(t *testing.T) {
 	assert.Equal(t, uint64(5), ToU64(result))
 
 	result = evalExpression(`(2 + 3) + 4.0`)
-	assert.Equal(t, float64((2 + 3)+4.0), ToF64(result))
+	assert.Equal(t, float64((2+3)+4.0), ToF64(result))
 	assert.Equal(t, float64(9.0), ToF64(result))
 
 	result = evalExpression(`(2 + 3.0) + 4`)
-	assert.Equal(t, float64((2 + 3.0)+4), ToF64(result))
+	assert.Equal(t, float64((2+3.0)+4), ToF64(result))
 	assert.Equal(t, float64(9.0), ToF64(result))
 
 	result = evalExpression(`(02 + 03) + 4.0`)
-	assert.Equal(t, float64((02 + 03)+4.0), ToF64(result))
+	assert.Equal(t, float64((02+03)+4.0), ToF64(result))
 	assert.Equal(t, float64(9.0), ToF64(result))
 
 	result = evalExpression(`(02 + 3.0) + 04`)
-	assert.Equal(t, float64((02 + 3.0)+04), ToF64(result))
+	assert.Equal(t, float64((02+3.0)+04), ToF64(result))
 	assert.Equal(t, float64(9.0), ToF64(result))
 }
