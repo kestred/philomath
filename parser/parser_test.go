@@ -26,158 +26,134 @@ func TestParseArithmetic(t *testing.T) {
 	var expected ast.Expr
 
 	// add follows multiply
-	expected = ast.NewInfixExpr(
-		ast.NewInfixExpr(
-			ast.NewValueExpr(ast.NewNumberLiteral("2")),
+	expected = ast.InExp(
+		ast.InExp(
+			ast.ValExp(ast.NumLit("2")),
 			ast.Operator{"*"},
-			ast.NewValueExpr(ast.NewNumberLiteral("3")),
+			ast.ValExp(ast.NumLit("3")),
 		),
 		ast.Operator{"+"},
-		ast.NewValueExpr(ast.NewNumberLiteral("4")),
+		ast.ValExp(ast.NumLit("4")),
 	)
 
 	assert.Equal(t, expected, parseExpression(`2 * 3 + 4`))
 
 	// multiply follows add
-	expected = ast.NewInfixExpr(
-		ast.NewValueExpr(ast.NewNumberLiteral("2")),
+	expected = ast.InExp(
+		ast.ValExp(ast.NumLit("2")),
 		ast.Operator{"+"},
-		ast.NewInfixExpr(
-			ast.NewValueExpr(ast.NewNumberLiteral("3")),
+		ast.InExp(
+			ast.ValExp(ast.NumLit("3")),
 			ast.Operator{"*"},
-			ast.NewValueExpr(ast.NewNumberLiteral("4")),
+			ast.ValExp(ast.NumLit("4")),
 		),
 	)
 
 	assert.Equal(t, expected, parseExpression(`2 + 3 * 4`))
 
 	// multiply follows grouped add
-	expected = ast.NewInfixExpr(
-		ast.NewGroupExpr(ast.NewInfixExpr(
-			ast.NewValueExpr(ast.NewNumberLiteral("2")),
+	expected = ast.InExp(
+		ast.GrpExp(ast.InExp(
+			ast.ValExp(ast.NumLit("2")),
 			ast.Operator{"+"},
-			ast.NewValueExpr(ast.NewNumberLiteral("3")),
+			ast.ValExp(ast.NumLit("3")),
 		)),
 		ast.Operator{"*"},
-		ast.NewValueExpr(ast.NewNumberLiteral("4")),
+		ast.ValExp(ast.NumLit("4")),
 	)
 
 	assert.Equal(t, expected, parseExpression(`(2 + 3) * 4`))
 
 	// add and subtract associativity
-	expected = ast.NewInfixExpr(
-		ast.NewInfixExpr(
-			ast.NewInfixExpr(
-				ast.NewInfixExpr(
-					ast.NewInfixExpr(
-						ast.NewInfixExpr(
-							ast.NewValueExpr(ast.NewNumberLiteral("2")),
+	expected = ast.InExp(
+		ast.InExp(
+			ast.InExp(
+				ast.InExp(
+					ast.InExp(
+						ast.InExp(
+							ast.ValExp(ast.NumLit("2")),
 							ast.Operator{"+"},
-							ast.NewValueExpr(ast.NewNumberLiteral("3")),
+							ast.ValExp(ast.NumLit("3")),
 						),
 						ast.Operator{"+"},
-						ast.NewValueExpr(ast.NewNumberLiteral("4")),
+						ast.ValExp(ast.NumLit("4")),
 					),
 					ast.Operator{"-"},
-					ast.NewValueExpr(ast.NewNumberLiteral("5")),
+					ast.ValExp(ast.NumLit("5")),
 				),
 				ast.Operator{"+"},
-				ast.NewValueExpr(ast.NewNumberLiteral("6")),
+				ast.ValExp(ast.NumLit("6")),
 			),
 			ast.Operator{"-"},
-			ast.NewValueExpr(ast.NewNumberLiteral("7")),
+			ast.ValExp(ast.NumLit("7")),
 		),
 		ast.Operator{"-"},
-		ast.NewValueExpr(ast.NewNumberLiteral("8")),
+		ast.ValExp(ast.NumLit("8")),
 	)
 
 	assert.Equal(t, expected, parseExpression(`2 + 3 + 4 - 5 + 6 - 7 - 8`))
 
 	// multiply, divide, and modulus associativity
-	expected = ast.NewInfixExpr(
-		ast.NewInfixExpr(
-			ast.NewInfixExpr(
-				ast.NewInfixExpr(
-					ast.NewInfixExpr(
-						ast.NewInfixExpr(
-							ast.NewValueExpr(ast.NewNumberLiteral("2")),
+	expected = ast.InExp(
+		ast.InExp(
+			ast.InExp(
+				ast.InExp(
+					ast.InExp(
+						ast.InExp(
+							ast.ValExp(ast.NumLit("2")),
 							ast.Operator{"/"},
-							ast.NewValueExpr(ast.NewNumberLiteral("3")),
+							ast.ValExp(ast.NumLit("3")),
 						),
 						ast.Operator{"/"},
-						ast.NewValueExpr(ast.NewNumberLiteral("4")),
+						ast.ValExp(ast.NumLit("4")),
 					),
 					ast.Operator{"*"},
-					ast.NewValueExpr(ast.NewNumberLiteral("5")),
+					ast.ValExp(ast.NumLit("5")),
 				),
 				ast.Operator{"*"},
-				ast.NewValueExpr(ast.NewNumberLiteral("6")),
+				ast.ValExp(ast.NumLit("6")),
 			),
 			ast.Operator{"%"},
-			ast.NewValueExpr(ast.NewNumberLiteral("7")),
+			ast.ValExp(ast.NumLit("7")),
 		),
 		ast.Operator{"/"},
-		ast.NewValueExpr(ast.NewNumberLiteral("8")),
+		ast.ValExp(ast.NumLit("8")),
 	)
 
 	assert.Equal(t, expected, parseExpression(`2 / 3 / 4 * 5 * 6 % 7 / 8`))
 
 	// signed addition
-	expected = ast.NewInfixExpr(
-		ast.NewPrefixExpr(
-			ast.Operator{"-"},
-			ast.NewValueExpr(ast.NewNumberLiteral("2")),
-		),
+	expected = ast.InExp(
+		ast.PreExp(ast.Operator{"-"}, ast.ValExp(ast.NumLit("2"))),
 		ast.Operator{"+"},
-		ast.NewPrefixExpr(
-			ast.Operator{"+"},
-			ast.NewValueExpr(ast.NewNumberLiteral("4")),
-		),
+		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
 	assert.Equal(t, expected, parseExpression(`-2 + +4`))
 
 	// signed subtraction
-	expected = ast.NewInfixExpr(
-		ast.NewPrefixExpr(
-			ast.Operator{"-"},
-			ast.NewValueExpr(ast.NewNumberLiteral("2")),
-		),
+	expected = ast.InExp(
+		ast.PreExp(ast.Operator{"-"}, ast.ValExp(ast.NumLit("2"))),
 		ast.Operator{"-"},
-		ast.NewPrefixExpr(
-			ast.Operator{"+"},
-			ast.NewValueExpr(ast.NewNumberLiteral("4")),
-		),
+		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
 	assert.Equal(t, expected, parseExpression(`-2 - +4`))
 
 	// signed multiplication
-	expected = ast.NewInfixExpr(
-		ast.NewPrefixExpr(
-			ast.Operator{"-"},
-			ast.NewValueExpr(ast.NewNumberLiteral("2")),
-		),
+	expected = ast.InExp(
+		ast.PreExp(ast.Operator{"-"}, ast.ValExp(ast.NumLit("2"))),
 		ast.Operator{"*"},
-		ast.NewPrefixExpr(
-			ast.Operator{"+"},
-			ast.NewValueExpr(ast.NewNumberLiteral("4")),
-		),
+		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
 	assert.Equal(t, expected, parseExpression(`-2 * +4`))
 
 	// signed division
-	expected = ast.NewInfixExpr(
-		ast.NewPrefixExpr(
-			ast.Operator{"-"},
-			ast.NewValueExpr(ast.NewNumberLiteral("2")),
-		),
+	expected = ast.InExp(
+		ast.PreExp(ast.Operator{"-"}, ast.ValExp(ast.NumLit("2"))),
 		ast.Operator{"/"},
-		ast.NewPrefixExpr(
-			ast.Operator{"+"},
-			ast.NewValueExpr(ast.NewNumberLiteral("4")),
-		),
+		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
 	assert.Equal(t, expected, parseExpression(`-2 / +4`))

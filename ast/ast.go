@@ -301,7 +301,7 @@ type (
 	}
 )
 
-func NewPostfixExpr(subexpr Expr, op Operator) *PostfixExpr {
+func PostExp(subexpr Expr, op Operator) *PostfixExpr {
 	return &PostfixExpr{
 		Subexpr:  subexpr,
 		Operator: op,
@@ -309,7 +309,7 @@ func NewPostfixExpr(subexpr Expr, op Operator) *PostfixExpr {
 	}
 }
 
-func NewInfixExpr(left Expr, op Operator, right Expr) *InfixExpr {
+func InExp(left Expr, op Operator, right Expr) *InfixExpr {
 	return &InfixExpr{
 		Left:     left,
 		Operator: op,
@@ -318,7 +318,7 @@ func NewInfixExpr(left Expr, op Operator, right Expr) *InfixExpr {
 	}
 }
 
-func NewPrefixExpr(op Operator, subexpr Expr) *PrefixExpr {
+func PreExp(op Operator, subexpr Expr) *PrefixExpr {
 	return &PrefixExpr{
 		Operator: op,
 		Subexpr:  subexpr,
@@ -326,7 +326,7 @@ func NewPrefixExpr(op Operator, subexpr Expr) *PrefixExpr {
 	}
 }
 
-func NewCallExpr(fn Expr, args []Expr) *CallExpr {
+func CallExp(fn Expr, args []Expr) *CallExpr {
 	return &CallExpr{
 		Function:  fn,
 		Arguments: args,
@@ -334,7 +334,7 @@ func NewCallExpr(fn Expr, args []Expr) *CallExpr {
 	}
 }
 
-func NewFunctionExpr(params []FunctionParam, ret Type, block Block) *FunctionExpr {
+func FnExp(params []FunctionParam, ret Type, block Block) *FunctionExpr {
 	return &FunctionExpr{
 		Params: params,
 		Return: ret,
@@ -343,14 +343,14 @@ func NewFunctionExpr(params []FunctionParam, ret Type, block Block) *FunctionExp
 	}
 }
 
-func NewGroupExpr(subexpr Expr) *GroupExpr {
+func GrpExp(subexpr Expr) *GroupExpr {
 	return &GroupExpr{
 		Subexpr: subexpr,
 		Type:    InferredType,
 	}
 }
 
-func NewMemberExpr(left Expr, member Ident) *MemberExpr {
+func DotExp(left Expr, member Ident) *MemberExpr {
 	return &MemberExpr{
 		Left:   left,
 		Member: member,
@@ -358,7 +358,7 @@ func NewMemberExpr(left Expr, member Ident) *MemberExpr {
 	}
 }
 
-func NewValueExpr(literal Literal) *ValueExpr {
+func ValExp(literal Literal) *ValueExpr {
 	return &ValueExpr{
 		Literal: literal,
 		Type:    InferredType,
@@ -444,11 +444,11 @@ type (
 	}
 )
 
-func NewNamedType(name Expr) *NamedType {
+func NamTyp(name Expr) *NamedType {
 	return &NamedType{Name: name}
 }
 
-func NewPointerType(pointerTo Type) *PointerType {
+func PtrTyp(pointerTo Type) *PointerType {
 	return &PointerType{PointerTo: pointerTo}
 }
 
@@ -479,14 +479,14 @@ type (
 	}
 )
 
-func NewNumberLiteral(literal string) *NumberLiteral {
+func NumLit(literal string) *NumberLiteral {
 	return &NumberLiteral{
 		Literal: literal,
 		Value:   InferredValue,
 	}
 }
 
-func NewTextLiteral(literal string) *TextLiteral {
+func TxtLit(literal string) *TextLiteral {
 	return &TextLiteral{
 		Literal: literal,
 		Value:   InferredValue,
