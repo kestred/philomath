@@ -291,7 +291,7 @@ func (o *Operators) InitBuiltin() {
 	o.defineHACKY(Operator{"Negative", "-", UnaryPrefix, RightAssociative, PrefixPrecedence})
 	o.defineHACKY(Operator{"Address Of", "^", UnaryPrefix, RightAssociative, PrefixPrecedence})
 	o.defineHACKY(Operator{"Dereference", "~", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Descope", ".", UnaryPostfix, LeftAssociative, PostfixPrecedence})
+	o.defineHACKY(Operator{"Member", ".", UnaryPostfix, LeftAssociative, PostfixPrecedence})
 }
 
 func (o *Operators) defineHACKY(op Operator) {

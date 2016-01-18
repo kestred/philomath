@@ -1,8 +1,29 @@
 package ast
 
-/* Null Nodes */
-var Undefined = &struct{}{}
-var Inferred = &NamedType{Name: &ValueExpr{Literal: &Ident{"<Inferred>"}}}
+/* Const Nodes */
+var (
+	InferredValue = &struct{}{}
+
+	UnknownType      = &BuiltinType{"<unknown>"}  // could not infer type
+	InferredType     = &BuiltinType{"<inferred>"} // could be any type
+	InferredNumber   = &BuiltinType{"<number>"}   // could be any number
+	InferredReal     = &BuiltinType{"<real>"}     // could only be a real number
+	InferredSigned   = &BuiltinType{"<signed>"}   // could only be a signed number
+	InferredUnsigned = &BuiltinType{"<unsigned>"} // could only be an unsigned number
+	BuiltinReal      = &BuiltinType{"real"}
+	BuiltinReal32    = &BuiltinType{"r32"}
+	BuiltinReal64    = &BuiltinType{"r64"}
+	BuiltinInt       = &BuiltinType{"int"}
+	BuiltinInt8      = &BuiltinType{"i8"}
+	BuiltinInt16     = &BuiltinType{"i16"}
+	BuiltinInt32     = &BuiltinType{"i32"}
+	BuiltinInt64     = &BuiltinType{"i64"}
+	BuiltinUint      = &BuiltinType{"uint"}
+	BuiltinUint8     = &BuiltinType{"u8"}
+	BuiltinUint16    = &BuiltinType{"u16"}
+	BuiltinUint32    = &BuiltinType{"u32"}
+	BuiltinUint64    = &BuiltinType{"u64"}
+)
 
 /* Abstract Nodes */
 
@@ -52,6 +73,7 @@ func (t *ArrayType) ImplementsNode()    {}
 func (t *FunctionType) ImplementsNode() {}
 func (t *NamedType) ImplementsNode()    {}
 func (t *PointerType) ImplementsNode()  {}
+func (t *BuiltinType) ImplementsNode()  {}
 
 // Literals
 func (l *NumberLiteral) ImplementsNode() {}
@@ -111,6 +133,7 @@ func (t *ArrayType) ImplementsType()    {}
 func (t *FunctionType) ImplementsType() {}
 func (t *NamedType) ImplementsType()    {}
 func (t *PointerType) ImplementsType()  {}
+func (t *BuiltinType) ImplementsType()  {}
 
 type Literal interface {
 	Node
@@ -272,7 +295,7 @@ func NewPostfixExpr(subexpr Expr, op Operator) *PostfixExpr {
 	return &PostfixExpr{
 		Subexpr:  subexpr,
 		Operator: op,
-		Type:     Inferred,
+		Type:     InferredType,
 	}
 }
 
@@ -281,7 +304,7 @@ func NewInfixExpr(left Expr, op Operator, right Expr) *InfixExpr {
 		Left:     left,
 		Operator: op,
 		Right:    right,
-		Type:     Inferred,
+		Type:     InferredType,
 	}
 }
 
@@ -289,7 +312,7 @@ func NewPrefixExpr(op Operator, subexpr Expr) *PrefixExpr {
 	return &PrefixExpr{
 		Operator: op,
 		Subexpr:  subexpr,
-		Type:     Inferred,
+		Type:     InferredType,
 	}
 }
 
@@ -297,7 +320,7 @@ func NewCallExpr(fn Expr, args []Expr) *CallExpr {
 	return &CallExpr{
 		Function:  fn,
 		Arguments: args,
-		Type:      Inferred,
+		Type:      InferredType,
 	}
 }
 
@@ -306,14 +329,14 @@ func NewFunctionExpr(params []FunctionParam, ret Type, block Block) *FunctionExp
 		Params: params,
 		Return: ret,
 		Block:  block,
-		Type:   Inferred,
+		Type:   InferredType,
 	}
 }
 
 func NewGroupExpr(subexpr Expr) *GroupExpr {
 	return &GroupExpr{
 		Subexpr: subexpr,
-		Type:    Inferred,
+		Type:    InferredType,
 	}
 }
 
@@ -321,14 +344,14 @@ func NewMemberExpr(left Expr, member Ident) *MemberExpr {
 	return &MemberExpr{
 		Left:   left,
 		Member: member,
-		Type:   Inferred,
+		Type:   InferredType,
 	}
 }
 
 func NewValueExpr(literal Literal) *ValueExpr {
 	return &ValueExpr{
 		Literal: literal,
-		Type:    Inferred,
+		Type:    InferredType,
 	}
 }
 
@@ -405,6 +428,10 @@ type (
 	PointerType struct {
 		PointerTo Type
 	}
+
+	BuiltinType struct {
+		Name string
+	}
 )
 
 func NewNamedType(name Expr) *NamedType {
@@ -445,13 +472,13 @@ type (
 func NewNumberLiteral(literal string) *NumberLiteral {
 	return &NumberLiteral{
 		Literal: literal,
-		Value:   Undefined,
+		Value:   InferredValue,
 	}
 }
 
 func NewTextLiteral(literal string) *TextLiteral {
 	return &TextLiteral{
 		Literal: literal,
-		Value:   Undefined,
+		Value:   InferredValue,
 	}
 }
