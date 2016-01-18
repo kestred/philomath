@@ -14,19 +14,19 @@ func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Regist
 			continue
 		case bc.LOAD_CONST:
 			registers[inst.Out] = consts[inst.Left]
-		case bc.INT64_ADD:
+		case bc.I64_ADD:
 			left := int64(registers[inst.Left])
 			right := int64(registers[inst.Right])
 			registers[inst.Out] = bc.Data(left + right)
-		case bc.INT64_SUBTRACT:
+		case bc.I64_SUBTRACT:
 			left := int64(registers[inst.Left])
 			right := int64(registers[inst.Right])
 			registers[inst.Out] = bc.Data(left - right)
-		case bc.INT64_MULTIPLY:
+		case bc.I64_MULTIPLY:
 			left := int64(registers[inst.Left])
 			right := int64(registers[inst.Right])
 			registers[inst.Out] = bc.Data(left * right)
-		case bc.INT64_DIVIDE:
+		case bc.I64_DIVIDE:
 			left := int64(registers[inst.Left])
 			right := int64(registers[inst.Right])
 			registers[inst.Out] = bc.Data(left / right)

@@ -101,6 +101,7 @@ func (d *ValueDefn) ImplementsDefn()  {}
 type Expr interface {
 	Node
 	ImplementsExpr()
+	GetType() Type
 }
 
 func (e *PostfixExpr) ImplementsExpr()  {}
@@ -111,6 +112,15 @@ func (e *GroupExpr) ImplementsExpr()    {}
 func (e *FunctionExpr) ImplementsExpr() {}
 func (e *MemberExpr) ImplementsExpr()   {}
 func (e *ValueExpr) ImplementsExpr()    {}
+
+func (e *PostfixExpr) GetType() Type  { return e.Type }
+func (e *InfixExpr) GetType() Type    { return e.Type }
+func (e *PrefixExpr) GetType() Type   { return e.Type }
+func (e *CallExpr) GetType() Type     { return e.Type }
+func (e *GroupExpr) GetType() Type    { return e.Type }
+func (e *FunctionExpr) GetType() Type { return e.Type }
+func (e *MemberExpr) GetType() Type   { return e.Type }
+func (e *ValueExpr) GetType() Type    { return e.Type }
 
 type Stmt interface {
 	Node

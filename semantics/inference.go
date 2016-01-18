@@ -28,7 +28,8 @@ func InferTypes(expr ast.Expr) ast.Type {
 		node.Type = inferPrefixType(node.Operator, subtype)
 		return node.Type
 	case *ast.GroupExpr:
-		return InferTypes(node.Subexpr)
+		node.Type = InferTypes(node.Subexpr)
+		return node.Type
 	case *ast.ValueExpr:
 		switch literal := node.Literal.(type) {
 		case *ast.NumberLiteral:

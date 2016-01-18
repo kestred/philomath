@@ -33,7 +33,7 @@ func TestEvaluateNoop(t *testing.T) {
 		{Code: bytecode.NOOP},
 		{Code: bytecode.LOAD_CONST, Out: 2, Left: 2},
 		{Code: bytecode.NOOP},
-		{Code: bytecode.INT64_ADD, Left: 1, Right: 2, Out: 3},
+		{Code: bytecode.I64_ADD, Left: 1, Right: 2, Out: 3},
 	}
 	consts = []bytecode.Data{0, 1, 2}
 	result = Evaluate(insts, consts, 3)
