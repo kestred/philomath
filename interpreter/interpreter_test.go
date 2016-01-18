@@ -3,9 +3,10 @@ package interpreter
 import (
 	"testing"
 
-	// TODO: Stop relying on parser when more code is stable
+	// TODO: Maybe stop relying on parser et. al. when more code is stable?
 	"github.com/kestred/philomath/bytecode"
 	"github.com/kestred/philomath/parser"
+	"github.com/kestred/philomath/semantics"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,6 +14,8 @@ func evalExpression(input string) bytecode.Data {
 	p := parser.Parser{}
 	p.Init("test", false, []byte(input))
 	expr := p.ParseExpression()
+	semantics.InferTypes(expr)
+
 	scope := &bytecode.Scope{}
 	scope.Init()
 	insts := bytecode.FromExpr(expr, scope)
@@ -40,13 +43,45 @@ func TestEvaluateNoop(t *testing.T) {
 	assert.Equal(t, 3, int(result))
 }
 
+func TestUnsafeSafety(t *testing.T) {
+	lhs := ToI64(bytecode.Data(2))
+	rhs := ToF64(bytecode.Data(2))
+	assert.NotEqual(t, float64(lhs), float64(rhs))
+	assert.Equal(t, int64(2), lhs)
+	assert.Equal(t, float64(1e-323), rhs)
+}
+
 func TestEvaluateArithmetic(t *testing.T) {
 	// constant
 	result := evalExpression(`22`)
-	assert.Equal(t, 22, int(result))
+	assert.Equal(t, int64(22), ToI64(result))
 
 	// add, subtract, multiply, divide
 	result = evalExpression(`2 * 3 + 27 / 9 - 15`)
-	assert.Equal(t, 2*3+27/9-15, int(result))
-	assert.Equal(t, -6, int(result))
+	assert.Equal(t, int64(2*3+27/9-15), ToI64(result))
+	assert.Equal(t, int64(-6), ToI64(result))
+
+	result = evalExpression(`2.0 * 4.0 + 8.0 / 16.0 - 32.0`)
+	assert.Equal(t, float64(2.0*4.0+8.0/16.0-32.0), ToF64(result))
+	assert.Equal(t, float64(-23.5), ToF64(result))
+
+	result = evalExpression(`02 * 03 + 04 / 05 - 01`)
+	assert.Equal(t, uint64(02*03+04/05-01), ToU64(result))
+	assert.Equal(t, uint64(5), ToU64(result))
+
+	result = evalExpression(`(2 + 3) + 4.0`)
+	assert.Equal(t, float64((2 + 3)+4.0), ToF64(result))
+	assert.Equal(t, float64(9.0), ToF64(result))
+
+	result = evalExpression(`(2 + 3.0) + 4`)
+	assert.Equal(t, float64((2 + 3.0)+4), ToF64(result))
+	assert.Equal(t, float64(9.0), ToF64(result))
+
+	result = evalExpression(`(02 + 03) + 4.0`)
+	assert.Equal(t, float64((02 + 03)+4.0), ToF64(result))
+	assert.Equal(t, float64(9.0), ToF64(result))
+
+	result = evalExpression(`(02 + 3.0) + 04`)
+	assert.Equal(t, float64((02 + 3.0)+04), ToF64(result))
+	assert.Equal(t, float64(9.0), ToF64(result))
 }
