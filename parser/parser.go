@@ -3,12 +3,12 @@ package parser
 import (
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/kestred/philomath/ast"
 	"github.com/kestred/philomath/scanner"
 	"github.com/kestred/philomath/token"
-	"github.com/kestred/philomath/utils"
 )
 
 type ParseError struct {
@@ -47,15 +47,17 @@ func (p *Parser) Init(filename string, trace bool, src []byte) {
 	}
 
 	p.filename = filename
-	p.trace = trace
 	p.scanner.Init(filename, src, scanError)
 	p.operators.InitBuiltin()
 	p.next()
+
+	// don't trace first token
+	p.trace = trace
 }
 
-func (p *Parser) Parse() ast.Node {
+func (p *Parser) ParseBlock() *ast.Block {
 	defer p.recoverStopped()
-	return &ast.Root{}
+	return p.parseBlock()
 }
 
 func (p *Parser) ParseExpression() ast.Expr {
@@ -98,25 +100,112 @@ func (p *Parser) error(pos token.Position, msg string) {
 	p.Errors = append(p.Errors, &ParseError{pos, msg})
 }
 
-func (p *Parser) expect(tok token.Token) {
+func (p *Parser) expect(tok token.Token) bool {
 	if p.tok != tok {
 		// TODO: While this is easy to program, it makes for absolutely terrible
 		// error messages in every single case that can be used.
 		// Eventually, anywhere this is used should be replaced with a thought out message.
-		p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, p.tok, tok))
+		p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, tok, p.tok))
+		p.next()
+		return false
+	} else {
+		p.next()
+		return true
 	}
-	p.next()
+}
+
+// TODO: This makes for absolutely terrible error messages.
+// Eventually, anywhere this is used should be replaced with a thought out message.
+func (p *Parser) expected(what string) {
+	p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, what, p.tok))
+	p.next() // eat something to make sure we don't infinite loop
 }
 
 func (p *Parser) next() {
-	p.pos, p.tok, p.lit = p.scanner.Scan()
-
 	if p.trace {
-		pc, _, _, _ := runtime.Caller(1)
+		pc, _, line, _ := runtime.Caller(1)
 		path := strings.Split(runtime.FuncForPC(pc).Name(), ".")
-		caller := "Parser." + path[len(path)-1]
-		fmt.Errorf("%s : %-14s @ %v\n", p.lit, p.tok, caller)
+		name := path[len(path)-1]
+		// ignore expect and expected
+		if len(name) >= 6 && name[0:6] == "expect" {
+			pc, _, line, _ = runtime.Caller(2)
+			path = strings.Split(runtime.FuncForPC(pc).Name(), ".")
+			name = path[len(path)-1]
+		}
+		caller := "Parser." + name
+		// NOTE: For some irritating reason, running `go test` will always
+		//       hide stderr so make sure we use stdout
+		fmt.Printf("%s : %-14s @ %v:%v\n", p.lit, p.tok, caller, line)
 	}
+
+	p.pos, p.tok, p.lit = p.scanner.Scan()
+}
+
+func (p *Parser) parseBlock() *ast.Block {
+	if p.tok == token.COLON {
+		p.next() // consume ":"
+		stmt := p.parseStatement()
+		return &ast.Block{[]ast.Blockable{stmt}}
+	}
+
+	p.expect(token.LEFT_BRACE)
+	var stmts []ast.Blockable
+	for p.tok != token.RIGHT_BRACE && p.tok != token.END {
+		stmts = append(stmts, p.parseBlockable())
+	}
+	p.expect(token.RIGHT_BRACE)
+	return &ast.Block{stmts}
+}
+
+func (p *Parser) parseBlockable() ast.Blockable {
+	if p.tok == token.LEFT_BRACE {
+		return p.parseBlock()
+	} else if p.tok != token.IDENT {
+		return p.parseStatement()
+	}
+
+	next, _ := p.scanner.Peek()
+	if next == token.CONS || next == token.COLON {
+		return p.parseDeclaration()
+	} else {
+		return p.parseStatement()
+	}
+}
+
+func (p *Parser) parseDeclaration() ast.Decl {
+	name := p.lit
+	p.next() // eat identifier
+
+	if p.tok == token.COLON {
+		// parse mutable decl
+		p.next() // eat ":"
+		if p.tok != token.EQUALS {
+			panic("TODO: Handle typed declarations")
+		}
+		p.expect(token.EQUALS)
+		expr := p.parseExpression()
+		p.expect(token.SEMICOLON)
+		return ast.Mutable(name, nil, expr)
+	}
+
+	// parse const decl
+	p.expect(token.CONS)
+	switch p.tok {
+	case token.STRUCT:
+		panic("TODO: Handle structs")
+	case token.MODULE:
+		panic("TODO: Handle modules")
+	default:
+		panic("TODO: Handle const expressions (maybe?)")
+		// expr := p.parseExpression()
+	}
+}
+
+func (p *Parser) parseStatement() ast.Stmt {
+	// TODO: Handle non-expression statements
+	expr := p.parseExpression()
+	p.expect(token.SEMICOLON)
+	return &ast.ExprStmt{expr}
 }
 
 func (p *Parser) parseExpression() ast.Expr {
@@ -171,7 +260,9 @@ func (p *Parser) parseBinaryOperator() Operator {
 		}
 	}
 
-	utils.Assert(op.Type != Nullary, "Found a nullary operator")
+	if op.Type == Nullary {
+		panic("TODO: Handle operator is not an infix/postfix operator")
+	}
 
 	return op
 }
@@ -208,7 +299,9 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 			}
 		}
 
-		utils.Assert(op.Type != Nullary, "Found a nullary operator")
+		if op.Type == Nullary {
+			panic("TODO: Handle operator is not a prefix operator")
+		}
 
 		p.next() // consume operator
 		expr := p.parseOperators(PrefixPrecedence)
@@ -216,25 +309,30 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	}
 
 	switch p.tok {
-	// handle grouped expression
 	case token.LEFT_PAREN:
-		p.next() // consume left parent
+		// handle grouped expression
+		p.next() // consume left paren
 		expr := p.parseOperators(0)
 		p.expect(token.RIGHT_PAREN)
 		return ast.GrpExp(expr)
 
-	// handle literals
-	case token.IDENT, token.TEXT:
-		panic("TODO: I'll handle these eventually")
+	case token.IDENT:
+		name := p.lit
+		p.next() // consume ident
+		return ast.ValExp(&ast.Ident{name})
+
+	case token.TEXT:
+		panic("TODO: Handle text literals")
 
 	case token.NUMBER:
 		expr := ast.ValExp(ast.NumLit(p.lit))
-		p.next()
+		p.next() // eat number
 		return expr
-	}
 
-	panic("TODO: not implemented")
-	return nil // TODO: Implement
+	default:
+		p.expected("a value")
+		return nil // TODO: maybe return BadExpr?
+	}
 }
 
 type OperatorType uint8
@@ -248,11 +346,46 @@ const (
 	BinaryInfix
 )
 
+var operatorTypes = [...]string{
+	Nullary:      "Nullary",
+	UnaryPrefix:  "Prefix",
+	UnaryPostfix: "Postfix",
+	BinaryInfix:  "Infix",
+}
+
+func (typ OperatorType) String() string {
+	s := ""
+	if 0 <= typ && typ < OperatorType(len(operatorTypes)) {
+		s = operatorTypes[typ]
+	}
+	if s == "" {
+		s = "OperatorType(" + strconv.Itoa(int(typ)) + ")"
+	}
+	return s
+}
+
 const (
 	NonAssociative Associative = iota
 	LeftAssociative
 	RightAssociative
 )
+
+var associatives = [...]string{
+	NonAssociative:   "NonAssociative",
+	LeftAssociative:  "LeftAssociative",
+	RightAssociative: "RightAssociative",
+}
+
+func (asc Associative) String() string {
+	s := ""
+	if 0 <= asc && asc < Associative(len(associatives)) {
+		s = associatives[asc]
+	}
+	if s == "" {
+		s = "Associative(" + strconv.Itoa(int(asc)) + ")"
+	}
+	return s
+}
 
 const (
 	AssignmentPrecedence Precedence = 0

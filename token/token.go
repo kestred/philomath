@@ -69,11 +69,12 @@ const (
 	operators_end
 
 	// Punctuation
-	COLON  // :
-	CONS   // ::
-	COMMA  // ,
-	EQUALS // =
-	ARROW  // ->
+	COLON     // :
+	CONS      // ::
+	SEMICOLON // ;
+	COMMA     // ,
+	EQUALS    // =
+	ARROW     // ->
 
 	// Delimiters
 	LEFT_PAREN    // (
@@ -110,11 +111,12 @@ var tokens = [...]string{
 	OPERATOR: "Operator",
 	PERIOD:   ".",
 
-	COLON:  ":",
-	CONS:   "::",
-	COMMA:  ",",
-	EQUALS: "=",
-	ARROW:  "->",
+	COLON:     ":",
+	CONS:      "::",
+	SEMICOLON: ";",
+	COMMA:     ",",
+	EQUALS:    "=",
+	ARROW:     "->",
 
 	LEFT_PAREN:    "(",
 	LEFT_BRACKET:  "[",

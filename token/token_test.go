@@ -61,6 +61,7 @@ func TestTokenString(t *testing.T) {
 
 	assert.Equal(t, ":", COLON.String())
 	assert.Equal(t, "::", CONS.String())
+	assert.Equal(t, ";", SEMICOLON.String())
 	assert.Equal(t, ",", COMMA.String())
 	assert.Equal(t, "=", EQUALS.String())
 	assert.Equal(t, "->", ARROW.String())
@@ -94,6 +95,7 @@ func TestIsOperator(t *testing.T) {
 
 	assert.Equal(t, false, COLON.IsOperator())
 	assert.Equal(t, false, CONS.IsOperator())
+	assert.Equal(t, false, SEMICOLON.IsOperator())
 	assert.Equal(t, false, COMMA.IsOperator())
 	assert.Equal(t, false, EQUALS.IsOperator())
 	assert.Equal(t, false, ARROW.IsOperator())
@@ -129,6 +131,7 @@ func TestIsKeyword(t *testing.T) {
 
 	assert.Equal(t, false, COLON.IsKeyword())
 	assert.Equal(t, false, CONS.IsKeyword())
+	assert.Equal(t, false, SEMICOLON.IsKeyword())
 	assert.Equal(t, false, COMMA.IsKeyword())
 	assert.Equal(t, false, EQUALS.IsKeyword())
 	assert.Equal(t, false, ARROW.IsKeyword())

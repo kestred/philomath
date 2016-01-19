@@ -48,20 +48,15 @@ type Scanner struct {
 	lineOffset int          // current line offset
 	line       int          // current line number
 	lines      []token.Line // previous line numbers and offsets
-
-	// public state
-	ErrorCount int // number of errors encountered
 }
 
 // Init prepares the scanner s to tokenize the text src by setting the
 // scanner at the beginning of src.
 //
 // Calls to Scan will invoke the error handler err if they encounter a
-// syntax error and err is not nil. Also, for each error encountered,
-// the Scanner field ErrorCount is incremented by one.
+// syntax error and err is not nil.
 //
-// Note that Init may call err if there is an error in the first character
-// of the file.
+// Init may call err if there is an error in the first character of the file.
 func (s *Scanner) Init(filename string, src []byte, err ErrorHandler) {
 	s.src = src
 	s.err = err
@@ -77,6 +72,37 @@ func (s *Scanner) Init(filename string, src []byte, err ErrorHandler) {
 	if s.char == bom {
 		s.next()
 	}
+}
+
+// Peek pretends to scan the next token.  Calling Peek then Scan is a little
+// over twice as much effort as just Scan, so avoid calling Peek when possible.
+// The error handler will not be called while peeking.
+//
+// Added to support LL(2) parsing of declarations vs statements in block.
+// All other rules are LL(1) parsable, so this should be called infrequently.
+func (s *Scanner) Peek() (tok token.Token, lit string) {
+	// save scanner state
+	char := s.char
+	offset := s.offset
+	readOffset := s.readOffset
+	lineOffset := s.lineOffset
+	line := s.line
+	lines := s.lines
+	err := s.err
+	s.err = nil // ignore errors
+
+	_, tok, lit = s.Scan()
+
+	// restore scanner state
+	s.char = char
+	s.offset = offset
+	s.readOffset = readOffset
+	s.lineOffset = lineOffset
+	s.line = line
+	s.lines = lines
+	s.err = err
+
+	return
 }
 
 // Scan scans the next token and returns the token position, the token, and its
@@ -148,6 +174,8 @@ scanAgain:
 				tok = token.INVALID
 				lit = string(s.src[pos:s.offset])
 			}
+		case ';':
+			tok = token.SEMICOLON
 		case ',':
 			tok = token.COMMA
 		case '=':
@@ -206,8 +234,6 @@ func (s *Scanner) LineAt(offset int) token.Line {
 }
 
 func (s *Scanner) error(offset int, msg string) {
-	s.ErrorCount++
-
 	if s.err != nil {
 		line := s.LineAt(offset)
 		column := 1 + utf8.RuneCount(s.src[line.Offset:offset])

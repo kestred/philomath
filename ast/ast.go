@@ -43,8 +43,6 @@ type Node interface {
 	ImplementsNode()
 }
 
-func (r *Root) ImplementsNode() {}
-
 // Declarations
 func (d *ConstantDecl) ImplementsNode() {}
 func (d *MutableDecl) ImplementsNode()  {}
@@ -79,6 +77,7 @@ func (r *EachRange) ImplementsNode()  {}
 func (r *ExprRange) ImplementsNode()  {}
 func (s *ReturnStmt) ImplementsNode() {}
 func (s *DoneStmt) ImplementsNode()   {}
+func (s *ExprStmt) ImplementsNode()   {}
 
 // Types
 func (t *ArrayType) ImplementsNode()    {}
@@ -93,8 +92,23 @@ func (l *TextLiteral) ImplementsNode()   {}
 func (o *Operator) ImplementsNode()      {}
 func (i *Ident) ImplementsNode()         {}
 
-type Decl interface {
+type Blockable interface {
 	Node
+	ImplementsBlockable()
+}
+
+func (b *Block) ImplementsBlockable()        {}
+func (d *ConstantDecl) ImplementsBlockable() {}
+func (d *MutableDecl) ImplementsBlockable()  {}
+func (s *IfStmt) ImplementsBlockable()       {}
+func (s *WhileStmt) ImplementsBlockable()    {}
+func (s *ForStmt) ImplementsBlockable()      {}
+func (s *ReturnStmt) ImplementsBlockable()   {}
+func (s *DoneStmt) ImplementsBlockable()     {}
+func (s *ExprStmt) ImplementsBlockable()     {}
+
+type Decl interface {
+	Blockable
 	ImplementsDecl()
 }
 
@@ -109,6 +123,18 @@ type Defn interface {
 func (d *EnumDefn) ImplementsDefn()   {}
 func (d *StructDefn) ImplementsDefn() {}
 func (d *ValueDefn) ImplementsDefn()  {}
+
+type Stmt interface {
+	Blockable
+	ImplementsStmt()
+}
+
+func (s *IfStmt) ImplementsStmt()     {}
+func (s *WhileStmt) ImplementsStmt()  {}
+func (s *ForStmt) ImplementsStmt()    {}
+func (s *ReturnStmt) ImplementsStmt() {}
+func (s *DoneStmt) ImplementsStmt()   {}
+func (s *ExprStmt) ImplementsStmt()   {}
 
 type Expr interface {
 	Node
@@ -135,17 +161,6 @@ func (e *FunctionExpr) GetType() Type { return e.Type }
 func (e *AssignExpr) GetType() Type   { return e.Type }
 func (e *MemberExpr) GetType() Type   { return e.Type }
 func (e *ValueExpr) GetType() Type    { return e.Type }
-
-type Stmt interface {
-	Node
-	ImplementsStmt()
-}
-
-func (s *IfStmt) ImplementsStmt()     {}
-func (s *WhileStmt) ImplementsStmt()  {}
-func (s *ForStmt) ImplementsStmt()    {}
-func (s *ReturnStmt) ImplementsStmt() {}
-func (s *DoneStmt) ImplementsStmt()   {}
 
 type Type interface {
 	Node
@@ -185,24 +200,44 @@ func (r *EachRange) ImplementsLoopRange() {}
 
 /* Concrete Nodes */
 
-type Root struct {
-	Stmts []Stmt
-	Decls []Decl
-}
-
 // A declaration is represented by one of the following
 type (
 	ConstantDecl struct {
+		// syntactic
 		Name Ident
 		Defn Defn
+
+		// semantic
+		Type Type
 	}
 
 	MutableDecl struct {
+		// syntactic
 		Name Ident
-		Type Type
+		Type Type // <-- also semantic right now
 		Expr Expr
 	}
 )
+
+func Constant(name string, defn Defn) *ConstantDecl {
+	return &ConstantDecl{
+		Name: Ident{name},
+		Defn: defn,
+		Type: InferredType,
+	}
+}
+
+func Mutable(name string, typ Type, expr Expr) *MutableDecl {
+	if typ == nil {
+		typ = InferredType
+	}
+
+	return &MutableDecl{
+		Name: Ident{name},
+		Type: typ,
+		Expr: expr,
+	}
+}
 
 // A definition is represented by a tree of one or more of the following
 type (
@@ -230,6 +265,56 @@ type (
 	}
 
 	ValueDefn struct {
+		Expr Expr
+	}
+)
+
+// A statement is represented by a tree of one or more of the following
+type (
+	Block struct {
+		Statements []Blockable // Stmt or Decl
+	}
+
+	IfStmt struct {
+		Cond Expr
+		Then Block
+		Else Block
+	}
+
+	WhileStmt struct {
+		Cond Expr
+		Do   Block
+	}
+
+	ForStmt struct {
+		Range LoopRange
+		Do    Block
+	}
+
+	ForRange struct {
+		Decl   MutableDecl
+		Cond   Expr
+		Update AssignExpr
+	}
+
+	EachRange struct {
+		Names []Ident
+		Expr  Expr
+		Range ExprRange
+	}
+
+	ExprRange struct {
+		Min Expr
+		Max Expr
+	}
+
+	ReturnStmt struct {
+		Value Expr
+	}
+
+	DoneStmt struct{}
+
+	ExprStmt struct {
 		Expr Expr
 	}
 )
@@ -396,52 +481,6 @@ func ValExp(literal Literal) *ValueExpr {
 		Type:    InferredType,
 	}
 }
-
-// A statement is represented by a tree of one or more of the following
-type (
-	Block struct {
-		Stmts []Stmt
-	}
-
-	IfStmt struct {
-		Cond Expr
-		Then Block
-		Else Block
-	}
-
-	WhileStmt struct {
-		Cond Expr
-		Do   Block
-	}
-
-	ForStmt struct {
-		Range LoopRange
-		Do    Block
-	}
-
-	ForRange struct {
-		Decl   MutableDecl
-		Cond   Expr
-		Update AssignExpr
-	}
-
-	EachRange struct {
-		Names []Ident
-		Expr  Expr
-		Range ExprRange
-	}
-
-	ExprRange struct {
-		Min Expr
-		Max Expr
-	}
-
-	ReturnStmt struct {
-		Value Expr
-	}
-
-	DoneStmt struct{}
-)
 
 // A type is represented by a tree of one or more of the following
 type (

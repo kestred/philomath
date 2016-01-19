@@ -27,7 +27,6 @@ func TestMain(t *testing.T) {
 		}
 	}
 
-	assert.Zero(t, s.ErrorCount)
 	assert.Equal(t, []token.Token{
 		/* MAIN := ()         */ token.IDENT, token.COLON, token.EQUALS, token.LEFT_PAREN, token.RIGHT_PAREN,
 		/* { mystery.Print(   */ token.LEFT_BRACE, token.IDENT, token.PERIOD, token.IDENT, token.LEFT_PAREN,
@@ -618,6 +617,12 @@ func TestScansOperators(t *testing.T) {
 		assert.Equal(t, 1, err.pos.Column)
 		assert.Equal(t, `too many colons for '::'`, err.msg)
 	}
+
+	scan, err = scanOnce(";")
+	assert.Nil(t, err)
+	assert.Equal(t, token.SEMICOLON, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, ";", scan.lit)
 
 	scan, err = scanOnce(",")
 	assert.Nil(t, err)

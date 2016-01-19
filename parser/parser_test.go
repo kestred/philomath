@@ -7,10 +7,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func parseExpression(input string) ast.Expr {
+func parseExpression(t *testing.T, input string) ast.Expr {
 	var parser Parser
 	parser.Init("test", false, []byte(input))
-	return parser.ParseExpression()
+	expr := parser.ParseExpression()
+	if len(parser.Errors) > 0 {
+		assert.Fail(t, parser.Errors[0].Error())
+	}
+	return expr
+}
+
+func parseBlock(t *testing.T, input string) *ast.Block {
+	var parser Parser
+	parser.Init("test", false, []byte(input))
+	block := parser.ParseBlock()
+	if len(parser.Errors) > 0 {
+		assert.Fail(t, parser.Errors[0].Error())
+	}
+	return block
 }
 
 func TestParseError(t *testing.T) {
@@ -18,7 +32,14 @@ func TestParseError(t *testing.T) {
 	parser.Init("error.phi", false, []byte(`1 * (2 + 3} - 4`))
 	parser.ParseExpression()
 	if assert.True(t, len(parser.Errors) > 0, "Expected some errors but found none.") {
-		assert.Equal(t, "error.phi:1:12: Expected '}' but recieved ')'.", parser.Errors[0].Error())
+		assert.Equal(t, "error.phi:1:12: Expected ')' but recieved '}'.", parser.Errors[0].Error())
+	}
+
+	parser = Parser{}
+	parser.Init("error.phi", false, []byte(`{ 1 - 4 }`))
+	parser.ParseBlock()
+	if assert.True(t, len(parser.Errors) > 0, "Expected some errors but found none.") {
+		assert.Equal(t, "error.phi:1:10: Expected ';' but recieved '}'.", parser.Errors[0].Error())
 	}
 }
 
@@ -36,7 +57,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.ValExp(ast.NumLit("4")),
 	)
 
-	assert.Equal(t, expected, parseExpression(`2 * 3 + 4`))
+	assert.Equal(t, expected, parseExpression(t, `2 * 3 + 4`))
 
 	// multiply follows add
 	expected = ast.InExp(
@@ -49,7 +70,7 @@ func TestParseArithmetic(t *testing.T) {
 		),
 	)
 
-	assert.Equal(t, expected, parseExpression(`2 + 3 * 4`))
+	assert.Equal(t, expected, parseExpression(t, `2 + 3 * 4`))
 
 	// multiply follows grouped add
 	expected = ast.InExp(
@@ -62,7 +83,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.ValExp(ast.NumLit("4")),
 	)
 
-	assert.Equal(t, expected, parseExpression(`(2 + 3) * 4`))
+	assert.Equal(t, expected, parseExpression(t, `(2 + 3) * 4`))
 
 	// add and subtract associativity
 	expected = ast.InExp(
@@ -91,7 +112,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.ValExp(ast.NumLit("8")),
 	)
 
-	assert.Equal(t, expected, parseExpression(`2 + 3 + 4 - 5 + 6 - 7 - 8`))
+	assert.Equal(t, expected, parseExpression(t, `2 + 3 + 4 - 5 + 6 - 7 - 8`))
 
 	// multiply, divide, and modulus associativity
 	expected = ast.InExp(
@@ -120,7 +141,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.ValExp(ast.NumLit("8")),
 	)
 
-	assert.Equal(t, expected, parseExpression(`2 / 3 / 4 * 5 * 6 % 7 / 8`))
+	assert.Equal(t, expected, parseExpression(t, `2 / 3 / 4 * 5 * 6 % 7 / 8`))
 
 	// signed addition
 	expected = ast.InExp(
@@ -129,7 +150,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
-	assert.Equal(t, expected, parseExpression(`-2 + +4`))
+	assert.Equal(t, expected, parseExpression(t, `-2 + +4`))
 
 	// signed subtraction
 	expected = ast.InExp(
@@ -138,7 +159,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
-	assert.Equal(t, expected, parseExpression(`-2 - +4`))
+	assert.Equal(t, expected, parseExpression(t, `-2 - +4`))
 
 	// signed multiplication
 	expected = ast.InExp(
@@ -147,7 +168,7 @@ func TestParseArithmetic(t *testing.T) {
 		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
-	assert.Equal(t, expected, parseExpression(`-2 * +4`))
+	assert.Equal(t, expected, parseExpression(t, `-2 * +4`))
 
 	// signed division
 	expected = ast.InExp(
@@ -156,5 +177,23 @@ func TestParseArithmetic(t *testing.T) {
 		ast.PreExp(ast.Operator{"+"}, ast.ValExp(ast.NumLit("4"))),
 	)
 
-	assert.Equal(t, expected, parseExpression(`-2 / +4`))
+	assert.Equal(t, expected, parseExpression(t, `-2 / +4`))
+}
+
+func TestParseBlock(t *testing.T) {
+	expected := &ast.Block{[]ast.Blockable{
+		ast.Mutable("foo", nil, ast.ValExp(ast.NumLit("3"))),
+		&ast.ExprStmt{ast.InExp(
+			ast.ValExp(ast.NumLit("2")),
+			ast.Operator{"+"},
+			ast.ValExp(&ast.Ident{"foo"}),
+		)},
+	}}
+
+	example := `{
+		foo := 3;  # mutable declaration
+		2 + foo;   # expression statement
+	}`
+
+	assert.Equal(t, expected, parseBlock(t, example))
 }
