@@ -1,7 +1,3 @@
-# TODO: formula user-defined DSL
-#netInput  :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
-#tanhError :: formula { (1 - output²) Σ[e in |errors|] (errors[e] × weights[e]) }
-
 #- TODO: modules (ie. namespaces), this might be a good syntax?
 feedfoward :: module {
   hidden_node :: struct {

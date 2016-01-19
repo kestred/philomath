@@ -127,7 +127,6 @@ func (p *Parser) parseOperators(precedence Precedence) ast.Expr {
 	lhs := p.parseBaseExpression()
 	if p.tok == token.LEFT_BRACKET {
 		panic("TODO: Hande array subscript")
-		// p.parse
 	} else if p.tok == token.LEFT_PAREN {
 		panic("TODO: Handle function call")
 	} else if !p.tok.IsOperator() {
@@ -268,6 +267,7 @@ const (
 type Operator struct {
 	Name        string
 	Literal     string
+	Overload    string
 	Type        OperatorType
 	Associative Associative
 	Precedence  Precedence
@@ -279,19 +279,29 @@ type Operators struct {
 
 func (o *Operators) InitBuiltin() {
 	o.literals = make(map[string][]Operator)
-	o.defineHACKY(Operator{"Logical Or", "or", BinaryInfix, LeftAssociative, LogicalPrecedence})
-	o.defineHACKY(Operator{"Logical And", "and", BinaryInfix, LeftAssociative, LogicalPrecedence + 1})
-	o.defineHACKY(Operator{"Add", "+", BinaryInfix, LeftAssociative, InfixPrecedence})
-	o.defineHACKY(Operator{"Add", "+", BinaryInfix, LeftAssociative, InfixPrecedence})
-	o.defineHACKY(Operator{"Subtract", "-", BinaryInfix, LeftAssociative, InfixPrecedence})
-	o.defineHACKY(Operator{"Multiply", "*", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
-	o.defineHACKY(Operator{"Divide", "/", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
-	o.defineHACKY(Operator{"Remainder", "%", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
-	o.defineHACKY(Operator{"Positive", "+", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Negative", "-", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Address Of", "^", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Dereference", "~", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Member", ".", UnaryPostfix, LeftAssociative, PostfixPrecedence})
+	// logic operators
+	o.defineHACKY(Operator{"Logical Or", "or", "_or_", BinaryInfix, LeftAssociative, LogicalPrecedence})
+	o.defineHACKY(Operator{"Logical And", "and", "_and_", BinaryInfix, LeftAssociative, LogicalPrecedence + 1})
+	o.defineHACKY(Operator{"Inclusion", "in", "_in_", BinaryInfix, LeftAssociative, LogicalPrecedence + 1})
+	// relation operators
+	o.defineHACKY(Operator{"Identical", "is", "_is_", BinaryInfix, NonAssociative, RelationPrecedence})
+	o.defineHACKY(Operator{"Equal", "==", "_eq_", BinaryInfix, NonAssociative, RelationPrecedence})
+	o.defineHACKY(Operator{"Less", "<", "_lt_", BinaryInfix, NonAssociative, RelationPrecedence})
+	o.defineHACKY(Operator{"Less or Equal", "<=", "_lte_", BinaryInfix, NonAssociative, RelationPrecedence})
+	o.defineHACKY(Operator{"Greater", ">", "_gt_", BinaryInfix, NonAssociative, RelationPrecedence})
+	o.defineHACKY(Operator{"Greater or Equal", ">=", "_gte_", BinaryInfix, NonAssociative, RelationPrecedence})
+	// arithmetic operators
+	o.defineHACKY(Operator{"Compare", "<=>", "_cmp_", BinaryInfix, LeftAssociative, InfixPrecedence})
+	o.defineHACKY(Operator{"Add", "+", "_add_", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
+	o.defineHACKY(Operator{"Subtract", "-", "_sub_", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
+	o.defineHACKY(Operator{"Multiply", "*", "_mul_", BinaryInfix, LeftAssociative, InfixPrecedence + 2})
+	o.defineHACKY(Operator{"Divide", "/", "_div_", BinaryInfix, LeftAssociative, InfixPrecedence + 2})
+	o.defineHACKY(Operator{"Remainder", "%", "_rem_", BinaryInfix, LeftAssociative, InfixPrecedence + 2})
+	o.defineHACKY(Operator{"Positive", "+", "pos_", UnaryPrefix, RightAssociative, PrefixPrecedence})
+	o.defineHACKY(Operator{"Negative", "-", "neg_", UnaryPrefix, RightAssociative, PrefixPrecedence})
+	// pointer operators
+	o.defineHACKY(Operator{"Reference", "^", "ref_", UnaryPrefix, RightAssociative, PrefixPrecedence})
+	o.defineHACKY(Operator{"Dereference", "~", "deref_", UnaryPrefix, RightAssociative, PrefixPrecedence})
 }
 
 func (o *Operators) defineHACKY(op Operator) {

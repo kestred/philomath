@@ -11,11 +11,13 @@ unicode_digit  = ? a Unicode character categorized as "Decimal Digit" ? ;
 unicode_math   = ? a Unicode character categorized as "Symbol, Math" ? ;
 unicode_letter = ? a Unicode character categorized as "Letter" ? ;
 text_character = ? space, tab, or any Unicode character greater than U+0020 ? ;
+ascii_letter   = "A" ;.. "F" | "a" ;.. "f" ;
+alphanumeric   = unicode_letter | unicode_digit ;
 character      = text_character | newline | carriage_return ;
 
 
 (* Literals *)
-identifier        = unicode_letter , { unicode_letter | unicode_digit | "_" } ;
+identifier        = unicode_letter , { [ "_" ] alphanumeric } ;
 scoped_identifier = [ identifier , "." ] , identifier ;
 
 hex_literal      = "0" , ( "x" ) , { hex_digit } ;
@@ -40,11 +42,14 @@ text_literal    = '"' , { text_character } , '"' ;
      using the reduced symbol set after this comment.
 
 math_symbol = ( unicode_math - ( "=" | ">" | "<" | "~" ) ) | "%" | "*" | "/" ;
-operator    = math_symbol , { math_symbol } | "_" , identifier , [ "_" ] ;
+operator    = math_symbol , { math_symbol } ;
 
 *)
-math_symbol = "+", "-", "*", "/", "%" ;
-operator   = math_symbol | "_" , { unicode_letter | "_" } ;
+infix_name   = "_" , { ascii_letter | decimal_digit } , "_" ;
+prefix_name  = { ascii_letter | decimal_digit } , "_" ;
+postfix_name = "_" , { ascii_letter | decimal_digit } ;
+math_symbol  = "+", "-", "*", "/", "%" ;
+operator     = math_symbol | infix_name | prefix_name | postfix_name ;
 
 (* Types *)
 named_type    = scoped_identifier ;
@@ -54,73 +59,83 @@ function_type = "(" , [ type , { "," , type } ] , ")" , [ "->" , type ] ;
 type          = array_type | function_type | named_type | pointer_type ;
 
 (* Statements *)
-done_stmt   = "done" , expr ;
-return_stmt = "return" , expr ;
-assign_stmt = scoped_identifier , [ operator ] , "=" , expr ;
-expr_range  = expr , ".." , expr ;
-each_range  = identifier , [ "," , identifier ] , "in" , ( expr | expr_range ) ;
-for_range   = mutable_decl , expr , ";" , assign_stmt ;
-for_stmt    = "for" , ( for_range | each_range ) , assign_stmt ;
-while_stmt  = "while" , expr , block ;
-if_stmt     = "if" , expr , block , [ "else" , block ] ;
-stmt        = if_stmt | for_stmt | ( expr, assign_stmt , done_stmt, return_stmt ) , ";" ;
+done_stmt   = "done" ;
+return_stmt = "return" , logic_expr ;
+expr_range  = infix_expr , ".." , infix_expr ;
+each_range  = identifier , [ "," , identifier ] , "in" , ( infix_expr | expr_range ) ;
+for_range   = mutable_decl , logic_expr , ";" , assign_expr ;
+for_stmt    = "for" , ( for_range | each_range ) , assign_expr ;
+while_stmt  = "while" , logic_expr , block ;
+if_stmt     = "if" , logic_expr , block , { "else" , "if" , logic_expr , block } , [ "else" , block ] ;
+stmt        = if_stmt | for_stmt | while_stmt | ( expr, done_stmt, return_stmt ) , ";" ;
 
 short_block = ":" , stmt ;
-long_block  = "{" , { stmt | decl } , "}" ;
+long_block  = "{" , { stmt | decl | long_block } , "}" ;
 block       = short_block | long_block ;
 
 (* Expressions *)
 function_param = identifier , ":" , type
 function_expr  = "func" , "(" , [ function_param , { "," , function_param } ] , ")" , [ "->" , type ] , block ;
-group_expr     = "(" , expr , ")";
-value_expr    = scoped_ident | text_literal | number_literal ;
+group_expr     = "(" , logic_expr , ")";
+value_expr    = identifier | text_literal | number_literal ;
 
 base_expr     = value_expr | group_expr | function_expr ;
-member_expr   = base_expr , "." , call_expr ;
-call_expr     = member_expr , {  } ;
-postfix_expr  = prefix_expr , { operator | "(" , [ expr , { "," , expr } ] , ")" | "[" expr "]" } ;
-prefix_expr   = { operator | "~" | "^" |  } , postfix_expr ;
-infix_expr    = postfix_expr , { operator , infix_expr } ;
+call_syntax   = "(" , [ logic_expr , { "," , logic_expr } ] , ")" ;
+postfix_expr  = base_expr , { operator | call_syntax | "[" logic_expr "]" | "." identifier } ;
+prefix_expr   = { operator | "~" | "^" } , postfix_expr ;
+infix_expr    = prefix_expr , { operator , infix_expr } ;
+includes_expr = infix_expr , [ "not" ] , "in" , infix_expr ;
 greater_expr  = { ( ">=" | ">" ) , infix_expr } ;
 lesser_expr   = { ( "<=" | "<" ) , infix_expr } ;
 equality_expr = { "==" , infix_expr } ;
 identity_expr = { "is" , infix_expr } ;
-relation_expr = infix_expr , [ identity_expr | equality_expr | lesser_expr | greater_expr ] ;
-logical_expr  = relation_expr , { ( "and" | "or" ) relative_expr } ;
-expr          = logical_expr;
+relation_expr = infix_expr , [ identity_expr | equality_expr | lesser_expr | greater_expr | includes_expr ] ;
+logic_expr    = relation_expr , { ( "and" | "or" ) relation_expr } ;
+assign_expr   = logic_expr , [ [ operator ] , "=" , logic_expr ] ;
+expr          = assign_expr ;
 
 (* Notes:
-     Above is the non-left-recurive grammar which can be used to verify that a
-     given sentence matches the grammar (expressions only need a LL(1) parser).
+     Above is the unambiguous non-left-recurive grammar which can be used to
+     verify that a given sentence matches the grammar with a LL parser.
 
-     Valid abstract syntax trees are more lenient than the grammar and can be
-     better represented by the following ambiguous left-recursive grammar rules.
+     Sadly, non-left-recursive grammars are harder to read for humans, so below
+     are simpler rules intended for human consumption.
 
-member_expr   = expr , "." , expr ;
-call_expr     = expr , { "(" , [ expr , { "," , expr } ] , ")" } ;
-indirect_expr = "~" , expr ;
-address_expr  = "^" , expr ;
-postfix_expr  = expr , operator ;
-prefix_expr   = operator , expr ;
-infix_expr    = expr , ( operator ) , expr ;
-normal_expr   = value_expr | group_expr | function_expr | member_expr | call_expr
-              | indirect_expr | address_expr | prefix_expr | postfix_expr | infix_expr ;
+subscript_expr = expr , "[" expr "]" ;
+member_expr    = expr , "." , identifier ;
+call_expr      = expr , { "(" , [ expr , { "," , expr } ] , ")" } ;
+indirect_expr  = "~" , expr ;
+address_expr   = "^" , expr ;
+postfix_expr   = expr , operator ;
+prefix_expr    = operator , expr ;
+infix_expr     = expr , ( operator ) , expr ;
+normal_expr    = value_expr | group_expr | function_expr | member_expr | call_expr
+               | indirect_expr | address_expr | prefix_expr | postfix_expr | infix_expr ;
 
      The grammar for comparison expressions in philomath is somewhat unusual
      compared to other languages in that it allows expression of relations in
      a more math-friendly style.  Here are a few examples:
 
-             a == b == c    is equivalent to    (a == b) and (a == c)
-             a <  b <= c    is equivalent to    (a <  b) and (b <= c)
+             a == b == c    is equivalent to    (a == b) and (b == c) and (a == c)
+             a <  b <= c    is equivalent to    (a <  b) and (b <= c) and (a <  c)
+
+     In most cases the last comparison can be optimized away, however it is
+     important when describing the behavior of inequality expressions:
+     (can't decide on the best operator; "<>", "!=", "=/=", etc)
+
+             a <> b <> c    is equivalent to    (a <> b) and (b <> c) and (a <> c)
 
 greater_expr  = normal_expr , { ( ">=" | ">" ) , normal_expr } ;
 lesser_expr   = normal_expr , { ( "<=" | "<" ) , normal_expr } ;
+notequal_expr = normal_expr , { "!=" , normal_expr } ;
 equality_expr = normal_expr , { "==" , normal_expr } ;
+negident_expr = normal_expr , { "is" , "not" , normal_expr } ;
 identity_expr = normal_expr , { "is" , normal_expr } ;
-relation_expr = identity_expr | equality_expr | lesser_expr | greater_expr ;
-logical_expr  = relation_expr , ( "and" | "or" ) , relative_expr ;
+relation_expr = identity_expr | equality_expr | notequal_expr | includes_expr | lesser_expr | greater_expr ;
+logical_expr  = relation_expr , ( [ "not" ] "in" | "and" | "or" ) , relation_expr ;
 
-expr = normal_expr | relative_expr | logical_expr ;
+assign_expr = normal_expr , [ operator ] , "=" , expr ;
+expr        = normal_expr | assign_expr | relation_expr | logical_expr ;
 
  *)
 

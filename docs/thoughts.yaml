@@ -1,0 +1,23 @@
+Preface: While notes.md is more organized and reasoned, I'm just tossing stray thoughts in here.
+
+Name Mangling:
+  Operator overloading: |
+    Each operator gets its own symbol name.
+    For prefix operators, it must look like "NAME_"
+    For postfix operators, it must look like "_NAME"
+    For infix operators, it must look like "_NAME_"
+    These names are restrict to C naming rules (ie. ASCII alphanumeric).
+
+    For a type "bignum",
+      unary prefix "-" is mangled to "neg_bignum"
+      binary infix "+" is mangled to "bignum_add_bignum"
+      unary postfix "_foo" is mangled to "bignum_foo"
+
+    The compiler will give you an error if there are any conflicts.
+    Normal philomath identifiers cannot begin or end with an underscore.
+
+  Module values: |
+    These values are mangled by combining module names with values using a double underscore.
+    For some module "math",
+      the function "tanh" is mangled to "math__tanh"
+      the operator "×" for a type "vec3" is mangled to "math__vec3_cross_vec3"

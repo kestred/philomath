@@ -1,5 +1,17 @@
 package ast
 
+/* At the moment this package isn't so far off from a concrete syntax tree
+
+	TODO: Maybe it would be worth making the two structures separate?
+
+  For example, the CST would only contain the syntactic information,
+	and the AST would then only contain the semantic information.
+	The AST could eliminate some nodes:
+		For example "GroupExpr" can be removed entirely
+		The "ValueExpr", "NumberLiteral", and "TextLiteral" nodes could be collapsed?
+
+*/
+
 /* Const Nodes */
 var (
 	InferredValue = &struct{}{}
@@ -53,6 +65,7 @@ func (e *CallExpr) ImplementsNode()      {}
 func (e *GroupExpr) ImplementsNode()     {}
 func (e *FunctionExpr) ImplementsNode()  {}
 func (p *FunctionParam) ImplementsNode() {}
+func (e *AssignExpr) ImplementsNode()    {}
 func (e *MemberExpr) ImplementsNode()    {}
 func (e *ValueExpr) ImplementsNode()     {}
 
@@ -64,7 +77,6 @@ func (s *ForStmt) ImplementsNode()    {}
 func (r *ForRange) ImplementsNode()   {}
 func (r *EachRange) ImplementsNode()  {}
 func (r *ExprRange) ImplementsNode()  {}
-func (s *AssignStmt) ImplementsNode() {}
 func (s *ReturnStmt) ImplementsNode() {}
 func (s *DoneStmt) ImplementsNode()   {}
 
@@ -110,6 +122,7 @@ func (e *PrefixExpr) ImplementsExpr()   {}
 func (e *CallExpr) ImplementsExpr()     {}
 func (e *GroupExpr) ImplementsExpr()    {}
 func (e *FunctionExpr) ImplementsExpr() {}
+func (e *AssignExpr) ImplementsExpr()   {}
 func (e *MemberExpr) ImplementsExpr()   {}
 func (e *ValueExpr) ImplementsExpr()    {}
 
@@ -119,6 +132,7 @@ func (e *PrefixExpr) GetType() Type   { return e.Type }
 func (e *CallExpr) GetType() Type     { return e.Type }
 func (e *GroupExpr) GetType() Type    { return e.Type }
 func (e *FunctionExpr) GetType() Type { return e.Type }
+func (e *AssignExpr) GetType() Type   { return e.Type }
 func (e *MemberExpr) GetType() Type   { return e.Type }
 func (e *ValueExpr) GetType() Type    { return e.Type }
 
@@ -130,7 +144,6 @@ type Stmt interface {
 func (s *IfStmt) ImplementsStmt()     {}
 func (s *WhileStmt) ImplementsStmt()  {}
 func (s *ForStmt) ImplementsStmt()    {}
-func (s *AssignStmt) ImplementsStmt() {}
 func (s *ReturnStmt) ImplementsStmt() {}
 func (s *DoneStmt) ImplementsStmt()   {}
 
@@ -283,6 +296,16 @@ type (
 		Type Type
 	}
 
+	AssignExpr struct {
+		// syntax
+		Assignee Expr
+		Operator Operator
+		Value    Expr
+
+		// semantics
+		Type Type
+	}
+
 	MemberExpr struct {
 		// syntax
 		Left   Expr
@@ -350,6 +373,15 @@ func GrpExp(subexpr Expr) *GroupExpr {
 	}
 }
 
+func SetExp(assignee Expr, op Operator, value Expr) *AssignExpr {
+	return &AssignExpr{
+		Assignee: assignee,
+		Operator: op,
+		Value:    value,
+		Type:     InferredType,
+	}
+}
+
 func DotExp(left Expr, member Ident) *MemberExpr {
 	return &MemberExpr{
 		Left:   left,
@@ -390,7 +422,7 @@ type (
 	ForRange struct {
 		Decl   MutableDecl
 		Cond   Expr
-		Update AssignStmt
+		Update AssignExpr
 	}
 
 	EachRange struct {
@@ -402,12 +434,6 @@ type (
 	ExprRange struct {
 		Min Expr
 		Max Expr
-	}
-
-	AssignStmt struct {
-		Assignee Expr
-		Operator Operator
-		Value    Expr
 	}
 
 	ReturnStmt struct {
