@@ -64,3 +64,13 @@ High-order Functions: |
     It should be fairly easy to infer all of the necessary types from the
     prototype and arguments of the calling function;  hopefully I'll still
     agree with this statement when implementing this feature later!
+
+Code Safety:
+  Warnings:
+    - Misleading identation when using a short block (eg. multiple statements at the next line's identation)
+  Errors:
+    - Error for assigning to a value at block scope and not later using that value
+  Code Generation:
+    - Arithmetic operators are overflow checked by default (disable with directive).
+    - Array accesses are bounds checked by default (disable with directive).
+    - Variables are initialized to 0 by default (disable with directive (or ---?)).
