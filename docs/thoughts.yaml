@@ -21,3 +21,46 @@ Name Mangling:
     For some module "math",
       the function "tanh" is mangled to "math__tanh"
       the operator "×" for a type "vec3" is mangled to "math__vec3_cross_vec3"
+
+High-order Functions: |
+  Argument Order:
+    The conventional argument order for a higher-order function should
+    generally have the function last.  The basic reason is so that it is easy
+    to read a function when writing the block as an argument to the function call.
+
+    Comparing the first option
+      map(func(v: int) -> int) {
+        a := valueToA(A);
+        return calcBFromA(a);
+      }, [1, 2, 3])
+
+    To the second option
+      map([1, 2, 3], func(v: int) -> int) {
+        a := valueToA(A);
+        return calcBFromA(a);
+      })
+
+    When using list (array) comprehensions, you might flip the argument around
+    and say that it would be better to have the comprehension second (example below),
+    but in general I think comprehensions are already short, while blocks can
+    be arbitrarily long.  Additionally using list comprehensions typically
+    obviates the need for "map", "filter", and "reduce" at all.
+
+      map(func(v: int) -> int { return v+1 }, [
+        a * 3 for a in array if a % 2 == 0
+      ])
+
+    Instead high-order functions can be very useful for building tools such as
+    futures and promises for asynchronous programming.
+
+  Eliding Types:
+    High order functions work via first-class functions, but they are very
+    ugly to read because of all the types.  They'd be much easier to use if
+    it was possible to elide the argument and return types for function
+    expressions which are passed directly as an argument.
+
+      map([1, 2, 3], func(v) { return v + 1; })
+
+    It should be fairly easy to infer all of the necessary types from the
+    prototype and arguments of the calling function;  hopefully I'll still
+    agree with this statement when implementing this feature later!
