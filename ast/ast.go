@@ -19,13 +19,13 @@ var (
 	UnknownType      = &BuiltinType{"<unknown>"}  // could not infer type
 	InferredType     = &BuiltinType{"<inferred>"} // could be any type
 	InferredNumber   = &BuiltinType{"<number>"}   // could be any number
-	InferredReal     = &BuiltinType{"<real>"}     // could only be a real number
+	InferredFloat    = &BuiltinType{"<float>"}    // could only be a float number
 	InferredSigned   = &BuiltinType{"<signed>"}   // could only be a signed number
 	InferredUnsigned = &BuiltinType{"<unsigned>"} // could only be an unsigned number
 	BuiltinEmpty     = &BuiltinType{"empty"}      // the 0-byte type
-	BuiltinReal      = &BuiltinType{"real"}
-	BuiltinReal32    = &BuiltinType{"r32"}
-	BuiltinReal64    = &BuiltinType{"r64"}
+	BuiltinFloat     = &BuiltinType{"float"}
+	BuiltinFloat32   = &BuiltinType{"f32"}
+	BuiltinFloat64   = &BuiltinType{"f64"}
 	BuiltinInt       = &BuiltinType{"int"}
 	BuiltinInt8      = &BuiltinType{"i8"}
 	BuiltinInt16     = &BuiltinType{"i16"}

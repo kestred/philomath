@@ -100,7 +100,7 @@ func inferTypesInExpr(expr ast.Expr, context TypeMap) ast.Type {
 				}
 				utils.AssertNil(err, "Failed parsing hexadecimal literal")
 			} else if strings.Contains(lit, ".") || strings.Contains(lit, "e") {
-				e.Type = ast.InferredReal
+				e.Type = ast.InferredFloat
 				literal.Value, err = strconv.ParseFloat(lit, 0)
 				if err == strconv.ErrRange {
 					panic("TODO: Handle floating point literal can't be represented by float64")
@@ -141,10 +141,10 @@ func inferPrefixType(op ast.Operator, typ ast.Type) ast.Type {
 		case ast.InferredNumber:
 			return ast.InferredSigned
 		case
-			ast.InferredReal,
-			ast.BuiltinReal,
-			ast.BuiltinReal32,
-			ast.BuiltinReal64,
+			ast.InferredFloat,
+			ast.BuiltinFloat,
+			ast.BuiltinFloat32,
+			ast.BuiltinFloat64,
 			ast.InferredSigned,
 			ast.BuiltinInt,
 			ast.BuiltinInt8,
@@ -205,15 +205,15 @@ func castNumbers(left ast.Type, right ast.Type) ast.Type {
 		return ast.UnknownType
 	}
 
-	if isReal(left) {
-		if isReal(right) {
+	if isFloat(left) {
+		if isFloat(right) {
 			// cast low-bit to high-bit float
 			return promoteByOrder(left, right)
 		} else {
 			// cast any integer to any float
 			return left
 		}
-	} else if isReal(right) {
+	} else if isFloat(right) {
 		// cast any integer to any float
 		return right
 	}
@@ -255,17 +255,17 @@ func promotionOrder(typ ast.Type) int {
 	switch typ {
 	case ast.InferredNumber:
 		return 0
-	case ast.InferredReal, ast.InferredSigned, ast.InferredUnsigned:
+	case ast.InferredFloat, ast.InferredSigned, ast.InferredUnsigned:
 		return 1
 	case ast.BuiltinInt8, ast.BuiltinUint8:
 		return 2
 	case ast.BuiltinInt16, ast.BuiltinUint16:
 		return 3
-	case ast.BuiltinReal32, ast.BuiltinInt32, ast.BuiltinUint32:
+	case ast.BuiltinFloat32, ast.BuiltinInt32, ast.BuiltinUint32:
 		return 4
-	case ast.BuiltinReal64, ast.BuiltinInt64, ast.BuiltinUint64:
+	case ast.BuiltinFloat64, ast.BuiltinInt64, ast.BuiltinUint64:
 		return 5
-	case ast.BuiltinReal, ast.BuiltinInt, ast.BuiltinUint:
+	case ast.BuiltinFloat, ast.BuiltinInt, ast.BuiltinUint:
 		return 6
 	default:
 		return -1
@@ -273,16 +273,16 @@ func promotionOrder(typ ast.Type) int {
 }
 
 func isNumber(typ ast.Type) bool {
-	return (typ == ast.InferredNumber) || isReal(typ) || isSigned(typ) || isUnsigned(typ)
+	return (typ == ast.InferredNumber) || isFloat(typ) || isSigned(typ) || isUnsigned(typ)
 }
 
-func isReal(typ ast.Type) bool {
+func isFloat(typ ast.Type) bool {
 	switch typ {
 	case
-		ast.InferredReal,
-		ast.BuiltinReal,
-		ast.BuiltinReal32,
-		ast.BuiltinReal64:
+		ast.InferredFloat,
+		ast.BuiltinFloat,
+		ast.BuiltinFloat32,
+		ast.BuiltinFloat64:
 		return true
 	default:
 		return false

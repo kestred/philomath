@@ -2,7 +2,7 @@
 #netInput    :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
 #meanSqError :: formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
 
-netInput :: func(inputs: []real, weights: []real) -> real {
+netInput :: func(inputs: []float, weights: []float) -> float {
   result := 0.0;
   for input, index in inputs:
     # TODO: add and assign operator
@@ -13,21 +13,21 @@ netInput :: func(inputs: []real, weights: []real) -> real {
 
 #- TODO: dynamic arrays [..]
 linear_node :: struct {
-  output: real;
-  weights: [..]real;
+  output: float;
+  weights: [..]float;
 }
 
 linear_network :: struct {
-  learningRate: real;
+  learningRate: float;
   outputs: [..]linear_node;
 }
 -#
 
 linear_node :: struct {
-  bias: real;
-  biasDelta: real;
-  weights: [1]real;
-  weightDeltas: [1]real;
+  bias: float;
+  biasDelta: float;
+  weights: [1]float;
+  weightDeltas: [1]float;
 }
 
 # a linear neural network with online learning
@@ -35,11 +35,11 @@ linear_node :: struct {
 # useful for calculating a linear regression in an "online" environment,
 # like from a stream of application events
 linear_network :: struct {
-  learningRate: real;
+  learningRate: float;
   outputs: [1]linear_node;
 }
 
-trainLinear :: func(net: ^linear_network, inputs: [1]real, outputs: [1]real) {
+trainLinear :: func(net: ^linear_network, inputs: [1]float, outputs: [1]float) {
   for ^node, index in net.outputs {
     # TODO: keyword arguments
     #node.output = netInput(inputs=inputs, weights=node.weights);

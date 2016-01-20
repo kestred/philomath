@@ -10,7 +10,7 @@ decisions heavily impact later decisions.
 
 ### [0] Code modules/namespaces
 Decisions:
- * Modules and files are completely unrelated
+ * Modules and files are unrelated
  * Modules provide a namespace which doesn't conflict with the global, or other
    module namespaces
  * A name can be accessed in a module via "." syntax (eg. `module.name`)
@@ -31,10 +31,10 @@ Reasoning:
  * File inclusion order is less significant if declarations can be out of order
  * Namespacing provides the basic building blocks of making beautiful apis and
    can significantly increase code reuse and identifier readability
- * Seasoned programmers are used to `.` access things like class variables in
-   C++, or modules in scripting languages.  It is more beautiful than the `::`
-   syntax in C++.  Unless there is some compelling not to use `.`, then it is
-   the easiest choice
+ * Seasoned programmers are used to `.` for access to things like class
+   variables in C++, or modules in scripting languages.  It is more beautiful
+   than the `::` syntax in C++.  Unless there is some compelling not to use `.`,
+   then it is the easiest choice
  * When heavily utilizing symbols from a given namespace, it frequently improves
    code readability to be able to elide the name qualification, so the language
    should support that (for example via "using")
@@ -113,36 +113,42 @@ Reasoning:
 Decisions:
  * bool
  * byte
- * int  i8  i16 i32 i64
- * uint u8  u16 u32 u64
- * real r32 r64
- * text rune
+ * int i8 i16 i32 i64
+ * uint u8 u16 u32 u64
+ * float f32 f64
+ * text char
+ * empty
 
 Reasoning:
  * Concise names are less to type
- * Built-in types are easy to learn and remember
- * Integer types i8, u16, etc are less ambiguous than char, short, etc
- * Real is explicitly not "float" to prevent seasoned programmers from
-   accidently assuming 32-bit (see decision [3])
- * Real is more intuitive to students than real
- * Real is a little shorter than real
- * Text is explicitly not "string" to prevent seasoned programmers from
-   accidently assuming null-termination or 8-bit characters
- * Text is more intuitive to students than string
- * Text is a little shorter than string
- * Rune is explicitly not "char" to prevent seasoned programmers from
-   accidently assuming an 8-bit integer
+ * A smallish set of built-in types should be easy to learn and remember
+ * Integer types i8, u16, etc are less ambiguous than short, long etc
+ * Text should be more intuitive to students than string
+   Text is a little shorter than string
  * Names are lower case because these should be most familiar
-   for int, bool, etc to seasoned programmers and there is no
-   compelling reason to change those names
+   for int, bool, etc to seasoned programmers and there has not yet
+   been a compelling reason to change those names
  * Types are all lower case because lower-case characters catch less
    attention and types are typically less important to a reader
-   (users generally prefer that they be can elided and inferred)
+   (users generally prefer that they be can elided and are inferred)
+   Furitively... I just can't get used to I8, U32, F64, etc
+ * Empty will be the type with 0-byte size
+   Empty over null/nil/etc, because null values are intuitively machine word size
+   Empty over blank/none/etc because it maps easily from set notation in mathematics
 
 Concerns:
- * Using an unusual name for string is very uncommon and may be
+ * Using an unusual name for string seems fairly uncommon and may be
    hard to switch to from other languages using "string"
- * Char is more intuitive to students than rune
+
+Alternatives:
+ * Considered real over float, but decided on float because:
+     Assembly instructions all work with "floating-point" values
+     If a programmer can accept 64-bit int and uint, they can accept 64-bit float
+     I didn't get used to using real that quickly (real can feel ambiguous)
+ * Considered using rune over char, but decided on char because:
+     Similar to int/uint/float, unicode char should be easy to get used to
+     Using "unicode" or "codepoint" is too long, and "code" is too confusing
+     Char sould be more intuitive to students than rune
 
 ### [5] Line comments
 Decisions:
@@ -183,7 +189,11 @@ Reasoning:
    to detect and optimize away unnecessary initialization
 
 ### [8] Enumerations
-Decisions:
+Concerns:
+ * It may be nice if enums where more generally flexibile
+   For example I may want to have some "Monster" enum where each monster type
+   is associated with more other values (eg. a struct with hitpoints, etc)
+Thoughts:
  * Enum definitions have the syntax `IDENT :: enum { ITEMS }`
    or `IDENT :: enum TYPE { ITEMS }`
  * An item is an identifier, optionally followed by a value and/or string literal
@@ -249,7 +259,7 @@ Examples:
     ```
 
 ### [9] User-defined definitions
-Decisions:
+Thoughts:
  * User-defined definitions have the syntax `IDENT₁ :: IDENT₂ { DSL_SOURCE }`
  * Parsing the source should be deferred until the IDENT₂ identifier is resolved
  * Allow users to define constant defintions similar to "struct" or "enum"
@@ -280,14 +290,23 @@ Examples:
    ```
 
 Concerns:
- * I'm not convinced this feature is actually required.
+ * I'm no longer convinced this feature is actually required.
    For example, the same could be accomplished with some directive "@run", eg:
 
-   ```@run DefineFormula("meanSqError", "0.5 Σ[o in |outputs|] (targetsₒ - outputsₒ)²")```
+   ```
+   @run DefineFormula("meanSqError", "0.5 Σ[o in |outputs|] (targetsₒ - outputsₒ)²")
+   ```
 
-   However, I intuit it may still be valuable to support having
-   user-defined definitions (in addition to user-defined operators, etc),
-   so I'm not yet ruling the feature out.
+ * Another alternative to the user-defined definitons which would satisify my
+   initial "formula" use case is the combination of pythonic list comprehensions
+   used along with Unicode math operators, eg:
+
+   ```
+   return 0.5 × Σ[targets[n] × outputs[n] for n in 0...outputs.length];
+   ```
+
+ * User-defined definitions may still be valuable for some case I've not thought
+   of yet (like DSLs, maybe for testing?) so I'm not yet ruling the feature out
 
 ### [10] User defined context
 Decisions:
@@ -355,15 +374,15 @@ Reasoning:
  * Its nice to have some distinction between types and other identifiers
  * Frequently, this is accomplished by using PascalCase and snake_case for one
    or the other; this is where user preference comes in, I like PascalTypes and
-   snake_values, except that I dislike Int, Float, etc, dislike inverting the
-   cases, and dislike builtins being inconsistent
+   snake_values, except that I dislike Int, I8, Float, F32, etc, and dislike
+   builtins being inconsistent, and haven't been used to the inverse for awhile
 
 Compromise:
- * Unlike C/C++, Philomath is a context free grammar;
+ * Unlike C++, Philomath is a context free grammar;
    with a context free grammar, it is easy to add syntax highlighting which
-   correctly highlights any part of the code the programmer deems relevant
- * Ergo, it isn't as necessary to distinguish between types and variables by
-   naming convention (ie. naming convention can be used to annotate other info)
+   correctly highlights any part of the code the programmer would like to notice
+   Ergo, it isn't as necessary to distinguish between types and variables by
+   naming convention (corollary. naming convention can be used for other info)
 
 ### [C] Naming conventions for module names
 Decisions:

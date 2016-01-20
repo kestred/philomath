@@ -29,11 +29,11 @@ decimals = decimal_digit , { decimal_digit } ;
 exponent = ( "e" ) , [ "+" | "-" ] , decimals ;
 
 integer_literal = hex_literal | decimal_literal | octal_literal ;
-real_literal    = mantissa , "." , [ decimals ] , [ exponent ]
+float_literal    = mantissa , "." , [ decimals ] , [ exponent ]
                 | mantissa , exponent
                 | "." , decimals | [ exponent ] ;
 
-number_literal  = integer_literal | real_literal ;
+number_literal  = integer_literal | float_literal ;
 text_literal    = '"' , { text_character } , '"' ;
 
 

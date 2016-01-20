@@ -181,7 +181,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				infix.Code = I64_ADD
 			case ast.InferredUnsigned:
 				infix.Code = U64_ADD
-			case ast.InferredReal:
+			case ast.InferredFloat:
 				infix.Code = F64_ADD
 			default:
 				panic("TODO: Unhandle expression type in bytecode generator")
@@ -192,7 +192,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				infix.Code = I64_SUBTRACT
 			case ast.InferredUnsigned:
 				infix.Code = U64_SUBTRACT
-			case ast.InferredReal:
+			case ast.InferredFloat:
 				infix.Code = F64_SUBTRACT
 			default:
 				panic("TODO: Unhandle expression type in bytecode generator")
@@ -203,7 +203,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				infix.Code = I64_MULTIPLY
 			case ast.InferredUnsigned:
 				infix.Code = U64_MULTIPLY
-			case ast.InferredReal:
+			case ast.InferredFloat:
 				infix.Code = F64_MULTIPLY
 			default:
 				panic("TODO: Unhandle expression type in bytecode generator")
@@ -214,7 +214,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				infix.Code = I64_DIVIDE
 			case ast.InferredUnsigned:
 				infix.Code = U64_DIVIDE
-			case ast.InferredReal:
+			case ast.InferredFloat:
 				infix.Code = F64_DIVIDE
 			default:
 				panic("TODO: Unhandle expression type in bytecode generator")
@@ -243,20 +243,20 @@ func insertConversion(scope *Scope, insts *[]Instruction, from ast.Type, to ast.
 	switch from {
 	// FIXME: right now "inferred numbers" are parsed into uint64, but here I treat them as signed
 	case ast.InferredNumber, ast.InferredSigned:
-		if to == ast.InferredReal {
+		if to == ast.InferredFloat {
 			list := *insts
 			convert := Instruction{Code: CONVERT_I64_TO_F64, Out: scope.AssignRegister()}
 			convert.Left = list[len(list)-1].Out
 			*insts = append(list, convert)
 		}
 	case ast.InferredUnsigned:
-		if to == ast.InferredReal {
+		if to == ast.InferredFloat {
 			list := *insts
 			convert := Instruction{Code: CONVERT_U64_TO_F64, Out: scope.AssignRegister()}
 			convert.Left = list[len(list)-1].Out
 			*insts = append(list, convert)
 		}
-	case ast.InferredReal:
+	case ast.InferredFloat:
 		switch to {
 		case ast.InferredNumber, ast.InferredSigned:
 			list := *insts
