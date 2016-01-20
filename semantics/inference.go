@@ -35,7 +35,7 @@ func inferTypesInBlock(block *ast.Block, context TypeMap) ast.Type {
 	//       type of a block is the union of all return statement expression types.
 	//       Otherwise, still useful to collect for error messages.
 	// var returnTypes []ast.Type
-	for _, node := range block.Statements {
+	for _, node := range block.Nodes {
 		switch n := node.(type) {
 		case *ast.MutableDecl:
 			typ := inferTypesInExpr(n.Expr, context)
@@ -51,7 +51,7 @@ func inferTypesInBlock(block *ast.Block, context TypeMap) ast.Type {
 			// NOTE: If we actually had a return statement, the type of its
 			//       expression would be the block's type; otherwise we return none.
 		default:
-			panic("TOOD: Unhandled stmt/decl in InferBlockTypes")
+			panic("TOOD: Unhandled stmt/decl in semantics.inferTypesInBlock")
 		}
 	}
 

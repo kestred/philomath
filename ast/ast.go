@@ -44,6 +44,8 @@ type Node interface {
 	ImplementsNode()
 }
 
+func (b *Block) ImplementsNode() {}
+
 // Declarations
 func (d *ConstantDecl) ImplementsNode() {}
 func (d *MutableDecl) ImplementsNode()  {}
@@ -69,7 +71,6 @@ func (e *MemberExpr) ImplementsNode()    {}
 func (e *ValueExpr) ImplementsNode()     {}
 
 // Statements (and related nodes)
-func (b *Block) ImplementsNode()      {}
 func (s *IfStmt) ImplementsNode()     {}
 func (s *WhileStmt) ImplementsNode()  {}
 func (s *ForStmt) ImplementsNode()    {}
@@ -273,7 +274,7 @@ type (
 // A statement is represented by a tree of one or more of the following
 type (
 	Block struct {
-		Statements []Blockable // Stmt or Decl
+		Nodes []Blockable // Block, Decl, or Stmt
 	}
 
 	IfStmt struct {

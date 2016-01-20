@@ -175,27 +175,27 @@ func TestInferBlock(t *testing.T) {
 		0755 - fuga;        # propogate undef in expr
 	}`)
 
-	if decl, ok := block.Statements[0].(*ast.MutableDecl); assert.True(t, ok) {
+	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredType, decl.Type)
 		assert.Equal(t, ast.InferredSigned, decl.Expr.GetType())
 	}
-	if stmt, ok := block.Statements[1].(*ast.ExprStmt); assert.True(t, ok) {
+	if stmt, ok := block.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredSigned, stmt.Expr.GetType())
 	}
 
-	if decl, ok := block.Statements[2].(*ast.MutableDecl); assert.True(t, ok) {
+	if decl, ok := block.Nodes[2].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredType, decl.Type)
 		assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
 	}
-	if stmt, ok := block.Statements[3].(*ast.ExprStmt); assert.True(t, ok) {
+	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
 	}
 
-	if decl, ok := block.Statements[4].(*ast.MutableDecl); assert.True(t, ok) {
+	if decl, ok := block.Nodes[4].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredType, decl.Type)
 		assert.Equal(t, ast.UnknownType, decl.Expr.GetType())
 	}
-	if stmt, ok := block.Statements[5].(*ast.ExprStmt); assert.True(t, ok) {
+	if stmt, ok := block.Nodes[5].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
 	}
 }

@@ -109,18 +109,40 @@ func (s *Scope) AssignRegister() Register {
 	return register
 }
 
-func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
-	switch node := expr.(type) {
+func FromBlock(block *ast.Block, scope *Scope) []Instruction {
+	var insts []Instruction
+	for _, node := range block.Nodes {
+		switch n := node.(type) {
+		case *ast.MutableDecl:
+			if n.Expr != nil {
+				insts = append(insts, FromExpr(n.Expr, scope)...)
+				scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
+			} else {
+				//// TODO: zero initialization (but it won't matter until there are typed declarations)
+				//scope.Registers[n.Name.Literal] = scope.AssignRegister()
+				panic("TODO: Unhandled mutable declaration without expression")
+			}
+		case *ast.ExprStmt:
+			insts = append(insts, FromExpr(n.Expr, scope)...)
+		default:
+			panic("TOOD: Unhandle node type in bytecode.FromBlock")
+		}
+	}
 
+	return insts
+}
+
+func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
+	switch e := expr.(type) {
 	case *ast.ValueExpr:
-		switch literal := node.Literal.(type) {
+		switch lit := e.Literal.(type) {
 		case *ast.NumberLiteral:
-			utils.Assert(literal.Value != ast.UnparsedValue, "A value was not parsed before bytecode generation")
+			utils.Assert(lit.Value != ast.UnparsedValue, "A value was not parsed before bytecode generation")
 			register := scope.AssignRegister()
 
 			var value Data
-			switch v := literal.Value.(type) {
-			// NOTE: These can't be combined for some noxious reason
+			switch v := lit.Value.(type) {
+			// NOTE: these can't be combined for some noxious reason
 			case int64:
 				value = *(*Data)(unsafe.Pointer(&v))
 			case uint64:
@@ -135,22 +157,17 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 			scope.Constants = append(scope.Constants, Data(value))
 			return []Instruction{{Code: LOAD_CONST, Out: register, Left: Constant(nextConstant)}}
 		case *ast.Ident:
-			panic("TODO: I haven't done declarations... so this identifier isn't that useful")
-			// NOTE: Find or assign register
-			/*
-				var exists bool
-				register, exists = scope.Registers[literal]
-				if !exists {
-					register = scope.AssignRegister()
-					scope.Registers[literal] = register
-				}
-			*/
+			register, exists := scope.Registers[lit.Literal]
+			utils.Assert(exists, "A register was not allocated for a name before use in an expression")
+			// FIXME: Right now expressions must return an instruction with the out register set,
+			//        but it doesn't make a whole lot of sense to be emitting NOOPs for value loads
+			return []Instruction{{Code: NOOP, Out: register}}
 		default:
 			panic("TODO: Unhandled value literal")
 		}
 
 	case *ast.GroupExpr:
-		return FromExpr(node.Subexpr, scope)
+		return FromExpr(e.Subexpr, scope)
 
 	case *ast.InfixExpr:
 		var insts []Instruction
@@ -159,24 +176,25 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		// TODO: casts should probably be added to the AST elsewhere and only processed here
 
 		// instructions to evaluate left hand side
-		left := FromExpr(node.Left, scope)
+		left := FromExpr(e.Left, scope)
 		insts = append(insts, left...)
-		insertConversion(scope, &insts, node.Left.GetType(), node.Type)
+		insertConversion(scope, &insts, e.Left.GetType(), e.Type)
 		infix.Left = insts[len(insts)-1].Out
 
 		// instructions to evaluate right hand side
-		right := FromExpr(node.Right, scope)
+		right := FromExpr(e.Right, scope)
 		insts = append(insts, right...)
-		insertConversion(scope, &insts, node.Right.GetType(), node.Type)
+		insertConversion(scope, &insts, e.Right.GetType(), e.Type)
 		infix.Right = insts[len(insts)-1].Out
 
 		// TODO: table lookup?
 		// TODO: probably shouldn't have any "inferred" types by the time we get here
 		// TODO: probably shouldn't be comparing against operator literals by the time we get here
-		switch node.Operator.Literal {
+		switch e.Operator.Literal {
 		case "+":
-			switch node.Type {
-			// FIXME: right now "inferred numbers" are parsed into uint64, but here I treat them as signed
+			switch e.Type {
+			// FIXME: right now "inferred numbers" are accept upto uint64 max,
+			//        but here I want to (and do) treat them as signed
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_ADD
 			case ast.InferredUnsigned:
@@ -187,7 +205,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				panic("TODO: Unhandle expression type in bytecode generator")
 			}
 		case "-":
-			switch node.Type {
+			switch e.Type {
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_SUBTRACT
 			case ast.InferredUnsigned:
@@ -198,7 +216,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				panic("TODO: Unhandle expression type in bytecode generator")
 			}
 		case "*":
-			switch node.Type {
+			switch e.Type {
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_MULTIPLY
 			case ast.InferredUnsigned:
@@ -209,7 +227,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				panic("TODO: Unhandle expression type in bytecode generator")
 			}
 		case "/":
-			switch node.Type {
+			switch e.Type {
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_DIVIDE
 			case ast.InferredUnsigned:
@@ -237,11 +255,10 @@ func insertConversion(scope *Scope, insts *[]Instruction, from ast.Type, to ast.
 	}
 
 	// TODO: maybe insert overflow check for integer conversions?
-	//   I don't think lossy conversions will be allowed by the type checker so for now, do nothing
-
 	// TODO: table lookup?
 	switch from {
-	// FIXME: right now "inferred numbers" are parsed into uint64, but here I treat them as signed
+	// FIXME: right now "inferred numbers" are accept upto uint64 max,
+	//        but here I want to (and do) treat them as signed
 	case ast.InferredNumber, ast.InferredSigned:
 		if to == ast.InferredFloat {
 			list := *insts
