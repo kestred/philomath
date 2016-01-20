@@ -115,10 +115,10 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 	case *ast.ValueExpr:
 		switch literal := node.Literal.(type) {
 		case *ast.NumberLiteral:
+			utils.Assert(literal.Value != ast.UnparsedValue, "A value was not parsed before bytecode generation")
 			register := scope.AssignRegister()
 
 			var value Data
-			utils.Assert(literal.Value != ast.InferredValue, "A value was not inferred before bytecode generation")
 			switch v := literal.Value.(type) {
 			// NOTE: These can't be combined for some noxious reason
 			case int64:

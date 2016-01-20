@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func numberValue(input string) interface{} {
+func numberValue(t *testing.T, input string) interface{} {
 	var p parser.Parser
 	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
@@ -24,16 +24,16 @@ func numberValue(input string) interface{} {
 }
 
 func TestLiteralValues(t *testing.T) {
-	assert.Equal(t, uint64(22), numberValue(`22`))
-	assert.Equal(t, uint64(0755), numberValue(`0755`))
+	assert.Equal(t, uint64(22), numberValue(t, `22`))
+	assert.Equal(t, uint64(0755), numberValue(t, `0755`))
 	// TODO: Implement hexidecimal scanning
 	// assert.Equal(t, uint64(0xff), numberValue(`0xff`))
-	assert.Equal(t, float64(.32), numberValue(`.32`))
-	assert.Equal(t, float64(3.2), numberValue(`3.2`))
-	assert.Equal(t, float64(0.32), numberValue(`0.32`))
-	assert.Equal(t, float64(3e2), numberValue(`3e2`))
-	assert.Equal(t, float64(3e+2), numberValue(`3e+2`))
-	assert.Equal(t, float64(3e-2), numberValue(`3e-2`))
+	assert.Equal(t, float64(.32), numberValue(t, `.32`))
+	assert.Equal(t, float64(3.2), numberValue(t, `3.2`))
+	assert.Equal(t, float64(0.32), numberValue(t, `0.32`))
+	assert.Equal(t, float64(3e2), numberValue(t, `3e2`))
+	assert.Equal(t, float64(3e+2), numberValue(t, `3e+2`))
+	assert.Equal(t, float64(3e-2), numberValue(t, `3e-2`))
 }
 
 func inferExpression(t *testing.T, input string) ast.Type {
@@ -47,6 +47,18 @@ func inferExpression(t *testing.T, input string) ast.Type {
 	typ := InferTypes(expr)
 	assert.Equal(t, typ, expr.GetType())
 	return typ
+}
+
+func inferBlock(t *testing.T, input string) *ast.Block {
+	var p parser.Parser
+	p.Init("example", false, []byte(input))
+	block := p.ParseBlock()
+	if len(p.Errors) > 0 {
+		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+	}
+
+	InferTypes(block)
+	return block
 }
 
 func TestInferLiterals(t *testing.T) {
@@ -149,4 +161,41 @@ func TestInferArithmetic(t *testing.T) {
 	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) - 7`))
 	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) * 7`))
 	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) / 7`))
+}
+
+func TestInferBlock(t *testing.T) {
+	block := inferBlock(t, `{
+		hoge := -3;         # simple decl
+		hoge + 2;           # one ident in expr
+
+		piyo := 0.5 * hoge; # use ident in decl
+		piyo / hoge;        # two ident in expr
+
+		fuga := hogera;     # use undef in decl
+		0755 - fuga;        # propogate undef in expr
+	}`)
+
+	if decl, ok := block.Statements[0].(*ast.MutableDecl); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredType, decl.Type)
+		assert.Equal(t, ast.InferredSigned, decl.Expr.GetType())
+	}
+	if stmt, ok := block.Statements[1].(*ast.ExprStmt); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredSigned, stmt.Expr.GetType())
+	}
+
+	if decl, ok := block.Statements[2].(*ast.MutableDecl); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredType, decl.Type)
+		assert.Equal(t, ast.InferredReal, decl.Expr.GetType())
+	}
+	if stmt, ok := block.Statements[3].(*ast.ExprStmt); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredReal, stmt.Expr.GetType())
+	}
+
+	if decl, ok := block.Statements[4].(*ast.MutableDecl); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredType, decl.Type)
+		assert.Equal(t, ast.UnknownType, decl.Expr.GetType())
+	}
+	if stmt, ok := block.Statements[5].(*ast.ExprStmt); assert.True(t, ok) {
+		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
+	}
 }

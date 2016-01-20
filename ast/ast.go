@@ -14,7 +14,7 @@ package ast
 
 /* Const Nodes */
 var (
-	InferredValue = &struct{}{}
+	UnparsedValue = &struct{}{}
 
 	UnknownType      = &BuiltinType{"<unknown>"}  // could not infer type
 	InferredType     = &BuiltinType{"<inferred>"} // could be any type
@@ -22,6 +22,7 @@ var (
 	InferredReal     = &BuiltinType{"<real>"}     // could only be a real number
 	InferredSigned   = &BuiltinType{"<signed>"}   // could only be a signed number
 	InferredUnsigned = &BuiltinType{"<unsigned>"} // could only be an unsigned number
+	BuiltinEmpty     = &BuiltinType{"empty"}      // the 0-byte type
 	BuiltinReal      = &BuiltinType{"real"}
 	BuiltinReal32    = &BuiltinType{"r32"}
 	BuiltinReal64    = &BuiltinType{"r64"}
@@ -547,13 +548,13 @@ type (
 func NumLit(literal string) *NumberLiteral {
 	return &NumberLiteral{
 		Literal: literal,
-		Value:   InferredValue,
+		Value:   UnparsedValue,
 	}
 }
 
 func TxtLit(literal string) *TextLiteral {
 	return &TextLiteral{
 		Literal: literal,
-		Value:   InferredValue,
+		Value:   UnparsedValue,
 	}
 }

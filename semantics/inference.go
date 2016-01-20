@@ -3,6 +3,8 @@ package semantics
 // NOTE: Only performing inference; type checking is a separate step
 // TODO: Break-out operator overload resolution
 // TODO: Should literals continue to be parsed here, or elsewhere?
+// TODO: Stop assuming declarations will be in order.
+//       They must be in blocks, but do not need to be at file/module scope
 
 import (
 	"strconv"
@@ -12,59 +14,114 @@ import (
 	"github.com/kestred/philomath/utils"
 )
 
-func InferTypes(expr ast.Expr) ast.Type {
-	switch node := expr.(type) {
+// TOOD: Implement copy on write to reference; inner-scopes may use a reference
+//       for performance, but must make a copy when defining identifiers.
+type TypeMap map[string]ast.Type
+
+func InferTypes(node ast.Node) ast.Type {
+	context := make(TypeMap)
+	switch n := node.(type) {
+	case *ast.Block:
+		return inferTypesInBlock(n, context)
+	case ast.Expr:
+		return inferTypesInExpr(n, context)
+	default:
+		panic("TODO: Only pass me a Block or an Expr right now!")
+	}
+}
+
+func inferTypesInBlock(block *ast.Block, context TypeMap) ast.Type {
+	// NOTE: If we have first-class union types, its reasonable to say that the
+	//       type of a block is the union of all return statement expression types.
+	//       Otherwise, still useful to collect for error messages.
+	// var returnTypes []ast.Type
+	for _, node := range block.Statements {
+		switch n := node.(type) {
+		case *ast.MutableDecl:
+			typ := inferTypesInExpr(n.Expr, context)
+			// TODO: Should I replace the type of
+			if n.Type == ast.InferredType {
+				context[n.Name.Literal] = typ
+			} else {
+				context[n.Name.Literal] = n.Type
+			}
+		case *ast.ExprStmt:
+			inferTypesInExpr(n.Expr, context)
+		case *ast.ReturnStmt:
+			// NOTE: If we actually had a return statement, the type of its
+			//       expression would be the block's type; otherwise we return none.
+		default:
+			panic("TOOD: Unhandled stmt/decl in InferBlockTypes")
+		}
+	}
+
+	return ast.BuiltinEmpty
+}
+
+// TODO: Probably need to be careful to avoid smashing non-inferred types
+//       I'll just wait until it becomes a bug and deal with it then
+func inferTypesInExpr(expr ast.Expr, context TypeMap) ast.Type {
+	switch e := expr.(type) {
 	case *ast.PostfixExpr:
-		subtype := InferTypes(node.Subexpr)
-		node.Type = inferPostfixType(node.Operator, subtype)
-		return node.Type
+		subtype := inferTypesInExpr(e.Subexpr, context)
+		e.Type = inferPostfixType(e.Operator, subtype)
+		return e.Type
 	case *ast.InfixExpr:
-		left := InferTypes(node.Left)
-		right := InferTypes(node.Right)
-		node.Type = inferInfixType(node.Operator, left, right)
-		return node.Type
+		left := inferTypesInExpr(e.Left, context)
+		right := inferTypesInExpr(e.Right, context)
+		e.Type = inferInfixType(e.Operator, left, right)
+		return e.Type
 	case *ast.PrefixExpr:
-		subtype := InferTypes(node.Subexpr)
-		node.Type = inferPrefixType(node.Operator, subtype)
-		return node.Type
+		subtype := inferTypesInExpr(e.Subexpr, context)
+		e.Type = inferPrefixType(e.Operator, subtype)
+		return e.Type
 	case *ast.GroupExpr:
-		node.Type = InferTypes(node.Subexpr)
-		return node.Type
+		e.Type = inferTypesInExpr(e.Subexpr, context)
+		return e.Type
 	case *ast.ValueExpr:
-		switch literal := node.Literal.(type) {
+		switch literal := e.Literal.(type) {
+		case *ast.Ident:
+			// NOTE: Assuming declarations will be in order (will stop being true eventually)
+			typ, defined := context[literal.Literal]
+			if defined {
+				e.Type = typ
+			} else {
+				e.Type = ast.UnknownType
+			}
+			return e.Type
 		case *ast.NumberLiteral:
 			var err error
 			lit := literal.Literal
 			if len(lit) > 2 && lit[0:2] == "0x" {
-				node.Type = ast.InferredUnsigned
+				e.Type = ast.InferredUnsigned
 				literal.Value, err = strconv.ParseUint(lit, 16, 0)
 				if err == strconv.ErrRange {
 					panic("TODO: Handle hexadecimal literal can't be represented by uint64")
 				}
 				utils.AssertNil(err, "Failed parsing hexadecimal literal")
 			} else if strings.Contains(lit, ".") || strings.Contains(lit, "e") {
-				node.Type = ast.InferredReal
+				e.Type = ast.InferredReal
 				literal.Value, err = strconv.ParseFloat(lit, 0)
 				if err == strconv.ErrRange {
 					panic("TODO: Handle floating point literal can't be represented by float64")
 				}
 				utils.AssertNil(err, "Failed parsing float literal")
 			} else if lit[0] == '0' {
-				node.Type = ast.InferredUnsigned
+				e.Type = ast.InferredUnsigned
 				literal.Value, err = strconv.ParseUint(lit, 8, 0)
 				if err == strconv.ErrRange {
 					panic("TODO: Handle octal literal can't be represented by uint64")
 				}
 				utils.AssertNil(err, "Failed parsing octal literal")
 			} else {
-				node.Type = ast.InferredNumber
+				e.Type = ast.InferredNumber
 				literal.Value, err = strconv.ParseUint(lit, 10, 0)
 				if err == strconv.ErrRange {
 					panic("TODO: Handle decimal literal can't be represented by uint64")
 				}
 				utils.AssertNil(err, "Failed parsing decimal literal")
 			}
-			return node.Type
+			return e.Type
 		default:
 			panic("TODO: Unhandled value literal")
 		}
@@ -134,43 +191,55 @@ func inferInfixType(op ast.Operator, left ast.Type, right ast.Type) ast.Type {
 	switch op.Literal {
 	case "-", "+", "*", "/":
 		// TODO: Implement operator overload resolution for prefix -/+
-		return promoteNumber(left, right)
+		return castNumbers(left, right)
 	default:
 		panic("TODO: Unhandled infix operator in type inference")
 	}
 }
 
-func promoteNumber(left ast.Type, right ast.Type) ast.Type {
+func castNumbers(left ast.Type, right ast.Type) ast.Type {
+	// NOTE: typechecking will come through later and assert that the implicit
+	//       casts are either safe (or "safe-enough")
 	if !isNumber(left) || !isNumber(right) {
+		// can't cast non-number to number
 		return ast.UnknownType
 	}
 
 	if isReal(left) {
 		if isReal(right) {
+			// cast low-bit to high-bit float
 			return promoteByOrder(left, right)
 		} else {
+			// cast any integer to any float
 			return left
 		}
 	} else if isReal(right) {
+		// cast any integer to any float
 		return right
 	}
 
 	if isSigned(left) {
 		if isSigned(right) {
+			// cast low-bit integer to high-bit integer
 			return promoteByOrder(left, right)
 		} else if right == ast.InferredNumber {
+			// cast generic to signed
 			return left
 		} else {
+			// can't cast unsigned to signed
 			return ast.UnknownType
 		}
 	} else if isSigned(right) {
 		if left == ast.InferredNumber {
+			// cast generic to signed
 			return right
 		} else {
+			// can't cast unsigned to signed
 			return ast.UnknownType
 		}
 	}
 
+	// cast low-bit unsigned to high-bit unsigned
 	return promoteByOrder(left, right)
 }
 
