@@ -8,21 +8,21 @@ import (
 )
 
 func parseExpression(t *testing.T, input string) ast.Expr {
-	var parser Parser
-	parser.Init("test", false, []byte(input))
-	expr := parser.ParseExpression()
-	if len(parser.Errors) > 0 {
-		assert.Fail(t, parser.Errors[0].Error())
+	var p Parser
+	p.Init("example", false, []byte(input))
+	expr := p.ParseExpression()
+	if len(p.Errors) > 0 {
+		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
 	}
 	return expr
 }
 
 func parseBlock(t *testing.T, input string) *ast.Block {
-	var parser Parser
-	parser.Init("test", false, []byte(input))
-	block := parser.ParseBlock()
-	if len(parser.Errors) > 0 {
-		assert.Fail(t, parser.Errors[0].Error())
+	var p Parser
+	p.Init("example", false, []byte(input))
+	block := p.ParseBlock()
+	if len(p.Errors) > 0 {
+		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
 	}
 	return block
 }

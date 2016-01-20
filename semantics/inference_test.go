@@ -11,10 +11,13 @@ import (
 
 func numberValue(input string) interface{} {
 	var p parser.Parser
-	p.Init("test", false, []byte(input))
+	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
-	InferTypes(expr)
+	if len(p.Errors) > 0 {
+		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+	}
 
+	InferTypes(expr)
 	valExpr := expr.(*ast.ValueExpr)
 	numLit := valExpr.Literal.(*ast.NumberLiteral)
 	return numLit.Value
@@ -35,8 +38,12 @@ func TestLiteralValues(t *testing.T) {
 
 func inferExpression(t *testing.T, input string) ast.Type {
 	var p parser.Parser
-	p.Init("test", false, []byte(input))
+	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
+	if len(p.Errors) > 0 {
+		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+	}
+
 	typ := InferTypes(expr)
 	assert.Equal(t, typ, expr.GetType())
 	return typ

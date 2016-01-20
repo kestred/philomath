@@ -11,7 +11,7 @@ import (
 
 func encodeExpression(input string) (*Scope, []Instruction) {
 	var p parser.Parser
-	p.Init("test", false, []byte(input))
+	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
 	semantics.InferTypes(expr)
 
