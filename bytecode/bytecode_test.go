@@ -1,7 +1,6 @@
 package bytecode
 
 import (
-	"fmt"
 	"testing"
 
 	// TODO: Maybe don't rely on parser et. al. when more code is stable
@@ -19,7 +18,6 @@ func encodeExpression(t *testing.T, input string) (*Scope, []Instruction) {
 	}
 
 	semantics.InferTypes(expr)
-
 	scope := &Scope{}
 	scope.Init()
 	return scope, FromExpr(expr, scope)
@@ -34,7 +32,6 @@ func encodeBlock(t *testing.T, input string) (*Scope, []Instruction) {
 	}
 
 	semantics.InferTypes(block)
-
 	scope := &Scope{}
 	scope.Init()
 	return scope, FromBlock(block, scope)
@@ -199,5 +196,4 @@ func TestEncodeBlock(t *testing.T) {
 	}`)
 	assert.Equal(t, expected, insts)
 	assert.Equal(t, constants, scope.Constants)
-	fmt.Println(insts)
 }

@@ -188,12 +188,31 @@ func TestParseBlock(t *testing.T) {
 			ast.Operator{"+"},
 			ast.ValExp(&ast.Ident{"foo"}),
 		)},
+		&ast.Block{[]ast.Blockable{
+			ast.Mutable("bar", nil, ast.ValExp(&ast.Ident{"foo"})),
+			&ast.ExprStmt{ast.InExp(
+				ast.ValExp(ast.NumLit("0755")),
+				ast.Operator{"-"},
+				ast.ValExp(ast.NumLit("1")),
+			)},
+		}},
+		&ast.ExprStmt{ast.InExp(
+			ast.ValExp(ast.NumLit("8.4e-5")),
+			ast.Operator{"/"},
+			ast.ValExp(ast.NumLit("0.5")),
+		)},
 	}}
 
-	example := `{
+	assert.Equal(t, expected, parseBlock(t, `{
 		foo := 3;  # mutable declaration
 		2 + foo;   # expression statement
-	}`
 
-	assert.Equal(t, expected, parseBlock(t, example))
+		{
+			# a nested block with multiple statements
+			bar := foo;
+			0755 - 1;
+		}
+
+		8.4e-5 / 0.5; # statement after a block
+	}`))
 }
