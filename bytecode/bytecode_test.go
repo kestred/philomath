@@ -14,7 +14,7 @@ func encodeExpression(t *testing.T, input string) (*Scope, []Instruction) {
 	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
 	if len(p.Errors) > 0 {
-		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 
 	semantics.InferTypes(expr)
@@ -28,7 +28,7 @@ func encodeBlock(t *testing.T, input string) (*Scope, []Instruction) {
 	p.Init("example", false, []byte(input))
 	block := p.ParseBlock()
 	if len(p.Errors) > 0 {
-		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 
 	semantics.InferTypes(block)

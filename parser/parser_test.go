@@ -12,17 +12,17 @@ func parseExpression(t *testing.T, input string) ast.Expr {
 	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
 	if len(p.Errors) > 0 {
-		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 	return expr
 }
 
 func parseBlock(t *testing.T, input string) *ast.Block {
 	var p Parser
-	p.Init("example", false, []byte(input))
+	p.Init("example", true, []byte(input))
 	block := p.ParseBlock()
 	if len(p.Errors) > 0 {
-		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
+		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 	return block
 }
@@ -183,36 +183,78 @@ func TestParseArithmetic(t *testing.T) {
 func TestParseBlock(t *testing.T) {
 	expected := &ast.Block{[]ast.Blockable{
 		ast.Mutable("foo", nil, ast.ValExp(ast.NumLit("3"))),
+		ast.Constant("baz", &ast.ExprDefn{ast.ValExp(ast.NumLit("1"))}),
 		&ast.ExprStmt{ast.InExp(
-			ast.ValExp(ast.NumLit("2")),
+			ast.InExp(
+				ast.ValExp(ast.NumLit("2")),
+				ast.Operator{"+"},
+				ast.ValExp(&ast.Ident{"foo"}),
+			),
 			ast.Operator{"+"},
-			ast.ValExp(&ast.Ident{"foo"}),
+			ast.ValExp(&ast.Ident{"baz"}),
 		)},
 		&ast.Block{[]ast.Blockable{
 			ast.Mutable("bar", nil, ast.ValExp(&ast.Ident{"foo"})),
 			&ast.ExprStmt{ast.InExp(
 				ast.ValExp(ast.NumLit("0755")),
 				ast.Operator{"-"},
-				ast.ValExp(ast.NumLit("1")),
+				ast.ValExp(&ast.Ident{"baz"}),
 			)},
+			&ast.AssignStmt{
+				[]ast.Expr{ast.ValExp(&ast.Ident{"foo"})},
+				ast.Operator{""},
+				[]ast.Expr{ast.InExp(
+					ast.ValExp(&ast.Ident{"baz"}),
+					ast.Operator{"*"},
+					ast.ValExp(ast.NumLit("4")),
+				)},
+			},
+			&ast.AssignStmt{
+				[]ast.Expr{
+					ast.ValExp(&ast.Ident{"bar"}),
+					ast.ValExp(&ast.Ident{"foo"}),
+				},
+				ast.Operator{""},
+				[]ast.Expr{
+					ast.InExp(
+						ast.ValExp(&ast.Ident{"foo"}),
+						ast.Operator{"+"},
+						ast.ValExp(ast.NumLit("27")),
+					),
+					ast.ValExp(&ast.Ident{"bar"}),
+				},
+			},
 		}},
 		&ast.ExprStmt{ast.InExp(
 			ast.ValExp(ast.NumLit("8.4e-5")),
 			ast.Operator{"/"},
 			ast.ValExp(ast.NumLit("0.5")),
 		)},
+		&ast.Block{nil},
 	}}
 
 	assert.Equal(t, expected, parseBlock(t, `{
-		foo := 3;  # mutable declaration
-		2 + foo;   # expression statement
+		foo := 3;      # mutable declaration
+		baz :: 1;      # constant declaration
+		2 + foo + baz; # expression statement
 
+		# a nested block
 		{
-			# a nested block with multiple statements
 			bar := foo;
-			0755 - 1;
+			0755 - baz;
+
+			foo = baz * 4;		        # assignment statement
+			bar, foo = foo + 27, bar; # parallel assignment
 		}
 
-		8.4e-5 / 0.5; # statement after a block
+		# ignore extra semicolons
+		; ;
+		8.4e-5 / 0.5;; ;
+		;
+
+		# empty block
+		{
+			; # ignore extra semicolons occuring before a statement
+		}
 	}`))
 }

@@ -78,6 +78,16 @@ func TestTokenString(t *testing.T) {
 	assert.Equal(t, "]", RIGHT_BRACKET.String())
 	assert.Equal(t, "}", RIGHT_BRACE.String())
 
+	assert.Equal(t, "if", IF.String())
+	assert.Equal(t, "for", FOR.String())
+	assert.Equal(t, "in", IN.String())
+	assert.Equal(t, "done", DONE.String())
+	assert.Equal(t, "return", RETURN.String())
+
+	assert.Equal(t, "struct", STRUCT.String())
+	assert.Equal(t, "module", MODULE.String())
+	assert.Equal(t, "func", FUNCTION.String())
+
 	assert.Equal(t, "Token(2000)", Token(2000).String())
 }
 
@@ -110,11 +120,12 @@ func TestIsOperator(t *testing.T) {
 	assert.Equal(t, false, IF.IsOperator())
 	assert.Equal(t, false, FOR.IsOperator())
 	assert.Equal(t, false, IN.IsOperator())
-	assert.Equal(t, false, BREAK.IsOperator())
+	assert.Equal(t, false, DONE.IsOperator())
 	assert.Equal(t, false, RETURN.IsOperator())
 
 	assert.Equal(t, false, STRUCT.IsOperator())
 	assert.Equal(t, false, MODULE.IsOperator())
+	assert.Equal(t, false, FUNCTION.IsOperator())
 }
 
 func TestIsKeyword(t *testing.T) {
@@ -146,9 +157,10 @@ func TestIsKeyword(t *testing.T) {
 	assert.Equal(t, true, IF.IsKeyword())
 	assert.Equal(t, true, FOR.IsKeyword())
 	assert.Equal(t, true, IN.IsKeyword())
-	assert.Equal(t, true, BREAK.IsKeyword())
+	assert.Equal(t, true, DONE.IsKeyword())
 	assert.Equal(t, true, RETURN.IsKeyword())
 
 	assert.Equal(t, true, STRUCT.IsKeyword())
 	assert.Equal(t, true, MODULE.IsKeyword())
+	assert.Equal(t, true, FUNCTION.IsKeyword())
 }

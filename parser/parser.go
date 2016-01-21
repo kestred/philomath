@@ -93,6 +93,7 @@ func (p *Parser) error(pos token.Position, msg string) {
 	if n > 0 && p.Errors[n-1].(*ParseError).Pos.Line == pos.Line {
 		return // discard - likely a spurious error
 	}
+	// TODO: Is 8 the right number? I prefer fewer reported errors to entirely bogus errors.
 	if n > 8 {
 		p.stopParsing()
 	}
@@ -106,6 +107,23 @@ func (p *Parser) expect(tok token.Token) bool {
 		// error messages in every single case that can be used.
 		// Eventually, anywhere this is used should be replaced with a thought out message.
 		p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, tok, p.tok))
+
+		/* TODO: It would probably produce better errors if we didn't eat any delimiters (eg. [] {} () , ;)
+
+		   In some cases that might result in an infinite loop since errors from
+		   the same source line are discared.
+
+		   This could be solved by quitting if the position hasn't changed since at
+			 all since the last error was reported (or after some number of reports).
+
+		   In this case, if we haven't reported that many errors, it would still be
+		   worth parsing the other files so that we can report an actionable number
+		   of errors.
+
+			TODO: Recovery (eg. error quality) might also be better if a parsing
+			      function could register a closing delimiter and then parsing unwinds
+						immediately to that function if the delimiter is found.
+		*/
 		p.next()
 		return false
 	} else {
@@ -133,9 +151,13 @@ func (p *Parser) next() {
 			name = path[len(path)-1]
 		}
 		caller := "Parser." + name
+		lit := p.lit
+		if len(lit) > 7 {
+			lit = lit[0:6] + "~"
+		}
 		// NOTE: For some irritating reason, running `go test` will always
 		//       hide stderr so make sure we use stdout
-		fmt.Printf("%s : %-14s @ %v:%v\n", p.lit, p.tok, caller, line)
+		fmt.Printf(" %7.7s : %-14s @ %v:%v\n", lit, p.tok, caller, line)
 	}
 
 	p.pos, p.tok, p.lit = p.scanner.Scan()
@@ -149,9 +171,16 @@ func (p *Parser) parseBlock() *ast.Block {
 	}
 
 	p.expect(token.LEFT_BRACE)
+	for p.tok == token.SEMICOLON {
+		p.next() // consume leading semicolons
+	}
+
 	var stmts []ast.Blockable
 	for p.tok != token.RIGHT_BRACE && p.tok != token.END {
 		stmts = append(stmts, p.parseBlockable())
+		for p.tok == token.SEMICOLON {
+			p.next() // consume extra semicolons
+		}
 	}
 	p.expect(token.RIGHT_BRACE)
 	return &ast.Block{stmts}
@@ -196,16 +225,64 @@ func (p *Parser) parseDeclaration() ast.Decl {
 	case token.MODULE:
 		panic("TODO: Handle modules")
 	default:
-		panic("TODO: Handle const expressions (maybe?)")
-		// expr := p.parseExpression()
+		// HACK: This kinda feels like a big hack. Specifically, this code isn't
+		// actually a hack but rather the grammar feels like a hack because of
+		// the way functions are handled here; either allow semicolons to be
+		// skipped most of the time or also require semicolons for structs/modules.
+		//
+		// I also think I've failed if I don't avoid the following Go weirdness:
+		//
+		//   (invalid)
+		//  foo := 3
+		//       + 4;
+		//
+		//   (valid)
+		//  foo := 3 +
+		//         4;
+		//
+		// It might also be ok to consider both of the above invalid and elide
+		// semicolons, but still allow a statement that looks like this:
+		//
+		//  foo := (13 +
+		//          4 -
+		//          7)
+		//
+		expr := p.parseExpression()
+		if _, isFunc := expr.(*ast.FunctionExpr); !isFunc {
+			p.expect(token.SEMICOLON)
+		}
+		return ast.Constant(name, &ast.ExprDefn{expr})
 	}
 }
 
 func (p *Parser) parseStatement() ast.Stmt {
-	// TODO: Handle non-expression statements
-	expr := p.parseExpression()
-	p.expect(token.SEMICOLON)
-	return &ast.ExprStmt{expr}
+	if p.tok.IsKeyword() {
+		panic("TODO: Handle keyword statements")
+	}
+
+	exprs := p.parseExpressionList()
+	// TODO: Handle combined assignment (eg. a += 2);
+	//       Generate an error but still continue if it is (a + = 2)
+	if p.tok == token.EQUALS {
+		p.next() // eat '='
+		values := p.parseExpressionList()
+		p.expect(token.SEMICOLON)
+		return &ast.AssignStmt{exprs, ast.Operator{""}, values}
+	} else if len(exprs) == 1 {
+		p.expect(token.SEMICOLON)
+		return &ast.ExprStmt{exprs[0]}
+	} else {
+		panic("TODO: Produce error for expression list w/o assignment, then recover")
+	}
+}
+
+func (p *Parser) parseExpressionList() []ast.Expr {
+	list := []ast.Expr{p.parseExpression()}
+	for p.tok == token.COMMA {
+		p.next() // eat ','
+		list = append(list, p.ParseExpression())
+	}
+	return list
 }
 
 func (p *Parser) parseExpression() ast.Expr {

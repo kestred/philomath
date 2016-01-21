@@ -90,11 +90,12 @@ const (
 	IF     // if
 	FOR    // for
 	IN     // in
-	BREAK  // break
+	DONE   // break
 	RETURN // return
 
-	STRUCT // struct
-	MODULE // module
+	STRUCT   // struct
+	MODULE   // module
+	FUNCTION // function
 
 	keywords_end
 )
@@ -128,11 +129,12 @@ var tokens = [...]string{
 	IF:     "if",
 	FOR:    "for",
 	IN:     "in",
-	BREAK:  "break",
+	DONE:   "done",
 	RETURN: "return",
 
-	STRUCT: "struct",
-	MODULE: "module",
+	STRUCT:   "struct",
+	MODULE:   "module",
+	FUNCTION: "func",
 }
 
 func (tok Token) String() string {

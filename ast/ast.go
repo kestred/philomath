@@ -56,7 +56,7 @@ func (v *EnumValue) ImplementsNode()     {}
 func (s *EnumSeparator) ImplementsNode() {}
 func (d *StructDefn) ImplementsNode()    {}
 func (f *StructField) ImplementsNode()   {}
-func (d *ValueDefn) ImplementsNode()     {}
+func (d *ExprDefn) ImplementsNode()     {}
 
 // Expressions (and related nodes)
 func (e *PostfixExpr) ImplementsNode()   {}
@@ -66,7 +66,6 @@ func (e *CallExpr) ImplementsNode()      {}
 func (e *GroupExpr) ImplementsNode()     {}
 func (e *FunctionExpr) ImplementsNode()  {}
 func (p *FunctionParam) ImplementsNode() {}
-func (e *AssignExpr) ImplementsNode()    {}
 func (e *MemberExpr) ImplementsNode()    {}
 func (e *ValueExpr) ImplementsNode()     {}
 
@@ -77,9 +76,10 @@ func (s *ForStmt) ImplementsNode()    {}
 func (r *ForRange) ImplementsNode()   {}
 func (r *EachRange) ImplementsNode()  {}
 func (r *ExprRange) ImplementsNode()  {}
+func (s *ExprStmt) ImplementsNode()   {}
+func (s *AssignStmt) ImplementsNode() {}
 func (s *ReturnStmt) ImplementsNode() {}
 func (s *DoneStmt) ImplementsNode()   {}
-func (s *ExprStmt) ImplementsNode()   {}
 
 // Types
 func (t *ArrayType) ImplementsNode()    {}
@@ -105,9 +105,10 @@ func (d *MutableDecl) ImplementsBlockable()  {}
 func (s *IfStmt) ImplementsBlockable()       {}
 func (s *WhileStmt) ImplementsBlockable()    {}
 func (s *ForStmt) ImplementsBlockable()      {}
+func (s *ExprStmt) ImplementsBlockable()     {}
+func (s *AssignStmt) ImplementsBlockable() {}
 func (s *ReturnStmt) ImplementsBlockable()   {}
 func (s *DoneStmt) ImplementsBlockable()     {}
-func (s *ExprStmt) ImplementsBlockable()     {}
 
 type Decl interface {
 	Blockable
@@ -124,7 +125,7 @@ type Defn interface {
 
 func (d *EnumDefn) ImplementsDefn()   {}
 func (d *StructDefn) ImplementsDefn() {}
-func (d *ValueDefn) ImplementsDefn()  {}
+func (d *ExprDefn) ImplementsDefn()  {}
 
 type Stmt interface {
 	Blockable
@@ -134,9 +135,10 @@ type Stmt interface {
 func (s *IfStmt) ImplementsStmt()     {}
 func (s *WhileStmt) ImplementsStmt()  {}
 func (s *ForStmt) ImplementsStmt()    {}
+func (s *ExprStmt) ImplementsStmt()   {}
+func (s *AssignStmt) ImplementsStmt() {}
 func (s *ReturnStmt) ImplementsStmt() {}
 func (s *DoneStmt) ImplementsStmt()   {}
-func (s *ExprStmt) ImplementsStmt()   {}
 
 type Expr interface {
 	Node
@@ -150,7 +152,6 @@ func (e *PrefixExpr) ImplementsExpr()   {}
 func (e *CallExpr) ImplementsExpr()     {}
 func (e *GroupExpr) ImplementsExpr()    {}
 func (e *FunctionExpr) ImplementsExpr() {}
-func (e *AssignExpr) ImplementsExpr()   {}
 func (e *MemberExpr) ImplementsExpr()   {}
 func (e *ValueExpr) ImplementsExpr()    {}
 
@@ -160,7 +161,6 @@ func (e *PrefixExpr) GetType() Type   { return e.Type }
 func (e *CallExpr) GetType() Type     { return e.Type }
 func (e *GroupExpr) GetType() Type    { return e.Type }
 func (e *FunctionExpr) GetType() Type { return e.Type }
-func (e *AssignExpr) GetType() Type   { return e.Type }
 func (e *MemberExpr) GetType() Type   { return e.Type }
 func (e *ValueExpr) GetType() Type    { return e.Type }
 
@@ -266,7 +266,7 @@ type (
 		Type Type
 	}
 
-	ValueDefn struct {
+	ExprDefn struct {
 		Expr Expr
 	}
 )
@@ -296,7 +296,7 @@ type (
 	ForRange struct {
 		Decl   MutableDecl
 		Cond   Expr
-		Update AssignExpr
+		Update AssignStmt
 	}
 
 	EachRange struct {
@@ -310,15 +310,21 @@ type (
 		Max Expr
 	}
 
+	AssignStmt struct {
+		Assignees []Expr
+		Operator  Operator
+		Values    []Expr
+	}
+
+	ExprStmt struct {
+		Expr Expr
+	}
+
 	ReturnStmt struct {
 		Value Expr
 	}
 
 	DoneStmt struct{}
-
-	ExprStmt struct {
-		Expr Expr
-	}
 )
 
 // An expression is represented by a tree of one or more of the following
@@ -378,16 +384,6 @@ type (
 	GroupExpr struct {
 		// syntax
 		Subexpr Expr
-
-		// semantics
-		Type Type
-	}
-
-	AssignExpr struct {
-		// syntax
-		Assignee Expr
-		Operator Operator
-		Value    Expr
 
 		// semantics
 		Type Type
@@ -457,15 +453,6 @@ func GrpExp(subexpr Expr) *GroupExpr {
 	return &GroupExpr{
 		Subexpr: subexpr,
 		Type:    InferredType,
-	}
-}
-
-func SetExp(assignee Expr, op Operator, value Expr) *AssignExpr {
-	return &AssignExpr{
-		Assignee: assignee,
-		Operator: op,
-		Value:    value,
-		Type:     InferredType,
 	}
 }
 
