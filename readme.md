@@ -1,8 +1,8 @@
- Philomath (.φ)
-----------------
-Philomath is a toy language implementation to learn/play-with programming
-language design, compiler architectures, byte code generation, virtual machines
-and byte code interpretation, byte-code to assembly conversion, and optimizing
+ Phi (.φ) - Philomath
+----------------------
+Phi is a toy language implementation to learn/play-with programming language
+design, compiler architectures, byte code generation, virtual machines and
+byte code interpretation, byte-code to assembly conversion, and optimizing
 compiler techniques.
 
 There are a few primary use cases that the language is being designed for
@@ -12,6 +12,7 @@ for most computing from embedded programming upto use as an interpreted REPL
  * Machine learning / Neural networks
  * Evolutionary computing / Genetic programming
  * Self hosting compilation
+ * Embedded Programming
  * Game development
  * General computing
 
