@@ -37,9 +37,14 @@ func inferTypesInBlock(block *ast.Block, context TypeMap) ast.Type {
 	// var returnTypes []ast.Type
 	for _, node := range block.Nodes {
 		switch n := node.(type) {
+		case *ast.ConstantDecl:
+			// NOTE: An ExprDefn is the only definiton with a type
+			if defn, ok := n.Defn.(*ast.ExprDefn); ok {
+				context[n.Name.Literal] = inferTypesInExpr(defn.Expr, context)
+			}
 		case *ast.MutableDecl:
 			typ := inferTypesInExpr(n.Expr, context)
-			// TODO: Should I replace the type of
+			// TODO: Not sure that I should replace the type of the decl if it is inferred...
 			if n.Type == ast.InferredType {
 				context[n.Name.Literal] = typ
 			} else {

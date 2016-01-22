@@ -188,10 +188,10 @@ func TestEncodeBlock(t *testing.T) {
 		{Code: F64_DIVIDE, Out: Register(8), Left: Register(6), Right: Register(7)},
 	}
 	scope, insts := encodeBlock(t, `{
-		hoge := 3;          # simple decl
+		hoge :: 3;          # constant decl
 		hoge + 2;           # one ident in expr, result ignored
 
-		piyo := 0.5 * hoge; # use ident in decl
+		piyo := 0.5 * hoge; # mutable decl
 		piyo / hoge;        # two ident in expr; TODO: return statement
 	}`)
 	assert.Equal(t, expected, insts)

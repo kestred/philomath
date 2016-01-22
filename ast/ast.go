@@ -56,7 +56,7 @@ func (v *EnumValue) ImplementsNode()     {}
 func (s *EnumSeparator) ImplementsNode() {}
 func (d *StructDefn) ImplementsNode()    {}
 func (f *StructField) ImplementsNode()   {}
-func (d *ExprDefn) ImplementsNode()     {}
+func (d *ExprDefn) ImplementsNode()      {}
 
 // Expressions (and related nodes)
 func (e *PostfixExpr) ImplementsNode()   {}
@@ -106,7 +106,7 @@ func (s *IfStmt) ImplementsBlockable()       {}
 func (s *WhileStmt) ImplementsBlockable()    {}
 func (s *ForStmt) ImplementsBlockable()      {}
 func (s *ExprStmt) ImplementsBlockable()     {}
-func (s *AssignStmt) ImplementsBlockable() {}
+func (s *AssignStmt) ImplementsBlockable()   {}
 func (s *ReturnStmt) ImplementsBlockable()   {}
 func (s *DoneStmt) ImplementsBlockable()     {}
 
@@ -125,7 +125,7 @@ type Defn interface {
 
 func (d *EnumDefn) ImplementsDefn()   {}
 func (d *StructDefn) ImplementsDefn() {}
-func (d *ExprDefn) ImplementsDefn()  {}
+func (d *ExprDefn) ImplementsDefn()   {}
 
 type Stmt interface {
 	Blockable

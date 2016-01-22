@@ -113,6 +113,12 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 	var insts []Instruction
 	for _, node := range block.Nodes {
 		switch n := node.(type) {
+		case *ast.ConstantDecl:
+			// NOTE: An ExprDefn is the only definiton used directly in bytecode generation
+			if defn, ok := n.Defn.(*ast.ExprDefn); ok {
+				insts = append(insts, FromExpr(defn.Expr, scope)...)
+				scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
+			}
 		case *ast.MutableDecl:
 			if n.Expr != nil {
 				insts = append(insts, FromExpr(n.Expr, scope)...)

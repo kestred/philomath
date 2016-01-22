@@ -165,26 +165,27 @@ func TestInferArithmetic(t *testing.T) {
 
 func TestInferBlock(t *testing.T) {
 	block := inferBlock(t, `{
-		hoge := -3;         # simple decl
+		hoge :: -3;         # constant decl
 		hoge + 2;           # one ident in expr
 
-		piyo := 0.5 * hoge; # use ident in decl
+		piyo := 0.5 * hoge; # mutable decl
 		piyo / hoge;        # two ident in expr
 
-		fuga := hogera;     # use undef in decl
-		0755 - fuga;        # propogate undef in expr
+		fuga := hogera;     # use undefined in decl
+		0755 - fuga;        # propogate undefined in expr
 	}`)
 
-	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type)
-		assert.Equal(t, ast.InferredSigned, decl.Expr.GetType())
+	if decl, ok := block.Nodes[0].(*ast.ConstantDecl); assert.True(t, ok) {
+		if defn, ok := decl.Defn.(*ast.ExprDefn); assert.True(t, ok) {
+			assert.Equal(t, ast.InferredSigned, defn.Expr.GetType())
+		}
 	}
 	if stmt, ok := block.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredSigned, stmt.Expr.GetType())
 	}
 
 	if decl, ok := block.Nodes[2].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type)
+		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
 	}
 	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {

@@ -106,15 +106,15 @@ func TestEvaluateArithmetic(t *testing.T) {
 
 func TestEncodeBlock(t *testing.T) {
 	result := evalBlock(t, `{
-		hoge := 3;          # simple decl
+		hoge :: 3;          # constant decl
 		hoge + 2;           # one ident in expr, result ignored
 
-		piyo := 0.5 * hoge; # use ident in decl
+		piyo := 0.5 * hoge; # mutable decl
 		piyo / hoge;        # two ident in expr; TODO: return statement
 	}`)
 
-	hoge := 3
-	piyo := 0.5 * float64(hoge)
+	const hoge = 3
+	var piyo = 0.5 * float64(hoge)
 	assert.Equal(t, float64(piyo/float64(hoge)), ToF64(result))
 	assert.Equal(t, float64(0.5), ToF64(result))
 }
