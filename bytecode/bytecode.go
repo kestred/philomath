@@ -8,15 +8,17 @@ import (
 	"github.com/kestred/philomath/utils"
 )
 
-type Code uint16
-type Register uint16
-type Data uintptr
+/* TODO: Handle shadowed variable names
 
-// Constant converts a constant table index to a register value.
-//
-// This function's main purpose is to visually distinguish between register
-// assignment and constant indexes, and to make it easier to search for its use.
-func Constant(i int) Register { return Register(i) }
+   I'm putting this off right now because I think that by the time I get to
+   the bytecode generator, I should not be operating on variable names at all
+   and so I don't want to build a complicated solution for it.
+
+   In the short term, this will be handled (for nested block scopes) as a check
+   at the semantic level.  Note that the semantic check is not intended to avoid
+   implementing shadowing, but rather because I think the bytecode generator
+	 is not the right place to implement variable shadowing;
+*/
 
 type Instruction struct {
 	Code Code
@@ -26,8 +28,16 @@ type Instruction struct {
 	Right Register
 }
 
-const OutOfRegisters = 65535
+type Code uint16
+type Register uint16
 
+// Constant converts a constant table index to a register value.
+//
+// This function's main purpose is to visually distinguish between register
+// assignment and constant indexes, and to make it easier to search for its use.
+func Constant(i int) Register { return Register(i) }
+
+const OutOfRegisters = 65535
 const (
 	NOOP Code = iota
 
@@ -90,16 +100,25 @@ func (code Code) String() string {
 	return s
 }
 
+type Data uintptr
+
+func FromI64(v int64) Data   { return *(*Data)(unsafe.Pointer(&v)) }
+func FromU64(v uint64) Data  { return *(*Data)(unsafe.Pointer(&v)) }
+func FromF64(v float64) Data { return *(*Data)(unsafe.Pointer(&v)) }
+func ToI64(v Data) int64     { return *(*int64)(unsafe.Pointer(&v)) }
+func ToU64(v Data) uint64    { return *(*uint64)(unsafe.Pointer(&v)) }
+func ToF64(v Data) float64   { return *(*float64)(unsafe.Pointer(&v)) }
+
 type Scope struct {
 	Constants    []Data
-	Registers    map[string]Register
 	NextRegister Register
+	Registers    map[string]Register
 }
 
 func (s *Scope) Init() {
-	s.Constants = []Data{0}
+	s.Constants = []Data{0} // the 0th constant is always 0
+	s.NextRegister = 1      // skip the 0th register
 	s.Registers = make(map[string]Register)
-	s.NextRegister = 1 // skip the 0th register
 }
 
 func (s *Scope) AssignRegister() Register {
@@ -113,8 +132,10 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 	var insts []Instruction
 	for _, node := range block.Nodes {
 		switch n := node.(type) {
+		case *ast.Block:
+			insts = append(insts, FromBlock(n, scope)...)
 		case *ast.ConstantDecl:
-			// NOTE: An ExprDefn is the only definiton used directly in bytecode generation
+			// NOTE: an ExprDefn is the only definiton used directly in bytecode generation
 			if defn, ok := n.Defn.(*ast.ExprDefn); ok {
 				insts = append(insts, FromExpr(defn.Expr, scope)...)
 				scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
@@ -148,13 +169,12 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 
 			var value Data
 			switch v := lit.Value.(type) {
-			// NOTE: these can't be combined for some noxious reason
 			case int64:
-				value = *(*Data)(unsafe.Pointer(&v))
+				value = FromI64(v)
 			case uint64:
-				value = *(*Data)(unsafe.Pointer(&v))
+				value = FromU64(v)
 			case float64:
-				value = *(*Data)(unsafe.Pointer(&v))
+				value = FromF64(v)
 			default:
 				panic("TODO: Unhandled value type")
 			}
@@ -165,7 +185,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		case *ast.Ident:
 			register, exists := scope.Registers[lit.Literal]
 			utils.Assert(exists, "A register was not allocated for a name before use in an expression")
-			// FIXME: Right now expressions must return an instruction with the out register set,
+			// FIXME: currently expressions must return an instruction with the Out register set,
 			//        but it doesn't make a whole lot of sense to be emitting NOOPs for value loads
 			return []Instruction{{Code: NOOP, Out: register}}
 		default:

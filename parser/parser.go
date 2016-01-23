@@ -114,15 +114,17 @@ func (p *Parser) expect(tok token.Token) bool {
 		   the same source line are discared.
 
 		   This could be solved by quitting if the position hasn't changed since at
-			 all since the last error was reported (or after some number of reports).
+		   all since the last error was reported (or after some number of reports).
 
 		   In this case, if we haven't reported that many errors, it would still be
 		   worth parsing the other files so that we can report an actionable number
 		   of errors.
 
-			TODO: Recovery (eg. error quality) might also be better if a parsing
-			      function could register a closing delimiter and then parsing unwinds
-						immediately to that function if the delimiter is found.
+		   TODO: Part 2.
+
+		   Recovery (eg. error quality) might also be better if a parsing
+		   function could register a closing delimiter and then parsing unwinds
+		   immediately to that function if the delimiter is found.
 		*/
 		p.next()
 		return false

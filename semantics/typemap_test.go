@@ -8,29 +8,29 @@ import (
 )
 
 func TestTypeMap(t *testing.T) {
-  // Get/Set
+	// Get/Set
 	typmap := MakeTypeMap()
 	typmap.Set("a", ast.InferredUnsigned)
 	assert.Equal(t, ast.InferredUnsigned, typmap.Get("a"))
 
 	{
-    // Get on reference
+		// Get on reference
 		refmap := typmap.Reference()
 		assert.Equal(t, ast.InferredUnsigned, refmap.Get("a"))
-    assert.Equal(t, typmap.types, refmap.types)
+		assert.Equal(t, typmap.types, refmap.types)
 
-    // Set on reference
+		// Set on reference
 		refmap.Set("b", ast.InferredSigned)
 		assert.Equal(t, ast.InferredSigned, refmap.Get("b"))
 		assert.Equal(t, ast.InferredUnsigned, refmap.Get("a"))
-    assert.NotEqual(t, typmap.types, refmap.types)
+		assert.NotEqual(t, typmap.types, refmap.types)
 
-    // Overwriting a value
+		// Overwriting a value
 		refmap.Set("a", ast.InferredFloat)
 		assert.Equal(t, ast.InferredFloat, refmap.Get("a"))
 	}
 
-  // Get on the original
-  assert.Equal(t, ast.InferredUnsigned, typmap.Get("a"))
-  assert.Equal(t, nil, typmap.Get("b"))
+	// Get on the original
+	assert.Equal(t, ast.InferredUnsigned, typmap.Get("a"))
+	assert.Equal(t, nil, typmap.Get("b"))
 }

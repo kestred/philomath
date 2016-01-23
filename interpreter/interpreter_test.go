@@ -61,47 +61,39 @@ func TestEvaluateNoop(t *testing.T) {
 	assert.Equal(t, 3, int(result))
 }
 
-func TestUnsafeSafety(t *testing.T) {
-	lhs := ToI64(bytecode.Data(2))
-	rhs := ToF64(bytecode.Data(2))
-	assert.NotEqual(t, float64(lhs), float64(rhs))
-	assert.Equal(t, int64(2), lhs)
-	assert.Equal(t, float64(1e-323), rhs)
-}
-
 func TestEvaluateArithmetic(t *testing.T) {
 	// constant
 	result := evalExpression(t, `22`)
-	assert.Equal(t, int64(22), ToI64(result))
+	assert.Equal(t, int64(22), bytecode.ToI64(result))
 
 	// add, subtract, multiply, divide
 	result = evalExpression(t, `2 * 3 + 27 / 9 - 15`)
-	assert.Equal(t, int64(2*3+27/9-15), ToI64(result))
-	assert.Equal(t, int64(-6), ToI64(result))
+	assert.Equal(t, int64(2*3+27/9-15), bytecode.ToI64(result))
+	assert.Equal(t, int64(-6), bytecode.ToI64(result))
 
 	result = evalExpression(t, `2.0 * 4.0 + 8.0 / 16.0 - 32.0`)
-	assert.Equal(t, float64(2.0*4.0+8.0/16.0-32.0), ToF64(result))
-	assert.Equal(t, float64(-23.5), ToF64(result))
+	assert.Equal(t, float64(2.0*4.0+8.0/16.0-32.0), bytecode.ToF64(result))
+	assert.Equal(t, float64(-23.5), bytecode.ToF64(result))
 
 	result = evalExpression(t, `02 * 03 + 04 / 05 - 01`)
-	assert.Equal(t, uint64(02*03+04/05-01), ToU64(result))
-	assert.Equal(t, uint64(5), ToU64(result))
+	assert.Equal(t, uint64(02*03+04/05-01), bytecode.ToU64(result))
+	assert.Equal(t, uint64(5), bytecode.ToU64(result))
 
 	result = evalExpression(t, `(2 + 3) + 4.0`)
-	assert.Equal(t, float64((2+3)+4.0), ToF64(result))
-	assert.Equal(t, float64(9.0), ToF64(result))
+	assert.Equal(t, float64((2+3)+4.0), bytecode.ToF64(result))
+	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 
 	result = evalExpression(t, `(2 + 3.0) + 4`)
-	assert.Equal(t, float64((2+3.0)+4), ToF64(result))
-	assert.Equal(t, float64(9.0), ToF64(result))
+	assert.Equal(t, float64((2+3.0)+4), bytecode.ToF64(result))
+	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 
 	result = evalExpression(t, `(02 + 03) + 4.0`)
-	assert.Equal(t, float64((02+03)+4.0), ToF64(result))
-	assert.Equal(t, float64(9.0), ToF64(result))
+	assert.Equal(t, float64((02+03)+4.0), bytecode.ToF64(result))
+	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 
 	result = evalExpression(t, `(02 + 3.0) + 04`)
-	assert.Equal(t, float64((02+3.0)+04), ToF64(result))
-	assert.Equal(t, float64(9.0), ToF64(result))
+	assert.Equal(t, float64((02+3.0)+04), bytecode.ToF64(result))
+	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 }
 
 func TestEncodeBlock(t *testing.T) {
@@ -115,6 +107,6 @@ func TestEncodeBlock(t *testing.T) {
 
 	const hoge = 3
 	var piyo = 0.5 * float64(hoge)
-	assert.Equal(t, float64(piyo/float64(hoge)), ToF64(result))
-	assert.Equal(t, float64(0.5), ToF64(result))
+	assert.Equal(t, float64(piyo/float64(hoge)), bytecode.ToF64(result))
+	assert.Equal(t, float64(0.5), bytecode.ToF64(result))
 }

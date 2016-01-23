@@ -1,17 +1,6 @@
 package interpreter
 
-import (
-	"unsafe"
-
-	bc "github.com/kestred/philomath/bytecode"
-)
-
-func ToI64(v bc.Data) int64     { return *(*int64)(unsafe.Pointer(&v)) }
-func ToU64(v bc.Data) uint64    { return *(*uint64)(unsafe.Pointer(&v)) }
-func ToF64(v bc.Data) float64   { return *(*float64)(unsafe.Pointer(&v)) }
-func FromI64(v int64) bc.Data   { return *(*bc.Data)(unsafe.Pointer(&v)) }
-func FromU64(v uint64) bc.Data  { return *(*bc.Data)(unsafe.Pointer(&v)) }
-func FromF64(v float64) bc.Data { return *(*bc.Data)(unsafe.Pointer(&v)) }
+import bc "github.com/kestred/philomath/bytecode"
 
 // for now, Evaluate will return whatever the result of the last instruction is
 func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Register) bc.Data {
@@ -26,71 +15,71 @@ func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Regist
 
 		// signed 64-bit arithmetic
 		case bc.I64_ADD:
-			left := ToI64(registers[inst.Left])
-			right := ToI64(registers[inst.Right])
-			registers[inst.Out] = FromI64(left + right)
+			left := bc.ToI64(registers[inst.Left])
+			right := bc.ToI64(registers[inst.Right])
+			registers[inst.Out] = bc.FromI64(left + right)
 		case bc.I64_SUBTRACT:
-			left := ToI64(registers[inst.Left])
-			right := ToI64(registers[inst.Right])
-			registers[inst.Out] = FromI64(left - right)
+			left := bc.ToI64(registers[inst.Left])
+			right := bc.ToI64(registers[inst.Right])
+			registers[inst.Out] = bc.FromI64(left - right)
 		case bc.I64_MULTIPLY:
-			left := ToI64(registers[inst.Left])
-			right := ToI64(registers[inst.Right])
-			registers[inst.Out] = FromI64(left * right)
+			left := bc.ToI64(registers[inst.Left])
+			right := bc.ToI64(registers[inst.Right])
+			registers[inst.Out] = bc.FromI64(left * right)
 		case bc.I64_DIVIDE:
-			left := ToI64(registers[inst.Left])
-			right := ToI64(registers[inst.Right])
-			registers[inst.Out] = FromI64(left / right)
+			left := bc.ToI64(registers[inst.Left])
+			right := bc.ToI64(registers[inst.Right])
+			registers[inst.Out] = bc.FromI64(left / right)
 
 		// unsigned 64-bit arithmetic
 		case bc.U64_ADD:
-			left := ToU64(registers[inst.Left])
-			right := ToU64(registers[inst.Right])
-			registers[inst.Out] = FromU64(left + right)
+			left := bc.ToU64(registers[inst.Left])
+			right := bc.ToU64(registers[inst.Right])
+			registers[inst.Out] = bc.FromU64(left + right)
 		case bc.U64_SUBTRACT:
-			left := ToU64(registers[inst.Left])
-			right := ToU64(registers[inst.Right])
-			registers[inst.Out] = FromU64(left - right)
+			left := bc.ToU64(registers[inst.Left])
+			right := bc.ToU64(registers[inst.Right])
+			registers[inst.Out] = bc.FromU64(left - right)
 		case bc.U64_MULTIPLY:
-			left := ToU64(registers[inst.Left])
-			right := ToU64(registers[inst.Right])
-			registers[inst.Out] = FromU64(left * right)
+			left := bc.ToU64(registers[inst.Left])
+			right := bc.ToU64(registers[inst.Right])
+			registers[inst.Out] = bc.FromU64(left * right)
 		case bc.U64_DIVIDE:
-			left := ToU64(registers[inst.Left])
-			right := ToU64(registers[inst.Right])
-			registers[inst.Out] = FromU64(left / right)
+			left := bc.ToU64(registers[inst.Left])
+			right := bc.ToU64(registers[inst.Right])
+			registers[inst.Out] = bc.FromU64(left / right)
 
 		// floating-point 64-bit arithmetic
 		case bc.F64_ADD:
-			left := ToF64(registers[inst.Left])
-			right := ToF64(registers[inst.Right])
-			registers[inst.Out] = FromF64(left + right)
+			left := bc.ToF64(registers[inst.Left])
+			right := bc.ToF64(registers[inst.Right])
+			registers[inst.Out] = bc.FromF64(left + right)
 		case bc.F64_SUBTRACT:
-			left := ToF64(registers[inst.Left])
-			right := ToF64(registers[inst.Right])
-			registers[inst.Out] = FromF64(left - right)
+			left := bc.ToF64(registers[inst.Left])
+			right := bc.ToF64(registers[inst.Right])
+			registers[inst.Out] = bc.FromF64(left - right)
 		case bc.F64_MULTIPLY:
-			left := ToF64(registers[inst.Left])
-			right := ToF64(registers[inst.Right])
-			registers[inst.Out] = FromF64(left * right)
+			left := bc.ToF64(registers[inst.Left])
+			right := bc.ToF64(registers[inst.Right])
+			registers[inst.Out] = bc.FromF64(left * right)
 		case bc.F64_DIVIDE:
-			left := ToF64(registers[inst.Left])
-			right := ToF64(registers[inst.Right])
-			registers[inst.Out] = FromF64(left / right)
+			left := bc.ToF64(registers[inst.Left])
+			right := bc.ToF64(registers[inst.Right])
+			registers[inst.Out] = bc.FromF64(left / right)
 
 		// conversions
 		case bc.CONVERT_F64_TO_I64:
-			value := ToF64(registers[inst.Left])
-			registers[inst.Out] = FromI64(int64(value))
+			value := bc.ToF64(registers[inst.Left])
+			registers[inst.Out] = bc.FromI64(int64(value))
 		case bc.CONVERT_F64_TO_U64:
-			value := ToF64(registers[inst.Left])
-			registers[inst.Out] = FromU64(uint64(value))
+			value := bc.ToF64(registers[inst.Left])
+			registers[inst.Out] = bc.FromU64(uint64(value))
 		case bc.CONVERT_I64_TO_F64:
-			value := ToI64(registers[inst.Left])
-			registers[inst.Out] = FromF64(float64(value))
+			value := bc.ToI64(registers[inst.Left])
+			registers[inst.Out] = bc.FromF64(float64(value))
 		case bc.CONVERT_U64_TO_F64:
-			value := ToU64(registers[inst.Left])
-			registers[inst.Out] = FromF64(float64(value))
+			value := bc.ToU64(registers[inst.Left])
+			registers[inst.Out] = bc.FromF64(float64(value))
 
 		default:
 			panic("TODO: Unhandled opcode")

@@ -164,6 +164,7 @@ func TestInferArithmetic(t *testing.T) {
 }
 
 func TestInferBlock(t *testing.T) {
+	// Declarations
 	block := inferBlock(t, `{
 		hoge :: -3;         # constant decl
 		hoge + 2;           # one ident in expr
@@ -200,6 +201,46 @@ func TestInferBlock(t *testing.T) {
 		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
 	}
 
-	// TODO: Nested block inference tests
+	// Nested block
+	block = inferBlock(t, `{
+		ham  := 0600;
+		eggs :: -6.29;
 
+		{
+			spam := eggs / 2;
+			spam - ham;
+			eggs;
+			ham;
+		}
+
+		eggs * spam;
+	}`)
+
+	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
+	}
+	if decl, ok := block.Nodes[1].(*ast.ConstantDecl); assert.True(t, ok) {
+		if defn, ok := decl.Defn.(*ast.ExprDefn); assert.True(t, ok) {
+			assert.Equal(t, ast.InferredFloat, defn.Expr.GetType())
+		}
+	}
+	if nest, ok := block.Nodes[2].(*ast.Block); assert.True(t, ok) {
+		if decl, ok := nest.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
+			assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+			assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
+		}
+		if stmt, ok := nest.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {
+			assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
+		}
+		if stmt, ok := nest.Nodes[2].(*ast.ExprStmt); assert.True(t, ok) {
+			assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
+		}
+		if stmt, ok := nest.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
+			assert.Equal(t, ast.InferredUnsigned, stmt.Expr.GetType())
+		}
+	}
+	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
+		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
+	}
 }
