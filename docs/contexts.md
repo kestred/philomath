@@ -4,21 +4,19 @@ make it really easy to define a global variable and very difficult to pass
 around a set of shared variables for an execution instance or library
 
 ### Feature
-The language supports defining a "context" (and functions using that context)
-that is implicitly passed to functions that use it.
+The language supports defining a "context" (and procedures using that context)
+that is implicitly passed to procedures that use it.
 Values in a context can be re-assigned before or when calling a procedure to get
 a fresh or modified context for that procedure invocation.
 
 ### Machine Implementation
-When calling a function the pointer to the a context is passed to every function.
-
 **Problem:** Passing many context w/o passing many pointers  
-**Problem:** Remembering a specific context in a nested function when called
-from a function not using that context  
+**Problem:** Remembering a specific context in a nested procedure when called
+from a procedure not using that context  
 
 > Both of these problems can be solved by using something like a
-"context table".  To pass the context to any function, you pass a pointer
-to the context table; then, a function within the originally compiled executable
+"context table".  To pass the context to any procedure, you pass a pointer
+to the context table; then, a procedure within the originally compiled executable
 knows at compile time what the offset for a given context is in the table.
 
 **Problem:** Passing a context to a linked libary / shared object
@@ -38,11 +36,11 @@ value in the context table (or some other location) could be a pointer to an
 extended or dynamic context table. The size of a context may need to be
 specified in the BSS/DATA of the library.
 
-**Problem:** Optimizing "leaf" function calls
+**Problem:** Optimizing "leaf" procedure calls
 
-> If a function does not use any contexts and does not make any function calls,
+> If a procedure does not use any contexts and does not make any procedure calls,
 it would be possible to elide storing the context argument in a register or on
-the stack.  If the functional call semantics has the context table in a known
+the stack.  If the procedureal call semantics has the context table in a known
 location, then that register or stack location does not need to be set.
 (You could potentially use that location for something else, but for shared
 objects / dynamically loaded code I'd avoid it because it complicates the ABI).
@@ -55,5 +53,5 @@ it cannot use a predefined global location for the context table.  Instead, the
 context table COULD be stored in thread-local storage (using segment registers).
 In the general case, if the context table is always stored on the heap and
 passed as a pointer, this wouldn't be a problem; however, consider the case
-of calling into C code and calling back a function which requires a context,
+of calling into C code and calling back a procedure which requires a context,
 then the table would need to be at a knowable (not necessarily static) location.
