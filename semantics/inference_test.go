@@ -199,4 +199,7 @@ func TestInferBlock(t *testing.T) {
 	if stmt, ok := block.Nodes[5].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
 	}
+
+	// TODO: Nested block inference tests
+
 }

@@ -14,12 +14,8 @@ import (
 	"github.com/kestred/philomath/utils"
 )
 
-// TOOD: Implement copy on write to reference; inner-scopes may use a reference
-//       for performance, but must make a copy when defining identifiers.
-type TypeMap map[string]ast.Type
-
 func InferTypes(node ast.Node) ast.Type {
-	context := make(TypeMap)
+	context := MakeTypeMap()
 	switch n := node.(type) {
 	case *ast.Block:
 		return inferTypesInBlock(n, context)
@@ -37,18 +33,20 @@ func inferTypesInBlock(block *ast.Block, context TypeMap) ast.Type {
 	// var returnTypes []ast.Type
 	for _, node := range block.Nodes {
 		switch n := node.(type) {
+		case *ast.Block:
+			inferTypesInBlock(n, context.Reference())
 		case *ast.ConstantDecl:
 			// NOTE: An ExprDefn is the only definiton with a type
 			if defn, ok := n.Defn.(*ast.ExprDefn); ok {
-				context[n.Name.Literal] = inferTypesInExpr(defn.Expr, context)
+				context.Set(n.Name.Literal, inferTypesInExpr(defn.Expr, context))
 			}
 		case *ast.MutableDecl:
 			typ := inferTypesInExpr(n.Expr, context)
 			// TODO: Not sure that I should replace the type of the decl if it is inferred...
 			if n.Type == ast.InferredType {
-				context[n.Name.Literal] = typ
+				context.Set(n.Name.Literal, typ)
 			} else {
-				context[n.Name.Literal] = n.Type
+				context.Set(n.Name.Literal, n.Type)
 			}
 		case *ast.ExprStmt:
 			inferTypesInExpr(n.Expr, context)
@@ -87,8 +85,8 @@ func inferTypesInExpr(expr ast.Expr, context TypeMap) ast.Type {
 		switch literal := e.Literal.(type) {
 		case *ast.Ident:
 			// NOTE: Assuming declarations will be in order (will stop being true eventually)
-			typ, defined := context[literal.Literal]
-			if defined {
+			typ := context.Get(literal.Literal)
+			if typ != nil {
 				e.Type = typ
 			} else {
 				e.Type = ast.UnknownType
