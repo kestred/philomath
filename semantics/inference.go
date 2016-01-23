@@ -50,9 +50,18 @@ func inferTypesInBlock(block *ast.Block, context TypeMap) ast.Type {
 			}
 		case *ast.ExprStmt:
 			inferTypesInExpr(n.Expr, context)
+		case *ast.AssignStmt:
+			if len(n.Assignees) != len(n.Values) {
+				panic("TODO: Handle unbalanced assignment")
+			}
+
+			for i := range n.Assignees {
+				inferTypesInExpr(n.Assignees[i], context)
+				inferTypesInExpr(n.Values[i], context)
+			}
 		case *ast.ReturnStmt:
-			// NOTE: If we actually had a return statement, the type of its
-			//       expression would be the block's type; otherwise we return none.
+			// NOTE: Once we actually have a return statement, the type of its
+			//       expression would be this block's type; otherwise we return none.
 		default:
 			panic("TOOD: Unhandled stmt/decl in semantics.inferTypesInBlock")
 		}

@@ -10,6 +10,8 @@ func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Regist
 		switch inst.Code {
 		case bc.NOOP:
 			continue
+		case bc.COPY_VALUE:
+			registers[inst.Out] = registers[inst.Left]
 		case bc.LOAD_CONST:
 			registers[inst.Out] = consts[inst.Left]
 

@@ -41,6 +41,23 @@ const OutOfRegisters = 65535
 const (
 	NOOP Code = iota
 
+	/* ASIDE: MOVE vs COPY
+
+	   I had a hard time deciding whether to call this instruction "move" or "copy".
+	   In other bytecode representions or instruction sets, the operation is
+	   called MOVE, but the description is then "copy A to B".
+
+	   Semantically, a proper MOVE opcode means that value in the Left register is
+	   moved to the Out register and the Left register becomes an undefined value.
+	   In practice, the interperter would just leave the value in the left register
+		 except during debugging, when it could be overwritten with a canary value.
+
+	   For now, I've chosen a COPY opcode because the bytecode generator is
+	   currently treating each register similar to single-static assignment form.
+	   If I have a smaller register pool and start re-using registers later,
+		 then I may end up switching to or adding a MOVE opcode.
+	*/
+	COPY_VALUE
 	LOAD_CONST
 
 	I64_ADD
@@ -65,7 +82,9 @@ const (
 )
 
 var opcodes = [...]string{
-	NOOP:       "No operation",
+	NOOP: "No operation",
+
+	COPY_VALUE: "Copy value",
 	LOAD_CONST: "Load constant",
 
 	I64_ADD:      "Signed Addition",
@@ -151,6 +170,48 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 			}
 		case *ast.ExprStmt:
 			insts = append(insts, FromExpr(n.Expr, scope)...)
+		case *ast.AssignStmt:
+			utils.Assert(len(n.Assignees) == len(n.Values), "An unbalanced assignment survived until bytecode generation")
+			if len(n.Values) == 1 {
+				insts = append(insts, FromExpr(n.Values[0], scope)...)
+				rhs := insts[len(insts)-1].Out
+				if expr, ok := n.Assignees[0].(*ast.ValueExpr); ok {
+					lit, ok := expr.Literal.(*ast.Ident)
+					utils.Assert(ok, "Found a non-identifier literal as the assignee in assignment")
+					lhs, exists := scope.Registers[lit.Literal]
+					utils.Assert(exists, "A register was not allocated for a name before use in an expression")
+
+					// copy from rhs to lhs (cast as needed)
+					rhs = insertConversion(scope, &insts, rhs, n.Values[0].GetType(), expr.Type)
+					insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
+				} else {
+					panic("TODO: Handle non-identifier expressions as the assignee in assignment")
+				}
+			} else {
+				tmps := make([]Register, len(n.Values))
+				for i, expr := range n.Values {
+					insts = append(insts, FromExpr(expr, scope)...)
+					rhs := insts[len(insts)-1].Out
+
+					// copy from rhs to temporary
+					tmps[i] = scope.AssignRegister()
+					insts = append(insts, Instruction{Code: COPY_VALUE, Out: tmps[i], Left: rhs})
+				}
+				for i, expr := range n.Assignees {
+					if e, ok := expr.(*ast.ValueExpr); ok {
+						lit, ok := e.Literal.(*ast.Ident)
+						utils.Assert(ok, "Found a non-identifier literal as the assignee in assignment")
+						lhs, exists := scope.Registers[lit.Literal]
+						utils.Assert(exists, "A register was not allocated for a name before use in an expression")
+
+						// copy from temporary to lhs (cast as needed)
+						rhs := insertConversion(scope, &insts, tmps[i], n.Values[i].GetType(), e.Type)
+						insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
+					} else {
+						panic("TODO: Handle non-identifier expressions as the assignee in assignment")
+					}
+				}
+			}
 		default:
 			panic("TOOD: Unhandle node type in bytecode.FromBlock")
 		}
@@ -204,14 +265,12 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		// instructions to evaluate left hand side
 		left := FromExpr(e.Left, scope)
 		insts = append(insts, left...)
-		insertConversion(scope, &insts, e.Left.GetType(), e.Type)
-		infix.Left = insts[len(insts)-1].Out
+		infix.Left = insertConversion(scope, &insts, insts[len(insts)-1].Out, e.Left.GetType(), e.Type)
 
 		// instructions to evaluate right hand side
 		right := FromExpr(e.Right, scope)
 		insts = append(insts, right...)
-		insertConversion(scope, &insts, e.Right.GetType(), e.Type)
-		infix.Right = insts[len(insts)-1].Out
+		infix.Right = insertConversion(scope, &insts, insts[len(insts)-1].Out, e.Right.GetType(), e.Type)
 
 		// TODO: table lookup?
 		// TODO: probably shouldn't have any "inferred" types by the time we get here
@@ -275,9 +334,10 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 	}
 }
 
-func insertConversion(scope *Scope, insts *[]Instruction, from ast.Type, to ast.Type) {
+// TODO: Handle non-numeric types
+func insertConversion(scope *Scope, insts *[]Instruction, loc Register, from ast.Type, to ast.Type) Register {
 	if from == to {
-		return
+		return loc
 	}
 
 	// TODO: maybe insert overflow check for integer conversions?
@@ -289,28 +349,34 @@ func insertConversion(scope *Scope, insts *[]Instruction, from ast.Type, to ast.
 		if to == ast.InferredFloat {
 			list := *insts
 			convert := Instruction{Code: CONVERT_I64_TO_F64, Out: scope.AssignRegister()}
-			convert.Left = list[len(list)-1].Out
+			convert.Left = loc
 			*insts = append(list, convert)
+			return convert.Out
 		}
 	case ast.InferredUnsigned:
 		if to == ast.InferredFloat {
 			list := *insts
 			convert := Instruction{Code: CONVERT_U64_TO_F64, Out: scope.AssignRegister()}
-			convert.Left = list[len(list)-1].Out
+			convert.Left = loc
 			*insts = append(list, convert)
+			return convert.Out
 		}
 	case ast.InferredFloat:
 		switch to {
 		case ast.InferredNumber, ast.InferredSigned:
 			list := *insts
 			convert := Instruction{Code: CONVERT_F64_TO_I64, Out: scope.AssignRegister()}
-			convert.Left = list[len(list)-1].Out
+			convert.Left = loc
 			*insts = append(list, convert)
+			return convert.Out
 		case ast.InferredUnsigned:
 			list := *insts
 			convert := Instruction{Code: CONVERT_F64_TO_U64, Out: scope.AssignRegister()}
-			convert.Left = list[len(list)-1].Out
+			convert.Left = loc
 			*insts = append(list, convert)
+			return convert.Out
 		}
 	}
+
+	return loc
 }

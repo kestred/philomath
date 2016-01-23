@@ -70,7 +70,7 @@ func TestEncodeArithmetic(t *testing.T) {
 	assert.Equal(t, expected, insts)
 	assert.Equal(t, constants, scope.Constants)
 
-	constants = []Data{0, 0755}
+	constants = []Data{0, FromU64(0755)}
 	expected = []Instruction{{Code: LOAD_CONST, Out: Register(1), Left: Constant(1)}}
 	scope, insts = encodeExpression(t, `0755`)
 	assert.Equal(t, expected, insts)
@@ -115,7 +115,7 @@ func TestEncodeArithmetic(t *testing.T) {
 	assert.Equal(t, expected, insts)
 	assert.Equal(t, constants, scope.Constants)
 
-	constants = []Data{0, 2, 3, 4, 5, 6}
+	constants = []Data{0, FromU64(2), FromU64(3), FromU64(4), FromU64(5), FromU64(6)}
 	expected = []Instruction{
 		{Code: LOAD_CONST, Out: Register(1), Left: Constant(1)},
 		{Code: LOAD_CONST, Out: Register(2), Left: Constant(2)},
@@ -192,7 +192,12 @@ func TestEncodeArithmetic(t *testing.T) {
 
 func TestEncodeBlock(t *testing.T) {
 	// Declarations
-	constants := []Data{0, 3, 2, FromF64(0.5)}
+	constants := []Data{
+		0: 0,
+		1: 3,
+		2: 2,
+		3: FromF64(0.5),
+	}
 	expected := []Instruction{
 		{Code: LOAD_CONST, Out: Register(1), Left: Constant(1)},
 		{Code: NOOP, Out: Register(1)},
@@ -217,24 +222,98 @@ func TestEncodeBlock(t *testing.T) {
 	assert.Equal(t, expected, insts)
 	assert.Equal(t, constants, scope.Constants)
 
-	// Nested block
-	constants = []Data{0, FromU64(0600), FromF64(6.29), FromI64(2)}
+	// Simple and Parallel Assignment
+	constants = []Data{
+		0: 0,
+		1: 1,
+		2: 4,
+		3: FromU64(012),
+		4: 14,
+		5: FromU64(0700),
+		6: FromF64(0.25),
+		7: FromF64(5.0),
+		8: 10000,
+		9: 100,
+	}
 	expected = []Instruction{
-		// ham := 0600;
+		// plugh := 1 - 3;
 		{Code: LOAD_CONST, Out: Register(1), Left: Constant(1)},
-		// eggs :: 6.29;
 		{Code: LOAD_CONST, Out: Register(2), Left: Constant(2)},
-		// spam :: eggs / 2;
+		{Code: I64_SUBTRACT, Out: Register(3), Left: Register(1), Right: Register(2)},
+		// xyzzy := 012;
+		{Code: LOAD_CONST, Out: Register(4), Left: Constant(3)},
+		// nerrf := 14;
+		{Code: LOAD_CONST, Out: Register(5), Left: Constant(4)},
+		// xyzzy = 0700;
+		{Code: LOAD_CONST, Out: Register(6), Left: Constant(5)},
+		{Code: COPY_VALUE, Out: Register(4), Left: Register(6)},
+		// plugh = 0.25 * plugh;
+		{Code: LOAD_CONST, Out: Register(7), Left: Constant(6)},
+		{Code: NOOP, Out: Register(3)},
+		{Code: CONVERT_I64_TO_F64, Out: Register(8), Left: Register(3)},
+		{Code: F64_MULTIPLY, Out: Register(9), Left: Register(7), Right: Register(8)},
+		{Code: CONVERT_F64_TO_I64, Out: Register(10), Left: Register(9)},
+		{Code: COPY_VALUE, Out: Register(3), Left: Register(10)},
+		// xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
+		{Code: NOOP, Out: Register(3)},
+		{Code: COPY_VALUE, Out: Register(11), Left: Register(3)},
+		{Code: NOOP, Out: Register(4)},
+		{Code: CONVERT_U64_TO_F64, Out: Register(12), Left: Register(4)},
+		{Code: LOAD_CONST, Out: Register(13), Left: Constant(7)},
+		{Code: F64_DIVIDE, Out: Register(14), Left: Register(12), Right: Register(13)},
+		{Code: COPY_VALUE, Out: Register(15), Left: Register(14)},
+		{Code: NOOP, Out: Register(5)},
+		{Code: COPY_VALUE, Out: Register(16), Left: Register(5)},
+		{Code: COPY_VALUE, Out: Register(4), Left: Register(11)},
+		{Code: CONVERT_F64_TO_I64, Out: Register(17), Left: Register(15)},
+		{Code: COPY_VALUE, Out: Register(5), Left: Register(17)},
+		{Code: COPY_VALUE, Out: Register(3), Left: Register(16)},
+		// barrf := xyzzy * 10000 + nerrf * 100;
+		{Code: NOOP, Out: Register(4)},
+		{Code: LOAD_CONST, Out: Register(18), Left: Constant(8)},
+		{Code: U64_MULTIPLY, Out: Register(19), Left: Register(4), Right: Register(18)},
+		{Code: NOOP, Out: Register(5)},
+		{Code: LOAD_CONST, Out: Register(20), Left: Constant(9)},
+		{Code: I64_MULTIPLY, Out: Register(21), Left: Register(5), Right: Register(20)},
+		{Code: U64_ADD, Out: Register(22), Left: Register(19), Right: Register(21)},
+	}
+	// FIXME: This example will break with more strict with implict casts
+	scope, insts = encodeBlock(t, `{
+		plugh := 1 - 4;
+		xyzzy := 012;
+		nerrf := 14;
+
+		xyzzy = 0700;                      # assignment statement
+		plugh = 0.25 * plugh;              # assignment with cast
+
+		# parallel assignment (with and without casts)
+		xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
+		barrf := xyzzy * 10000 + nerrf * 100;
+	}`)
+	assert.Equal(t, expected, insts)
+	assert.Equal(t, constants, scope.Constants)
+
+	// Nested block
+	constants = []Data{
+		0: 0,
+		1: FromU64(0600),
+		2: FromF64(6.29),
+		3: 2,
+		4: 3,
+	}
+	expected = []Instruction{
+		{Code: LOAD_CONST, Out: Register(1), Left: Constant(1)},
+		{Code: LOAD_CONST, Out: Register(2), Left: Constant(2)},
 		{Code: NOOP, Out: Register(2)},
 		{Code: LOAD_CONST, Out: Register(3), Left: Constant(3)},
 		{Code: CONVERT_I64_TO_F64, Out: Register(4), Left: Register(3)},
 		{Code: F64_DIVIDE, Out: Register(5), Left: Register(2), Right: Register(4)},
-		// spam - ham;
 		{Code: NOOP, Out: Register(5)},
 		{Code: NOOP, Out: Register(1)},
 		{Code: CONVERT_U64_TO_F64, Out: Register(6), Left: Register(1)},
 		{Code: F64_SUBTRACT, Out: Register(7), Left: Register(5), Right: Register(6)},
-		// eggs
+		{Code: LOAD_CONST, Out: Register(8), Left: Constant(4)},
+		{Code: COPY_VALUE, Out: Register(1), Left: Register(8)},
 		{Code: NOOP, Out: Register(2)},
 	}
 	scope, insts = encodeBlock(t, `{
@@ -244,6 +323,7 @@ func TestEncodeBlock(t *testing.T) {
 		{
 			spam := eggs / 2;
 			spam - ham;
+			ham = 3;
 		}
 
 		eggs;

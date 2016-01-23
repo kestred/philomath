@@ -175,7 +175,6 @@ func TestInferBlock(t *testing.T) {
 		fuga := hogera;     # use undefined in decl
 		0755 - fuga;        # propogate undefined in expr
 	}`)
-
 	if decl, ok := block.Nodes[0].(*ast.ConstantDecl); assert.True(t, ok) {
 		if defn, ok := decl.Defn.(*ast.ExprDefn); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredSigned, defn.Expr.GetType())
@@ -184,7 +183,6 @@ func TestInferBlock(t *testing.T) {
 	if stmt, ok := block.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredSigned, stmt.Expr.GetType())
 	}
-
 	if decl, ok := block.Nodes[2].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
@@ -192,13 +190,43 @@ func TestInferBlock(t *testing.T) {
 	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
 	}
-
 	if decl, ok := block.Nodes[4].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredType, decl.Type)
 		assert.Equal(t, ast.UnknownType, decl.Expr.GetType())
 	}
 	if stmt, ok := block.Nodes[5].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
+	}
+
+	// Assignment
+	block = inferBlock(t, `{
+		plugh := -4;
+		xyzzy := 012;
+
+		plugh = 0.5 * plugh;
+		xyzzy, plugh = (plugh / 5), xyzzy;
+	}`)
+	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.InferredSigned, decl.Expr.GetType())
+	}
+	if decl, ok := block.Nodes[1].(*ast.MutableDecl); assert.True(t, ok) {
+		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
+	}
+	if stmt, ok := block.Nodes[2].(*ast.AssignStmt); assert.True(t, ok) {
+		if assert.Equal(t, 1, len(stmt.Assignees)) && assert.Equal(t, 1, len(stmt.Values)) {
+			assert.Equal(t, ast.InferredSigned, stmt.Assignees[0].GetType())
+			assert.Equal(t, ast.InferredFloat, stmt.Values[0].GetType())
+		}
+	}
+	if stmt, ok := block.Nodes[3].(*ast.AssignStmt); assert.True(t, ok) {
+		if assert.Equal(t, 2, len(stmt.Assignees)) && assert.Equal(t, 2, len(stmt.Values)) {
+			assert.Equal(t, ast.InferredUnsigned, stmt.Assignees[0].GetType())
+			assert.Equal(t, ast.InferredSigned, stmt.Assignees[1].GetType())
+			assert.Equal(t, ast.InferredSigned, stmt.Values[0].GetType())
+			assert.Equal(t, ast.InferredUnsigned, stmt.Values[1].GetType())
+		}
 	}
 
 	// Nested block
@@ -215,7 +243,6 @@ func TestInferBlock(t *testing.T) {
 
 		eggs * spam;
 	}`)
-
 	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())

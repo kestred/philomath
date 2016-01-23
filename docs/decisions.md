@@ -123,8 +123,11 @@ Reasoning:
  * Concise names are less to type
  * A smallish set of built-in types should be easy to learn and remember
  * Integer types i8, u16, etc are less ambiguous than short, long etc
- * Text should be more intuitive to students than string
+ * In x86, "strings" are zero-terminated byte arrays, however the builtin
+   text type is a length/pointer struct with UTF-8 encoding (only?).
+   Text should be more intuitive to students than string
    Text is a little shorter than string
+   (A null terminated string might be availabe, but not in the core).
  * Names are lower case because these should be most familiar
    for int, bool, etc to seasoned programmers and there has not yet
    been a compelling reason to change those names
