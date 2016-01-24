@@ -5,8 +5,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/kestred/philomath/token"
-	"github.com/kestred/philomath/utils"
+	"github.com/kestred/philomath/code/token"
+	"github.com/kestred/philomath/code/utils"
 )
 
 const bom = 0xFEFF // byte order mark, only permitted as very first character

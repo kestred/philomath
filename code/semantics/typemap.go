@@ -1,6 +1,6 @@
 package semantics
 
-import "github.com/kestred/philomath/ast"
+import "github.com/kestred/philomath/code/ast"
 
 // TypeMap is a map of variable names to types.
 // The Reference() method can be used to get a copy-on-write reference to the map.

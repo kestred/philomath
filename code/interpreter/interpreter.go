@@ -1,6 +1,6 @@
 package interpreter
 
-import bc "github.com/kestred/philomath/bytecode"
+import bc "github.com/kestred/philomath/code/bytecode"
 
 // for now, Evaluate will return whatever the result of the last instruction is
 func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Register) bc.Data {

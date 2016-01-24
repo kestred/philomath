@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kestred/philomath/ast"
-	"github.com/kestred/philomath/utils"
+	"github.com/kestred/philomath/code/ast"
+	"github.com/kestred/philomath/code/utils"
 )
 
 func InferTypes(node ast.Node) ast.Type {

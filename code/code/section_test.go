@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kestred/philomath/ast"
-	"github.com/kestred/philomath/parser"
+	"github.com/kestred/philomath/code/ast"
+	"github.com/kestred/philomath/code/parser"
 	"github.com/stretchr/testify/assert"
 )
 

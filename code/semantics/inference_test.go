@@ -3,9 +3,9 @@ package semantics
 import (
 	"testing"
 
-	"github.com/kestred/philomath/ast"
+	"github.com/kestred/philomath/code/ast"
 	// TODO: Maybe avoid relying on parser when more code is stable?
-	"github.com/kestred/philomath/parser"
+	"github.com/kestred/philomath/code/parser"
 	"github.com/stretchr/testify/assert"
 )
 

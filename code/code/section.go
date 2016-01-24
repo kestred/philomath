@@ -1,8 +1,8 @@
 package code
 
 import (
-	"github.com/kestred/philomath/ast"
-	"github.com/kestred/philomath/utils"
+	"github.com/kestred/philomath/code/ast"
+	"github.com/kestred/philomath/code/utils"
 )
 
 type Section struct {

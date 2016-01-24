@@ -3,7 +3,7 @@ package scanner
 import (
 	"testing"
 
-	"github.com/kestred/philomath/token"
+	"github.com/kestred/philomath/code/token"
 	"github.com/stretchr/testify/assert"
 )
 

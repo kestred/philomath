@@ -5,9 +5,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kestred/philomath/ast"
-	"github.com/kestred/philomath/scanner"
-	"github.com/kestred/philomath/token"
+	"github.com/kestred/philomath/code/ast"
+	"github.com/kestred/philomath/code/scanner"
+	"github.com/kestred/philomath/code/token"
 )
 
 type ParseError struct {

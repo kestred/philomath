@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	// TODO: Maybe stop relying on parser et. al. when more code is stable?
-	"github.com/kestred/philomath/bytecode"
-	"github.com/kestred/philomath/parser"
-	"github.com/kestred/philomath/semantics"
+	"github.com/kestred/philomath/code/bytecode"
+	"github.com/kestred/philomath/code/parser"
+	"github.com/kestred/philomath/code/semantics"
 	"github.com/stretchr/testify/assert"
 )
 

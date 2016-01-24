@@ -3,7 +3,7 @@ package semantics
 import (
 	"testing"
 
-	"github.com/kestred/philomath/ast"
+	"github.com/kestred/philomath/code/ast"
 	"github.com/stretchr/testify/assert"
 )
 
