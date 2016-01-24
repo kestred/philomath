@@ -17,28 +17,29 @@ var (
 	UnparsedValue = &struct{}{}
 
 	// Relaxed types
-	UnknownType      = &BuiltinType{"<unknown>"}  // could not infer type
-	InferredType     = &BuiltinType{"<inferred>"} // could be any type
-	InferredNumber   = &BuiltinType{"<number>"}   // could be any number
-	InferredFloat    = &BuiltinType{"<float>"}    // could only be a float number
-	InferredSigned   = &BuiltinType{"<signed>"}   // could only be a signed number
-	InferredUnsigned = &BuiltinType{"<unsigned>"} // could only be an unsigned number
+	UninferredType   = &SimpleType{"<uninferred>"} // could be any type
+	UnresolvedType   = &SimpleType{"<unresolved>"} // could not infer type
+	UnknownType      = &SimpleType{"<unknown>"}    // could not infer type
+	InferredNumber   = &SimpleType{"<number>"}     // could only be a number
+	InferredFloat    = &SimpleType{"<float>"}      // could only be a float number
+	InferredSigned   = &SimpleType{"<signed>"}     // could only be a signed number
+	InferredUnsigned = &SimpleType{"<unsigned>"}   // could only be an unsigned number
 
 	// Builtin types
-	BuiltinEmpty   = &BuiltinType{"empty"} // the 0-byte type
-	BuiltinFloat   = &BuiltinType{"float"}
-	BuiltinFloat32 = &BuiltinType{"f32"}
-	BuiltinFloat64 = &BuiltinType{"f64"}
-	BuiltinInt     = &BuiltinType{"int"}
-	BuiltinInt8    = &BuiltinType{"i8"}
-	BuiltinInt16   = &BuiltinType{"i16"}
-	BuiltinInt32   = &BuiltinType{"i32"}
-	BuiltinInt64   = &BuiltinType{"i64"}
-	BuiltinUint    = &BuiltinType{"uint"}
-	BuiltinUint8   = &BuiltinType{"u8"}
-	BuiltinUint16  = &BuiltinType{"u16"}
-	BuiltinUint32  = &BuiltinType{"u32"}
-	BuiltinUint64  = &BuiltinType{"u64"}
+	BuiltinEmpty   = &SimpleType{"empty"} // the 0-byte type
+	BuiltinFloat   = &SimpleType{"float"}
+	BuiltinFloat32 = &SimpleType{"f32"}
+	BuiltinFloat64 = &SimpleType{"f64"}
+	BuiltinInt     = &SimpleType{"int"}
+	BuiltinInt8    = &SimpleType{"i8"}
+	BuiltinInt16   = &SimpleType{"i16"}
+	BuiltinInt32   = &SimpleType{"i32"}
+	BuiltinInt64   = &SimpleType{"i64"}
+	BuiltinUint    = &SimpleType{"uint"}
+	BuiltinUint8   = &SimpleType{"u8"}
+	BuiltinUint16  = &SimpleType{"u16"}
+	BuiltinUint32  = &SimpleType{"u32"}
+	BuiltinUint64  = &SimpleType{"u64"}
 
 	// Logical operators
 	BuiltinLogicalOr    = &OperatorDefn{"Logical Or", "or", "_or_", BinaryInfix, LeftAssociative, LogicalOrPrec}
@@ -90,17 +91,6 @@ func (d *OperatorDefn) ImplementsNode()  {}
 func (d *StructDefn) ImplementsNode()    {}
 func (f *StructField) ImplementsNode()   {}
 
-// Expressions (and related nodes)
-func (e *PostfixExpr) ImplementsNode()   {}
-func (e *InfixExpr) ImplementsNode()     {}
-func (e *PrefixExpr) ImplementsNode()    {}
-func (e *CallExpr) ImplementsNode()      {}
-func (e *GroupExpr) ImplementsNode()     {}
-func (e *FunctionExpr) ImplementsNode()  {}
-func (p *FunctionParam) ImplementsNode() {}
-func (e *MemberExpr) ImplementsNode()    {}
-func (e *ValueExpr) ImplementsNode()     {}
-
 // Statements (and related nodes)
 func (s *IfStmt) ImplementsNode()     {}
 func (s *WhileStmt) ImplementsNode()  {}
@@ -113,17 +103,27 @@ func (s *AssignStmt) ImplementsNode() {}
 func (s *ReturnStmt) ImplementsNode() {}
 func (s *DoneStmt) ImplementsNode()   {}
 
-// Types
-func (t *ArrayType) ImplementsNode()    {}
-func (t *FunctionType) ImplementsNode() {}
-func (t *NamedType) ImplementsNode()    {}
-func (t *PointerType) ImplementsNode()  {}
-func (t *BuiltinType) ImplementsNode()  {}
+// Expressions (and related nodes)
+func (e *PostfixExpr) ImplementsNode()   {}
+func (e *InfixExpr) ImplementsNode()     {}
+func (e *PrefixExpr) ImplementsNode()    {}
+func (e *CallExpr) ImplementsNode()      {}
+func (e *GroupExpr) ImplementsNode()     {}
+func (e *FunctionExpr) ImplementsNode()  {}
+func (p *FunctionParam) ImplementsNode() {}
+func (e *MemberExpr) ImplementsNode()    {}
 
 // Literals
 func (l *NumberLiteral) ImplementsNode() {}
 func (l *TextLiteral) ImplementsNode()   {}
 func (i *Identifier) ImplementsNode()    {}
+
+// Types
+func (t *ArrayType) ImplementsNode()    {}
+func (t *FunctionType) ImplementsNode() {}
+func (t *NamedType) ImplementsNode()    {}
+func (t *PointerType) ImplementsNode()  {}
+func (t *SimpleType) ImplementsNode()   {}
 
 type Blockable interface {
 	Node
@@ -178,23 +178,36 @@ type Expr interface {
 	GetType() Type
 }
 
-func (e *PostfixExpr) ImplementsExpr()  {}
-func (e *InfixExpr) ImplementsExpr()    {}
-func (e *PrefixExpr) ImplementsExpr()   {}
-func (e *CallExpr) ImplementsExpr()     {}
-func (e *GroupExpr) ImplementsExpr()    {}
-func (e *FunctionExpr) ImplementsExpr() {}
-func (e *MemberExpr) ImplementsExpr()   {}
-func (e *ValueExpr) ImplementsExpr()    {}
+func (e *PostfixExpr) ImplementsExpr()   {}
+func (e *InfixExpr) ImplementsExpr()     {}
+func (e *PrefixExpr) ImplementsExpr()    {}
+func (e *CallExpr) ImplementsExpr()      {}
+func (e *GroupExpr) ImplementsExpr()     {}
+func (e *FunctionExpr) ImplementsExpr()  {}
+func (e *MemberExpr) ImplementsExpr()    {}
+func (l *NumberLiteral) ImplementsExpr() {}
+func (l *TextLiteral) ImplementsExpr()   {}
+func (i *Identifier) ImplementsExpr()    {}
 
-func (e *PostfixExpr) GetType() Type  { return e.Type }
-func (e *InfixExpr) GetType() Type    { return e.Type }
-func (e *PrefixExpr) GetType() Type   { return e.Type }
-func (e *CallExpr) GetType() Type     { return e.Type }
-func (e *GroupExpr) GetType() Type    { return e.Type }
-func (e *FunctionExpr) GetType() Type { return e.Type }
-func (e *MemberExpr) GetType() Type   { return e.Type }
-func (e *ValueExpr) GetType() Type    { return e.Type }
+func (e *PostfixExpr) GetType() Type   { return e.Type }
+func (e *InfixExpr) GetType() Type     { return e.Type }
+func (e *PrefixExpr) GetType() Type    { return e.Type }
+func (e *CallExpr) GetType() Type      { return e.Type }
+func (e *GroupExpr) GetType() Type     { return e.Type }
+func (e *FunctionExpr) GetType() Type  { return e.Type }
+func (e *MemberExpr) GetType() Type    { return e.Type }
+func (l *NumberLiteral) GetType() Type { return l.Type }
+func (l *TextLiteral) GetType() Type   { return l.Type }
+func (i *Identifier) GetType() Type    { return i.Type }
+
+type Literal interface {
+	Expr
+	ImplementsLiteral()
+}
+
+func (l *NumberLiteral) ImplementsLiteral() {}
+func (l *TextLiteral) ImplementsLiteral()   {}
+func (i *Identifier) ImplementsLiteral()    {}
 
 type Type interface {
 	Node
@@ -205,16 +218,7 @@ func (t *ArrayType) ImplementsType()    {}
 func (t *FunctionType) ImplementsType() {}
 func (t *NamedType) ImplementsType()    {}
 func (t *PointerType) ImplementsType()  {}
-func (t *BuiltinType) ImplementsType()  {}
-
-type Literal interface {
-	Node
-	ImplementsLiteral()
-}
-
-func (l *NumberLiteral) ImplementsLiteral() {}
-func (l *TextLiteral) ImplementsLiteral()   {}
-func (i *Identifier) ImplementsLiteral()    {}
+func (t *SimpleType) ImplementsType()   {}
 
 type EnumItem interface {
 	Node
@@ -257,13 +261,13 @@ func Constant(name string, defn Defn) *ConstantDecl {
 	return &ConstantDecl{
 		Name: Ident(name),
 		Defn: defn,
-		Type: InferredType,
+		Type: UninferredType,
 	}
 }
 
 func Mutable(name string, typ Type, expr Expr) *MutableDecl {
 	if typ == nil {
-		typ = InferredType
+		typ = UninferredType
 	}
 
 	return &MutableDecl{
@@ -439,20 +443,41 @@ type (
 		Type Type
 	}
 
-	ValueExpr struct {
+	NumberLiteral struct {
 		// syntax
-		Literal Literal
+		Literal string
 
 		// semantics
-		Type Type
+		Type  Type
+		Value Value
 	}
+
+	TextLiteral struct {
+		// syntax
+		Literal string
+
+		// semantics
+		Type  Type
+		Value Value
+	}
+
+	Identifier struct {
+		// syntax
+		Literal string
+
+		// semantics
+		Type     Type
+		Resolved Node
+	}
+
+	Value interface{}
 )
 
 func PostExp(subexpr Expr, op *OperatorDefn) *PostfixExpr {
 	return &PostfixExpr{
 		Subexpr:  subexpr,
 		Operator: op,
-		Type:     InferredType,
+		Type:     UninferredType,
 	}
 }
 
@@ -461,7 +486,7 @@ func InExp(left Expr, op *OperatorDefn, right Expr) *InfixExpr {
 		Left:     left,
 		Operator: op,
 		Right:    right,
-		Type:     InferredType,
+		Type:     UninferredType,
 	}
 }
 
@@ -469,7 +494,7 @@ func PreExp(op *OperatorDefn, subexpr Expr) *PrefixExpr {
 	return &PrefixExpr{
 		Operator: op,
 		Subexpr:  subexpr,
-		Type:     InferredType,
+		Type:     UninferredType,
 	}
 }
 
@@ -477,7 +502,7 @@ func CallExp(fn Expr, args []Expr) *CallExpr {
 	return &CallExpr{
 		Function:  fn,
 		Arguments: args,
-		Type:      InferredType,
+		Type:      UninferredType,
 	}
 }
 
@@ -486,14 +511,14 @@ func FnExp(params []FunctionParam, ret Type, block Block) *FunctionExpr {
 		Params: params,
 		Return: ret,
 		Block:  block,
-		Type:   InferredType,
+		Type:   UninferredType,
 	}
 }
 
 func GrpExp(subexpr Expr) *GroupExpr {
 	return &GroupExpr{
 		Subexpr: subexpr,
-		Type:    InferredType,
+		Type:    UninferredType,
 	}
 }
 
@@ -501,14 +526,30 @@ func GetExp(left Expr, member string) *MemberExpr {
 	return &MemberExpr{
 		Left:   left,
 		Member: Ident(member),
-		Type:   InferredType,
+		Type:   UninferredType,
 	}
 }
 
-func ValExp(literal Literal) *ValueExpr {
-	return &ValueExpr{
+func NumLit(literal string) *NumberLiteral {
+	return &NumberLiteral{
 		Literal: literal,
-		Type:    InferredType,
+		Value:   UnparsedValue,
+		Type:    UninferredType,
+	}
+}
+
+func TxtLit(literal string) *TextLiteral {
+	return &TextLiteral{
+		Literal: literal,
+		Value:   UnparsedValue,
+		Type:    UninferredType,
+	}
+}
+
+func Ident(literal string) *Identifier {
+	return &Identifier{
+		Literal: literal,
+		Type:    UnresolvedType,
 	}
 }
 
@@ -534,7 +575,7 @@ type (
 		PointerTo Type
 	}
 
-	BuiltinType struct {
+	SimpleType struct {
 		Name string
 	}
 )
@@ -545,53 +586,4 @@ func NamTyp(name Expr) *NamedType {
 
 func PtrTyp(pointerTo Type) *PointerType {
 	return &PointerType{PointerTo: pointerTo}
-}
-
-// A literal is represented by one of the following
-type (
-	NumberLiteral struct {
-		// syntax
-		Literal string
-
-		// semantics
-		Value Value
-	}
-
-	TextLiteral struct {
-		// syntax
-		Literal string
-
-		// semantics
-		Value Value
-	}
-
-	Identifier struct {
-		// syntax
-		Literal string
-
-		// semantics
-		Resolved Node
-	}
-
-	Value interface{}
-)
-
-func NumLit(literal string) *NumberLiteral {
-	return &NumberLiteral{
-		Literal: literal,
-		Value:   UnparsedValue,
-	}
-}
-
-func TxtLit(literal string) *TextLiteral {
-	return &TextLiteral{
-		Literal: literal,
-		Value:   UnparsedValue,
-	}
-}
-
-func Ident(literal string) *Identifier {
-	return &Identifier{
-		Literal: literal,
-	}
 }

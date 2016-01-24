@@ -9,34 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func numberValue(t *testing.T, input string) interface{} {
-	var p parser.Parser
-	p.Init("example", false, []byte(input))
-	expr := p.ParseExpression()
-	if len(p.Errors) > 0 {
-		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
-	}
-
-	section := code.PrepareTree(expr, nil)
-	InferTypes(&section)
-	valExpr := expr.(*ast.ValueExpr)
-	numLit := valExpr.Literal.(*ast.NumberLiteral)
-	return numLit.Value
-}
-
-func TestLiteralValues(t *testing.T) {
-	assert.Equal(t, uint64(22), numberValue(t, `22`))
-	assert.Equal(t, uint64(0755), numberValue(t, `0755`))
-	// TODO: Implement hexidecimal scanning
-	// assert.Equal(t, uint64(0xff), numberValue(`0xff`))
-	assert.Equal(t, float64(.32), numberValue(t, `.32`))
-	assert.Equal(t, float64(3.2), numberValue(t, `3.2`))
-	assert.Equal(t, float64(0.32), numberValue(t, `0.32`))
-	assert.Equal(t, float64(3e2), numberValue(t, `3e2`))
-	assert.Equal(t, float64(3e+2), numberValue(t, `3e+2`))
-	assert.Equal(t, float64(3e-2), numberValue(t, `3e-2`))
-}
-
 func inferExpression(t *testing.T, input string) ast.Expr {
 	var p parser.Parser
 	p.Init("example", false, []byte(input))
@@ -61,6 +33,19 @@ func inferBlock(t *testing.T, input string) *ast.Block {
 	section := code.PrepareTree(block, nil)
 	InferTypes(&section)
 	return block
+}
+
+func TestLiteralValues(t *testing.T) {
+	assert.Equal(t, uint64(22), inferExpression(t, `22`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, uint64(0755), inferExpression(t, `0755`).(*ast.NumberLiteral).Value)
+	// TODO: Implement hexidecimal scanning
+	// assert.Equal(t, uint64(0xff), inferExpression(`0xff`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, float64(.32), inferExpression(t, `.32`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, float64(3.2), inferExpression(t, `3.2`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, float64(0.32), inferExpression(t, `0.32`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, float64(3e2), inferExpression(t, `3e2`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, float64(3e+2), inferExpression(t, `3e+2`).(*ast.NumberLiteral).Value)
+	assert.Equal(t, float64(3e-2), inferExpression(t, `3e-2`).(*ast.NumberLiteral).Value)
 }
 
 func TestInferLiterals(t *testing.T) {
@@ -186,14 +171,14 @@ func TestInferBlock(t *testing.T) {
 		assert.Equal(t, ast.InferredSigned, stmt.Expr.GetType())
 	}
 	if decl, ok := block.Nodes[2].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
 	}
 	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
 	}
 	if decl, ok := block.Nodes[4].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type)
+		assert.Equal(t, ast.UninferredType, decl.Type)
 		assert.Equal(t, ast.UnknownType, decl.Expr.GetType())
 	}
 	if stmt, ok := block.Nodes[5].(*ast.ExprStmt); assert.True(t, ok) {
@@ -209,11 +194,11 @@ func TestInferBlock(t *testing.T) {
 		xyzzy, plugh = (plugh / 5), xyzzy;
 	}`)
 	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredSigned, decl.Expr.GetType())
 	}
 	if decl, ok := block.Nodes[1].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
 	}
 	if stmt, ok := block.Nodes[2].(*ast.AssignStmt); assert.True(t, ok) {
@@ -246,7 +231,7 @@ func TestInferBlock(t *testing.T) {
 		eggs * spam;
 	}`)
 	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
 		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
 	}
 	if decl, ok := block.Nodes[1].(*ast.ConstantDecl); assert.True(t, ok) {
@@ -256,7 +241,7 @@ func TestInferBlock(t *testing.T) {
 	}
 	if nest, ok := block.Nodes[2].(*ast.Block); assert.True(t, ok) {
 		if decl, ok := nest.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-			assert.Equal(t, ast.InferredType, decl.Type) // not overridden for now
+			assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
 			assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
 		}
 		if stmt, ok := nest.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {

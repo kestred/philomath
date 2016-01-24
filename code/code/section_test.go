@@ -23,69 +23,53 @@ func TestFlattenBlock(t *testing.T) {
 	expected := []ast.Node{
 		&ast.Block{},
 		// foo := -3;
-		1: &ast.MutableDecl{},
+		&ast.MutableDecl{},
 		&ast.Identifier{},
 		&ast.PrefixExpr{},
 		&ast.OperatorDefn{},
-		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
 		// baz :: 1;
-		7: &ast.ConstantDecl{},
+		&ast.ConstantDecl{},
 		&ast.Identifier{},
 		&ast.ConstantDefn{},
-		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
 		// (2 + foo) + baz;
-		12: &ast.ExprStmt{},
+		&ast.ExprStmt{},
 		&ast.InfixExpr{},
 		&ast.GroupExpr{},
 		&ast.InfixExpr{},
-		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
 		&ast.OperatorDefn{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		&ast.OperatorDefn{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		// {
 		&ast.Block{},
 		// bar := foo;
-		25: &ast.MutableDecl{},
+		&ast.MutableDecl{},
 		&ast.Identifier{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		// 0755 - baz;
-		29: &ast.ExprStmt{},
+		&ast.ExprStmt{},
 		&ast.InfixExpr{},
-		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
 		&ast.OperatorDefn{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		// foo = baz * 4;
-		36: &ast.AssignStmt{},
-		&ast.ValueExpr{},
+		&ast.AssignStmt{},
 		&ast.Identifier{},
 		&ast.InfixExpr{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		&ast.OperatorDefn{},
-		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
 		// bar, foo = foo + 27, bar;
-		45: &ast.AssignStmt{},
-		&ast.ValueExpr{},
+		&ast.AssignStmt{},
 		&ast.Identifier{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		&ast.InfixExpr{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		&ast.OperatorDefn{},
-		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
-		&ast.ValueExpr{},
 		&ast.Identifier{},
 		// }
 	}
@@ -105,7 +89,7 @@ func TestFlattenBlock(t *testing.T) {
 		}
 	}`)
 
-	section := Prepare(block, nil)
+	section := PrepareTree(block, nil)
 	assert.Equal(t, block, section.Root)
 	assert.Equal(t, block, section.Nodes[0])
 	for i, example := range expected {

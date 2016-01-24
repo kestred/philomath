@@ -49,24 +49,24 @@ func TestParseArithmetic(t *testing.T) {
 	// add follows multiply
 	expected = ast.InExp(
 		ast.InExp(
-			ast.ValExp(ast.NumLit("2")),
+			ast.NumLit("2"),
 			ast.BuiltinMultiply,
-			ast.ValExp(ast.NumLit("3")),
+			ast.NumLit("3"),
 		),
 		ast.BuiltinAdd,
-		ast.ValExp(ast.NumLit("4")),
+		ast.NumLit("4"),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `2 * 3 + 4`))
 
 	// multiply follows add
 	expected = ast.InExp(
-		ast.ValExp(ast.NumLit("2")),
+		ast.NumLit("2"),
 		ast.BuiltinAdd,
 		ast.InExp(
-			ast.ValExp(ast.NumLit("3")),
+			ast.NumLit("3"),
 			ast.BuiltinMultiply,
-			ast.ValExp(ast.NumLit("4")),
+			ast.NumLit("4"),
 		),
 	)
 
@@ -75,12 +75,12 @@ func TestParseArithmetic(t *testing.T) {
 	// multiply follows grouped add
 	expected = ast.InExp(
 		ast.GrpExp(ast.InExp(
-			ast.ValExp(ast.NumLit("2")),
+			ast.NumLit("2"),
 			ast.BuiltinAdd,
-			ast.ValExp(ast.NumLit("3")),
+			ast.NumLit("3"),
 		)),
 		ast.BuiltinMultiply,
-		ast.ValExp(ast.NumLit("4")),
+		ast.NumLit("4"),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `(2 + 3) * 4`))
@@ -92,24 +92,24 @@ func TestParseArithmetic(t *testing.T) {
 				ast.InExp(
 					ast.InExp(
 						ast.InExp(
-							ast.ValExp(ast.NumLit("2")),
+							ast.NumLit("2"),
 							ast.BuiltinAdd,
-							ast.ValExp(ast.NumLit("3")),
+							ast.NumLit("3"),
 						),
 						ast.BuiltinAdd,
-						ast.ValExp(ast.NumLit("4")),
+						ast.NumLit("4"),
 					),
 					ast.BuiltinSubtract,
-					ast.ValExp(ast.NumLit("5")),
+					ast.NumLit("5"),
 				),
 				ast.BuiltinAdd,
-				ast.ValExp(ast.NumLit("6")),
+				ast.NumLit("6"),
 			),
 			ast.BuiltinSubtract,
-			ast.ValExp(ast.NumLit("7")),
+			ast.NumLit("7"),
 		),
 		ast.BuiltinSubtract,
-		ast.ValExp(ast.NumLit("8")),
+		ast.NumLit("8"),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `2 + 3 + 4 - 5 + 6 - 7 - 8`))
@@ -121,60 +121,60 @@ func TestParseArithmetic(t *testing.T) {
 				ast.InExp(
 					ast.InExp(
 						ast.InExp(
-							ast.ValExp(ast.NumLit("2")),
+							ast.NumLit("2"),
 							ast.BuiltinDivide,
-							ast.ValExp(ast.NumLit("3")),
+							ast.NumLit("3"),
 						),
 						ast.BuiltinDivide,
-						ast.ValExp(ast.NumLit("4")),
+						ast.NumLit("4"),
 					),
 					ast.BuiltinMultiply,
-					ast.ValExp(ast.NumLit("5")),
+					ast.NumLit("5"),
 				),
 				ast.BuiltinMultiply,
-				ast.ValExp(ast.NumLit("6")),
+				ast.NumLit("6"),
 			),
 			ast.BuiltinRemainder,
-			ast.ValExp(ast.NumLit("7")),
+			ast.NumLit("7"),
 		),
 		ast.BuiltinDivide,
-		ast.ValExp(ast.NumLit("8")),
+		ast.NumLit("8"),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `2 / 3 / 4 * 5 * 6 % 7 / 8`))
 
 	// signed addition
 	expected = ast.InExp(
-		ast.PreExp(ast.BuiltinNegative, ast.ValExp(ast.NumLit("2"))),
+		ast.PreExp(ast.BuiltinNegative, ast.NumLit("2")),
 		ast.BuiltinAdd,
-		ast.PreExp(ast.BuiltinPositive, ast.ValExp(ast.NumLit("4"))),
+		ast.PreExp(ast.BuiltinPositive, ast.NumLit("4")),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `-2 + +4`))
 
 	// signed subtraction
 	expected = ast.InExp(
-		ast.PreExp(ast.BuiltinNegative, ast.ValExp(ast.NumLit("2"))),
+		ast.PreExp(ast.BuiltinNegative, ast.NumLit("2")),
 		ast.BuiltinSubtract,
-		ast.PreExp(ast.BuiltinPositive, ast.ValExp(ast.NumLit("4"))),
+		ast.PreExp(ast.BuiltinPositive, ast.NumLit("4")),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `-2 - +4`))
 
 	// signed multiplication
 	expected = ast.InExp(
-		ast.PreExp(ast.BuiltinNegative, ast.ValExp(ast.NumLit("2"))),
+		ast.PreExp(ast.BuiltinNegative, ast.NumLit("2")),
 		ast.BuiltinMultiply,
-		ast.PreExp(ast.BuiltinPositive, ast.ValExp(ast.NumLit("4"))),
+		ast.PreExp(ast.BuiltinPositive, ast.NumLit("4")),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `-2 * +4`))
 
 	// signed division
 	expected = ast.InExp(
-		ast.PreExp(ast.BuiltinNegative, ast.ValExp(ast.NumLit("2"))),
+		ast.PreExp(ast.BuiltinNegative, ast.NumLit("2")),
 		ast.BuiltinDivide,
-		ast.PreExp(ast.BuiltinPositive, ast.ValExp(ast.NumLit("4"))),
+		ast.PreExp(ast.BuiltinPositive, ast.NumLit("4")),
 	)
 
 	assert.Equal(t, expected, parseExpression(t, `-2 / +4`))
@@ -182,53 +182,53 @@ func TestParseArithmetic(t *testing.T) {
 
 func TestParseBlock(t *testing.T) {
 	expected := &ast.Block{[]ast.Blockable{
-		ast.Mutable("foo", nil, ast.ValExp(ast.NumLit("3"))),
-		ast.Constant("baz", &ast.ConstantDefn{ast.ValExp(ast.NumLit("1"))}),
+		ast.Mutable("foo", nil, ast.NumLit("3")),
+		ast.Constant("baz", &ast.ConstantDefn{ast.NumLit("1")}),
 		&ast.ExprStmt{ast.InExp(
 			ast.InExp(
-				ast.ValExp(ast.NumLit("2")),
+				ast.NumLit("2"),
 				ast.BuiltinAdd,
-				ast.ValExp(ast.Ident("foo")),
+				ast.Ident("foo"),
 			),
 			ast.BuiltinAdd,
-			ast.ValExp(ast.Ident("baz")),
+			ast.Ident("baz"),
 		)},
 		&ast.Block{[]ast.Blockable{
-			ast.Mutable("bar", nil, ast.ValExp(ast.Ident("foo"))),
+			ast.Mutable("bar", nil, ast.Ident("foo")),
 			&ast.ExprStmt{ast.InExp(
-				ast.ValExp(ast.NumLit("0755")),
+				ast.NumLit("0755"),
 				ast.BuiltinSubtract,
-				ast.ValExp(ast.Ident("baz")),
+				ast.Ident("baz"),
 			)},
 			&ast.AssignStmt{
-				[]ast.Expr{ast.ValExp(ast.Ident("foo"))},
+				[]ast.Expr{ast.Ident("foo")},
 				nil,
 				[]ast.Expr{ast.InExp(
-					ast.ValExp(ast.Ident("baz")),
+					ast.Ident("baz"),
 					ast.BuiltinMultiply,
-					ast.ValExp(ast.NumLit("4")),
+					ast.NumLit("4"),
 				)},
 			},
 			&ast.AssignStmt{
 				[]ast.Expr{
-					ast.ValExp(ast.Ident("bar")),
-					ast.ValExp(ast.Ident("foo")),
+					ast.Ident("bar"),
+					ast.Ident("foo"),
 				},
 				nil,
 				[]ast.Expr{
 					ast.InExp(
-						ast.ValExp(ast.Ident("foo")),
+						ast.Ident("foo"),
 						ast.BuiltinAdd,
-						ast.ValExp(ast.NumLit("27")),
+						ast.NumLit("27"),
 					),
-					ast.ValExp(ast.Ident("bar")),
+					ast.Ident("bar"),
 				},
 			},
 		}},
 		&ast.ExprStmt{ast.InExp(
-			ast.ValExp(ast.NumLit("8.4e-5")),
+			ast.NumLit("8.4e-5"),
 			ast.BuiltinDivide,
-			ast.ValExp(ast.NumLit("0.5")),
+			ast.NumLit("0.5"),
 		)},
 		&ast.Block{nil},
 	}}

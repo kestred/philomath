@@ -1,7 +1,6 @@
 package semantics
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -13,32 +12,26 @@ import (
 // TODO: Break-out operator overload resolution
 
 func InferTypes(cs *code.Section) {
-	// NOTE: Use post-order traversal so that child node types are available for their parents
-	for i := len(cs.Nodes) - 1; i >= 0; i-- {
-		inferType(cs.Nodes[i])
-	}
-}
-
-func inferType(node ast.Node) {
+	// NOTE: Using post-order traversal so that child node types are available for their parents
 	// TODO: Probably need to be careful to avoid smashing non-inferred types
 	//       I'll just wait until it becomes a bug and deal with it then
-	switch n := node.(type) {
-	case *ast.PostfixExpr:
-		n.Type = inferPostfixType(n.Operator, n.Subexpr.GetType())
-	case *ast.InfixExpr:
-		n.Type = inferInfixType(n.Operator, n.Left.GetType(), n.Right.GetType())
-	case *ast.PrefixExpr:
-		n.Type = inferPrefixType(n.Operator, n.Subexpr.GetType())
-	case *ast.GroupExpr:
-		n.Type = n.Subexpr.GetType()
-	case *ast.ValueExpr:
-		switch l := n.Literal.(type) {
+	for i := len(cs.Nodes) - 1; i >= 0; i-- {
+		switch n := cs.Nodes[i].(type) {
+		case *ast.PostfixExpr:
+			n.Type = inferPostfixType(n.Operator, n.Subexpr.GetType())
+		case *ast.InfixExpr:
+			n.Type = inferInfixType(n.Operator, n.Left.GetType(), n.Right.GetType())
+		case *ast.PrefixExpr:
+			n.Type = inferPrefixType(n.Operator, n.Subexpr.GetType())
+		case *ast.GroupExpr:
+			n.Type = n.Subexpr.GetType()
 		case *ast.Identifier:
 			// TODO: Get from previously resolved identifiers
 		case *ast.NumberLiteral:
-			n.Type, l.Value = parseNumber(l.Literal)
-		default:
-			panic("TODO: Handled type inference for this literal")
+			n.Type, n.Value = parseNumber(n.Literal)
+
+		case ast.Expr: // fail early if I forget to add an expression
+			utils.InvalidCodePath()
 		}
 	}
 }

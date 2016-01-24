@@ -397,13 +397,13 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	case token.IDENT:
 		name := p.lit
 		p.next() // consume ident
-		return ast.ValExp(ast.Ident(name))
+		return ast.Ident(name)
 
 	case token.TEXT:
 		panic("TODO: Handle text literals")
 
 	case token.NUMBER:
-		expr := ast.ValExp(ast.NumLit(p.lit))
+		expr := ast.NumLit(p.lit)
 		p.next() // eat number
 		return expr
 

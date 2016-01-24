@@ -61,8 +61,12 @@ func flattenTree(node ast.Node) []ast.Node {
 		nodes = append(nodes, flattenTree(n.Subexpr)...)
 	case *ast.GroupExpr:
 		nodes = append(nodes, flattenTree(n.Subexpr)...)
-	case *ast.ValueExpr:
-		nodes = append(nodes, n.Literal)
+
+	// Literals
+	case *ast.Identifier,
+		*ast.NumberLiteral,
+		*ast.TextLiteral:
+		break // nothing to add
 
 	default:
 		panic("TODO: Handle all nodes types")
