@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	// TODO: Maybe don't rely on parser et. al. when more code is stable
+	"github.com/kestred/philomath/code/code"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/kestred/philomath/code/semantics"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,8 @@ func encodeExpression(t *testing.T, input string) (*Scope, []Instruction) {
 		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 
-	semantics.InferTypes(expr)
+	section := code.PrepareTree(expr, nil)
+	semantics.InferTypes(&section)
 	scope := &Scope{}
 	scope.Init()
 	return scope, FromExpr(expr, scope)
@@ -31,7 +33,9 @@ func encodeBlock(t *testing.T, input string) (*Scope, []Instruction) {
 		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 
-	semantics.InferTypes(block)
+	section := code.PrepareTree(block, nil)
+	semantics.ResolveNames(&section)
+	semantics.InferTypes(&section)
 	scope := &Scope{}
 	scope.Init()
 	return scope, FromBlock(block, scope)

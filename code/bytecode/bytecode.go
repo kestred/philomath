@@ -168,28 +168,26 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 				//scope.Registers[n.Name.Literal] = scope.AssignRegister()
 				panic("TODO: Unhandled mutable declaration without expression")
 			}
-		case *ast.ExprStmt:
+		case *ast.EvalStmt:
 			insts = append(insts, FromExpr(n.Expr, scope)...)
 		case *ast.AssignStmt:
-			utils.Assert(len(n.Assignees) == len(n.Values), "An unbalanced assignment survived until bytecode generation")
-			if len(n.Values) == 1 {
-				insts = append(insts, FromExpr(n.Values[0], scope)...)
+			utils.Assert(len(n.Left) == len(n.Right), "An unbalanced assignment survived until bytecode generation")
+			if len(n.Right) == 1 {
+				insts = append(insts, FromExpr(n.Right[0], scope)...)
 				rhs := insts[len(insts)-1].Out
-				if expr, ok := n.Assignees[0].(*ast.ValueExpr); ok {
-					lit, ok := expr.Literal.(*ast.Identifier)
-					utils.Assert(ok, "Found a non-identifier literal as the assignee in assignment")
-					lhs, exists := scope.Registers[lit.Literal]
+				if expr, ok := n.Left[0].(*ast.Identifier); ok {
+					lhs, exists := scope.Registers[expr.Literal]
 					utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
 					// copy from rhs to lhs (cast as needed)
-					rhs = insertConversion(scope, &insts, rhs, n.Values[0].GetType(), expr.Type)
+					rhs = insertConversion(scope, &insts, rhs, n.Right[0].GetType(), expr.Type)
 					insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
 				} else {
 					panic("TODO: Handle non-identifier expressions as the assignee in assignment")
 				}
 			} else {
-				tmps := make([]Register, len(n.Values))
-				for i, expr := range n.Values {
+				tmps := make([]Register, len(n.Right))
+				for i, expr := range n.Right {
 					insts = append(insts, FromExpr(expr, scope)...)
 					rhs := insts[len(insts)-1].Out
 
@@ -197,15 +195,13 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 					tmps[i] = scope.AssignRegister()
 					insts = append(insts, Instruction{Code: COPY_VALUE, Out: tmps[i], Left: rhs})
 				}
-				for i, expr := range n.Assignees {
-					if e, ok := expr.(*ast.ValueExpr); ok {
-						lit, ok := e.Literal.(*ast.Identifier)
-						utils.Assert(ok, "Found a non-identifier literal as the assignee in assignment")
-						lhs, exists := scope.Registers[lit.Literal]
+				for i, expr := range n.Left {
+					if e, ok := expr.(*ast.Identifier); ok {
+						lhs, exists := scope.Registers[e.Literal]
 						utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
 						// copy from temporary to lhs (cast as needed)
-						rhs := insertConversion(scope, &insts, tmps[i], n.Values[i].GetType(), e.Type)
+						rhs := insertConversion(scope, &insts, tmps[i], n.Right[i].GetType(), e.Type)
 						insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
 					} else {
 						panic("TODO: Handle non-identifier expressions as the assignee in assignment")
@@ -222,36 +218,31 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 
 func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 	switch e := expr.(type) {
-	case *ast.ValueExpr:
-		switch lit := e.Literal.(type) {
-		case *ast.NumberLiteral:
-			utils.Assert(lit.Value != ast.UnparsedValue, "A value was not parsed before bytecode generation")
-			register := scope.AssignRegister()
+	case *ast.NumberLiteral:
+		utils.Assert(e.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
+		register := scope.AssignRegister()
 
-			var value Data
-			switch v := lit.Value.(type) {
-			case int64:
-				value = FromI64(v)
-			case uint64:
-				value = FromU64(v)
-			case float64:
-				value = FromF64(v)
-			default:
-				panic("TODO: Unhandled value type")
-			}
-
-			nextConstant := len(scope.Constants)
-			scope.Constants = append(scope.Constants, Data(value))
-			return []Instruction{{Code: LOAD_CONST, Out: register, Left: Constant(nextConstant)}}
-		case *ast.Identifier:
-			register, exists := scope.Registers[lit.Literal]
-			utils.Assert(exists, "A register was not allocated for a name before use in an expression")
-			// FIXME: currently expressions must return an instruction with the Out register set,
-			//        but it doesn't make a whole lot of sense to be emitting NOOPs for value loads
-			return []Instruction{{Code: NOOP, Out: register}}
+		var value Data
+		switch v := e.Value.(type) {
+		case int64:
+			value = FromI64(v)
+		case uint64:
+			value = FromU64(v)
+		case float64:
+			value = FromF64(v)
 		default:
-			panic("TODO: Unhandled value literal")
+			panic("TODO: Unhandled value type")
 		}
+
+		nextConstant := len(scope.Constants)
+		scope.Constants = append(scope.Constants, Data(value))
+		return []Instruction{{Code: LOAD_CONST, Out: register, Left: Constant(nextConstant)}}
+	case *ast.Identifier:
+		register, exists := scope.Registers[e.Literal]
+		utils.Assert(exists, "A register was not allocated for a name before use in an expression")
+		// FIXME: currently expressions must return an instruction with the Out register set,
+		//        but it doesn't make a whole lot of sense to be emitting NOOPs for value loads
+		return []Instruction{{Code: NOOP, Out: register}}
 
 	case *ast.GroupExpr:
 		return FromExpr(e.Subexpr, scope)

@@ -181,10 +181,10 @@ func TestParseArithmetic(t *testing.T) {
 }
 
 func TestParseBlock(t *testing.T) {
-	expected := &ast.Block{[]ast.Blockable{
+	expected := ast.Blok([]ast.Blockable{
 		ast.Mutable("foo", nil, ast.NumLit("3")),
-		ast.Constant("baz", &ast.ConstantDefn{ast.NumLit("1")}),
-		&ast.ExprStmt{ast.InExp(
+		ast.Constant("baz", ast.ConstDef(ast.NumLit("1"))),
+		ast.Eval(ast.InExp(
 			ast.InExp(
 				ast.NumLit("2"),
 				ast.BuiltinAdd,
@@ -192,15 +192,15 @@ func TestParseBlock(t *testing.T) {
 			),
 			ast.BuiltinAdd,
 			ast.Ident("baz"),
-		)},
-		&ast.Block{[]ast.Blockable{
+		)),
+		ast.Blok([]ast.Blockable{
 			ast.Mutable("bar", nil, ast.Ident("foo")),
-			&ast.ExprStmt{ast.InExp(
+			ast.Eval(ast.InExp(
 				ast.NumLit("0755"),
 				ast.BuiltinSubtract,
 				ast.Ident("baz"),
-			)},
-			&ast.AssignStmt{
+			)),
+			ast.Assign(
 				[]ast.Expr{ast.Ident("foo")},
 				nil,
 				[]ast.Expr{ast.InExp(
@@ -208,8 +208,8 @@ func TestParseBlock(t *testing.T) {
 					ast.BuiltinMultiply,
 					ast.NumLit("4"),
 				)},
-			},
-			&ast.AssignStmt{
+			),
+			ast.Assign(
 				[]ast.Expr{
 					ast.Ident("bar"),
 					ast.Ident("foo"),
@@ -223,15 +223,15 @@ func TestParseBlock(t *testing.T) {
 					),
 					ast.Ident("bar"),
 				},
-			},
-		}},
-		&ast.ExprStmt{ast.InExp(
+			),
+		}),
+		ast.Eval(ast.InExp(
 			ast.NumLit("8.4e-5"),
 			ast.BuiltinDivide,
 			ast.NumLit("0.5"),
-		)},
-		&ast.Block{nil},
-	}}
+		)),
+		ast.Blok(nil),
+	})
 
 	assert.Equal(t, expected, parseBlock(t, `{
 		foo := 3;      # mutable declaration

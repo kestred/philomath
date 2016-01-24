@@ -20,7 +20,8 @@ func IsDecl(v interface{}) bool {
 
 func TestConstructors(t *testing.T) {
 	decl := Mutable("foo", nil, Ident("bar"))
-	assert.Equal(t, UninferredType, decl.Type)
+	assert.Equal(t, InferredType, decl.Type)
+	assert.Equal(t, UnresolvedType, decl.Expr.GetType())
 	assert.True(t, IsNode(decl))
 	assert.True(t, IsDecl(decl))
 }

@@ -168,7 +168,7 @@ func (p *Parser) parseBlock() *ast.Block {
 	if p.tok == token.COLON {
 		p.next() // consume ":"
 		stmt := p.parseStatement()
-		return &ast.Block{[]ast.Blockable{stmt}}
+		return ast.Blok([]ast.Blockable{stmt})
 	}
 
 	p.expect(token.LEFT_BRACE)
@@ -184,7 +184,7 @@ func (p *Parser) parseBlock() *ast.Block {
 		}
 	}
 	p.expect(token.RIGHT_BRACE)
-	return &ast.Block{stmts}
+	return ast.Blok(stmts)
 }
 
 func (p *Parser) parseBlockable() ast.Blockable {
@@ -252,7 +252,7 @@ func (p *Parser) parseDeclaration() ast.Decl {
 		if _, isFunc := expr.(*ast.FunctionExpr); !isFunc {
 			p.expect(token.SEMICOLON)
 		}
-		return ast.Constant(name, &ast.ConstantDefn{expr})
+		return ast.Constant(name, ast.ConstDef(expr))
 	}
 }
 
@@ -268,10 +268,10 @@ func (p *Parser) parseStatement() ast.Stmt {
 		p.next() // eat '='
 		values := p.parseExpressionList()
 		p.expect(token.SEMICOLON)
-		return &ast.AssignStmt{exprs, nil, values}
+		return ast.Assign(exprs, nil, values)
 	} else if len(exprs) == 1 {
 		p.expect(token.SEMICOLON)
-		return &ast.ExprStmt{exprs[0]}
+		return ast.Eval(exprs[0])
 	} else {
 		panic("TODO: Produce error for expression list w/o assignment, then recover")
 	}

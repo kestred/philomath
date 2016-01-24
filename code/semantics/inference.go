@@ -12,32 +12,70 @@ import (
 // TODO: Break-out operator overload resolution
 
 func InferTypes(cs *code.Section) {
-	// NOTE: Using post-order traversal so that child node types are available for their parents
-	// TODO: Probably need to be careful to avoid smashing non-inferred types
-	//       I'll just wait until it becomes a bug and deal with it then
-	for i := len(cs.Nodes) - 1; i >= 0; i-- {
-		switch n := cs.Nodes[i].(type) {
-		case *ast.PostfixExpr:
-			n.Type = inferPostfixType(n.Operator, n.Subexpr.GetType())
-		case *ast.InfixExpr:
-			n.Type = inferInfixType(n.Operator, n.Left.GetType(), n.Right.GetType())
-		case *ast.PrefixExpr:
-			n.Type = inferPrefixType(n.Operator, n.Subexpr.GetType())
-		case *ast.GroupExpr:
-			n.Type = n.Subexpr.GetType()
-		case *ast.Identifier:
-			// TODO: Get from previously resolved identifiers
-		case *ast.NumberLiteral:
-			n.Type, n.Value = parseNumber(n.Literal)
+	inferTypesRecursive(cs.Root)
+}
 
-		case ast.Expr: // fail early if I forget to add an expression
-			utils.InvalidCodePath()
+func inferTypesRecursive(node ast.Node) ast.Type {
+	switch n := node.(type) {
+	case *ast.Block:
+		for _, subnode := range n.Nodes {
+			inferTypesRecursive(subnode)
 		}
+	case *ast.ConstantDecl:
+		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
+			inferTypesRecursive(defn.Expr)
+		}
+	case *ast.MutableDecl:
+		typ := inferTypesRecursive(n.Expr)
+		if n.Type == ast.InferredType {
+			n.Type = typ
+		}
+	case *ast.EvalStmt:
+		inferTypesRecursive(n.Expr)
+	case *ast.AssignStmt:
+		if len(n.Left) != len(n.Right) {
+			panic("TODO: Handle unbalanced assignment")
+		}
+		for i := range n.Left {
+			inferTypesRecursive(n.Left[i])
+			inferTypesRecursive(n.Right[i])
+		}
+	case *ast.PostfixExpr:
+		subtype := inferTypesRecursive(n.Subexpr)
+		n.Type = inferPostfixType(n.Operator, subtype)
+		return n.Type
+	case *ast.InfixExpr:
+		left := inferTypesRecursive(n.Left)
+		right := inferTypesRecursive(n.Right)
+		n.Type = inferInfixType(n.Operator, left, right)
+		return n.Type
+	case *ast.PrefixExpr:
+		subtype := inferTypesRecursive(n.Subexpr)
+		n.Type = inferPrefixType(n.Operator, subtype)
+		return n.Type
+	case *ast.GroupExpr:
+		n.Type = inferTypesRecursive(n.Subexpr)
+		return n.Type
+	case *ast.Identifier:
+		utils.Assert(n.Decl != nil, "An unresolved identifier survived until type inferrence")
+		switch d := n.Decl.(type) {
+		case *ast.ConstantDecl:
+			n.Type = d.Defn.(*ast.ConstantDefn).Expr.GetType()
+		case *ast.MutableDecl:
+			n.Type = d.Type
+		}
+		return n.Type
+	case *ast.NumberLiteral:
+		n.Type, n.Value = parseNumber(n.Literal)
+		return n.Type
+	default:
+		utils.InvalidCodePath()
 	}
+	return ast.BuiltinEmpty
 }
 
 func inferPrefixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
-	if typ == ast.UnknownType {
+	if isError(typ) {
 		return typ
 	}
 
@@ -79,7 +117,7 @@ func inferPrefixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
 }
 
 func inferPostfixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
-	if typ == ast.UnknownType {
+	if isError(typ) {
 		return typ
 	}
 
@@ -90,8 +128,10 @@ func inferPostfixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
 }
 
 func inferInfixType(op *ast.OperatorDefn, left ast.Type, right ast.Type) ast.Type {
-	if left == ast.UnknownType || right == ast.UnknownType {
-		return ast.UnknownType
+	if isError(left) {
+		return left
+	} else if isError(right) {
+		return right
 	}
 
 	switch op {
@@ -139,9 +179,9 @@ func parseNumber(num string) (ast.Type, interface{}) {
 func castNumbers(left ast.Type, right ast.Type) ast.Type {
 	// NOTE: typechecking will come through later and assert that the implicit
 	//       casts are either safe (or "safe-enough")
-	if !isNumber(left) || !isNumber(right) {
+	if !maybeNumber(left) || !maybeNumber(right) {
 		// can't cast non-number to number
-		return ast.UnknownType
+		return ast.UncastableType
 	}
 
 	if isFloat(left) {
@@ -166,7 +206,7 @@ func castNumbers(left ast.Type, right ast.Type) ast.Type {
 			return left
 		} else {
 			// can't cast unsigned to signed
-			return ast.UnknownType
+			return ast.UncastableType
 		}
 	} else if isSigned(right) {
 		if left == ast.InferredNumber {
@@ -174,7 +214,7 @@ func castNumbers(left ast.Type, right ast.Type) ast.Type {
 			return right
 		} else {
 			// can't cast unsigned to signed
-			return ast.UnknownType
+			return ast.UncastableType
 		}
 	}
 
@@ -211,8 +251,21 @@ func promotionOrder(typ ast.Type) int {
 	}
 }
 
-func isNumber(typ ast.Type) bool {
-	return (typ == ast.InferredNumber) || isFloat(typ) || isSigned(typ) || isUnsigned(typ)
+func isError(typ ast.Type) bool {
+	switch typ {
+	case
+		ast.UninferredType,
+		ast.UnresolvedType,
+		ast.UncastableType:
+		return true
+	default:
+		return false
+	}
+}
+
+func maybeNumber(typ ast.Type) bool {
+	return typ == ast.InferredNumber || typ == ast.InferredType ||
+		isFloat(typ) || isSigned(typ) || isUnsigned(typ)
 }
 
 func isFloat(typ ast.Type) bool {

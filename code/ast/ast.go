@@ -1,129 +1,89 @@
 package ast
 
-/* At the moment this package isn't so far off from a concrete syntax tree
+/* Constant Nodes */
 
-	TODO: Maybe it would be worth making the two structures separate?
-
-  For example, the CST would only contain the syntactic information,
-	and the AST would then only contain the semantic information.
-	The AST could eliminate some nodes:
-		For example "GroupExpr" can be removed entirely
-		The "ValueExpr", "NumberLiteral", and "TextLiteral" nodes could be collapsed?
-
-*/
-
-/* Const Nodes */
 var (
 	UnparsedValue = &struct{}{}
 
 	// Relaxed types
-	UninferredType   = &SimpleType{"<uninferred>"} // could be any type
-	UnresolvedType   = &SimpleType{"<unresolved>"} // could not infer type
-	UnknownType      = &SimpleType{"<unknown>"}    // could not infer type
-	InferredNumber   = &SimpleType{"<number>"}     // could only be a number
-	InferredFloat    = &SimpleType{"<float>"}      // could only be a float number
-	InferredSigned   = &SimpleType{"<signed>"}     // could only be a signed number
-	InferredUnsigned = &SimpleType{"<unsigned>"}   // could only be an unsigned number
+	InferredType     = BaseTyp("<inferrable>") // could be any type
+	InferredNumber   = BaseTyp("<number>")     // could only be a number
+	InferredFloat    = BaseTyp("<float>")      // could only be a float number
+	InferredSigned   = BaseTyp("<signed>")     // could only be a signed number
+	InferredUnsigned = BaseTyp("<unsigned>")   // could only be an unsigned number
+
+	// Error types
+	UninferredType = BaseTyp("<uninferred>") // used before it was inferred
+	UnresolvedType = BaseTyp("<unresolved>") // could not infer type
+	UncastableType = BaseTyp("<uncastable>") // could not cast type
 
 	// Builtin types
-	BuiltinEmpty   = &SimpleType{"empty"} // the 0-byte type
-	BuiltinFloat   = &SimpleType{"float"}
-	BuiltinFloat32 = &SimpleType{"f32"}
-	BuiltinFloat64 = &SimpleType{"f64"}
-	BuiltinInt     = &SimpleType{"int"}
-	BuiltinInt8    = &SimpleType{"i8"}
-	BuiltinInt16   = &SimpleType{"i16"}
-	BuiltinInt32   = &SimpleType{"i32"}
-	BuiltinInt64   = &SimpleType{"i64"}
-	BuiltinUint    = &SimpleType{"uint"}
-	BuiltinUint8   = &SimpleType{"u8"}
-	BuiltinUint16  = &SimpleType{"u16"}
-	BuiltinUint32  = &SimpleType{"u32"}
-	BuiltinUint64  = &SimpleType{"u64"}
+	BuiltinEmpty   = BaseTyp("empty") // the 0-byte type
+	BuiltinFloat   = BaseTyp("float")
+	BuiltinFloat32 = BaseTyp("f32")
+	BuiltinFloat64 = BaseTyp("f64")
+	BuiltinInt     = BaseTyp("int")
+	BuiltinInt8    = BaseTyp("i8")
+	BuiltinInt16   = BaseTyp("i16")
+	BuiltinInt32   = BaseTyp("i32")
+	BuiltinInt64   = BaseTyp("i64")
+	BuiltinUint    = BaseTyp("uint")
+	BuiltinUint8   = BaseTyp("u8")
+	BuiltinUint16  = BaseTyp("u16")
+	BuiltinUint32  = BaseTyp("u32")
+	BuiltinUint64  = BaseTyp("u64")
 
 	// Logical operators
-	BuiltinLogicalOr    = &OperatorDefn{"Logical Or", "or", "_or_", BinaryInfix, LeftAssociative, LogicalOrPrec}
-	BuiltinLogicalAnd   = &OperatorDefn{"Logical And", "and", "_and_", BinaryInfix, LeftAssociative, LogicalAndPrec}
-	BuiltinElementOf    = &OperatorDefn{"Element Of", "in", "_in_", BinaryInfix, NonAssociative, InclusionPrec}
-	BuiltinNotElementOf = &OperatorDefn{"Not Element Of", "not in", "_not_in_", BinaryInfix, NonAssociative, InclusionPrec}
+	BuiltinLogicalOr    = Operator("Logical Or", "or", "_or_", BinaryInfix, LeftAssociative, LogicalOrPrec)
+	BuiltinLogicalAnd   = Operator("Logical And", "and", "_and_", BinaryInfix, LeftAssociative, LogicalAndPrec)
+	BuiltinElementOf    = Operator("Element Of", "in", "_in_", BinaryInfix, NonAssociative, InclusionPrec)
+	BuiltinNotElementOf = Operator("Not Element Of", "not in", "_not_in_", BinaryInfix, NonAssociative, InclusionPrec)
 
 	// Comparison operators
-	BuiltinIdentical      = &OperatorDefn{"Identical", "is", "_is_", BinaryInfix, NonAssociative, ComparisonPrec}
-	BuiltinEqual          = &OperatorDefn{"Equal", "==", "_eq_", BinaryInfix, NonAssociative, ComparisonPrec}
-	BuiltinLess           = &OperatorDefn{"Less", "<", "_lt_", BinaryInfix, NonAssociative, ComparisonPrec}
-	BuiltinLessOrEqual    = &OperatorDefn{"Less Or Equal", "<=", "_lte_", BinaryInfix, NonAssociative, ComparisonPrec}
-	BuiltinGreater        = &OperatorDefn{"Greater", ">", "_gt_", BinaryInfix, NonAssociative, ComparisonPrec}
-	BuiltinGreaterOrEqual = &OperatorDefn{"Greater Or Equal", ">=", "_gte_", BinaryInfix, NonAssociative, ComparisonPrec}
+	BuiltinIdentical      = Operator("Identical", "is", "_is_", BinaryInfix, NonAssociative, ComparisonPrec)
+	BuiltinEqual          = Operator("Equal", "==", "_eq_", BinaryInfix, NonAssociative, ComparisonPrec)
+	BuiltinLess           = Operator("Less", "<", "_lt_", BinaryInfix, NonAssociative, ComparisonPrec)
+	BuiltinLessOrEqual    = Operator("Less Or Equal", "<=", "_lte_", BinaryInfix, NonAssociative, ComparisonPrec)
+	BuiltinGreater        = Operator("Greater", ">", "_gt_", BinaryInfix, NonAssociative, ComparisonPrec)
+	BuiltinGreaterOrEqual = Operator("Greater Or Equal", ">=", "_gte_", BinaryInfix, NonAssociative, ComparisonPrec)
 
 	// Arithmetic operators
-	BuiltinCompare   = &OperatorDefn{"Compare", "<=>", "_cmp_", BinaryInfix, LeftAssociative, ArithmeticPrec}
-	BuiltinAdd       = &OperatorDefn{"Add", "+", "_add_", BinaryInfix, LeftAssociative, CommutativePrec}
-	BuiltinSubtract  = &OperatorDefn{"Subtract", "-", "_sub_", BinaryInfix, LeftAssociative, CommutativePrec}
-	BuiltinMultiply  = &OperatorDefn{"Multiply", "*", "_mul_", BinaryInfix, LeftAssociative, DistributivePrec}
-	BuiltinDivide    = &OperatorDefn{"Divide", "/", "_div_", BinaryInfix, LeftAssociative, DistributivePrec}
-	BuiltinRemainder = &OperatorDefn{"Remainder", "%", "_rem_", BinaryInfix, LeftAssociative, DistributivePrec}
-	BuiltinPositive  = &OperatorDefn{"Positive", "+", "pos_", UnaryPrefix, RightAssociative, PrefixPrec}
-	BuiltinNegative  = &OperatorDefn{"Negative", "-", "neg_", UnaryPrefix, RightAssociative, PrefixPrec}
+	BuiltinCompare   = Operator("Compare", "<=>", "_cmp_", BinaryInfix, LeftAssociative, ArithmeticPrec)
+	BuiltinAdd       = Operator("Add", "+", "_add_", BinaryInfix, LeftAssociative, CommutativePrec)
+	BuiltinSubtract  = Operator("Subtract", "-", "_sub_", BinaryInfix, LeftAssociative, CommutativePrec)
+	BuiltinMultiply  = Operator("Multiply", "*", "_mul_", BinaryInfix, LeftAssociative, DistributivePrec)
+	BuiltinDivide    = Operator("Divide", "/", "_div_", BinaryInfix, LeftAssociative, DistributivePrec)
+	BuiltinRemainder = Operator("Remainder", "%", "_rem_", BinaryInfix, LeftAssociative, DistributivePrec)
+	BuiltinPositive  = Operator("Positive", "+", "pos_", UnaryPrefix, RightAssociative, PrefixPrec)
+	BuiltinNegative  = Operator("Negative", "-", "neg_", UnaryPrefix, RightAssociative, PrefixPrec)
 
 	// Pointer operators
-	BuiltinReference   = &OperatorDefn{"Reference", "^", "ref_", UnaryPrefix, RightAssociative, PostfixPrec}
-	BuiltinDereference = &OperatorDefn{"Dereference", "~", "deref_", UnaryPrefix, RightAssociative, PostfixPrec}
+	BuiltinReference   = Operator("Reference", "^", "ref_", UnaryPrefix, RightAssociative, PostfixPrec)
+	BuiltinDereference = Operator("Dereference", "~", "deref_", UnaryPrefix, RightAssociative, PostfixPrec)
 )
 
 /* Abstract Nodes */
 
 type Node interface {
 	ImplementsNode()
+	GetParent() Node
+	SetParent(p Node)
 }
 
-func (b *Block) ImplementsNode() {}
+type NodeBase struct {
+	Parent Node
+}
 
-// Declarations
-func (d *ConstantDecl) ImplementsNode() {}
-func (d *MutableDecl) ImplementsNode()  {}
+func (n *NodeBase) ImplementsNode()  {}
+func (n *NodeBase) GetParent() Node  { return n.Parent }
+func (n *NodeBase) SetParent(p Node) { n.Parent = p }
 
-// Definitions (and related nodes)
-func (d *EnumDefn) ImplementsNode()      {}
-func (v *EnumValue) ImplementsNode()     {}
-func (s *EnumSeparator) ImplementsNode() {}
-func (d *ConstantDefn) ImplementsNode()  {}
-func (d *OperatorDefn) ImplementsNode()  {}
-func (d *StructDefn) ImplementsNode()    {}
-func (f *StructField) ImplementsNode()   {}
+type Scope interface {
+	Node
+	ImplementsScope()
+}
 
-// Statements (and related nodes)
-func (s *IfStmt) ImplementsNode()     {}
-func (s *WhileStmt) ImplementsNode()  {}
-func (s *ForStmt) ImplementsNode()    {}
-func (r *ForRange) ImplementsNode()   {}
-func (r *EachRange) ImplementsNode()  {}
-func (r *ExprRange) ImplementsNode()  {}
-func (s *ExprStmt) ImplementsNode()   {}
-func (s *AssignStmt) ImplementsNode() {}
-func (s *ReturnStmt) ImplementsNode() {}
-func (s *DoneStmt) ImplementsNode()   {}
-
-// Expressions (and related nodes)
-func (e *PostfixExpr) ImplementsNode()   {}
-func (e *InfixExpr) ImplementsNode()     {}
-func (e *PrefixExpr) ImplementsNode()    {}
-func (e *CallExpr) ImplementsNode()      {}
-func (e *GroupExpr) ImplementsNode()     {}
-func (e *FunctionExpr) ImplementsNode()  {}
-func (p *FunctionParam) ImplementsNode() {}
-func (e *MemberExpr) ImplementsNode()    {}
-
-// Literals
-func (l *NumberLiteral) ImplementsNode() {}
-func (l *TextLiteral) ImplementsNode()   {}
-func (i *Identifier) ImplementsNode()    {}
-
-// Types
-func (t *ArrayType) ImplementsNode()    {}
-func (t *FunctionType) ImplementsNode() {}
-func (t *NamedType) ImplementsNode()    {}
-func (t *PointerType) ImplementsNode()  {}
-func (t *SimpleType) ImplementsNode()   {}
+func (b *Block) ImplementsScope() {}
 
 type Blockable interface {
 	Node
@@ -136,7 +96,7 @@ func (d *MutableDecl) ImplementsBlockable()  {}
 func (s *IfStmt) ImplementsBlockable()       {}
 func (s *WhileStmt) ImplementsBlockable()    {}
 func (s *ForStmt) ImplementsBlockable()      {}
-func (s *ExprStmt) ImplementsBlockable()     {}
+func (s *EvalStmt) ImplementsBlockable()     {}
 func (s *AssignStmt) ImplementsBlockable()   {}
 func (s *ReturnStmt) ImplementsBlockable()   {}
 func (s *DoneStmt) ImplementsBlockable()     {}
@@ -167,7 +127,7 @@ type Stmt interface {
 func (s *IfStmt) ImplementsStmt()     {}
 func (s *WhileStmt) ImplementsStmt()  {}
 func (s *ForStmt) ImplementsStmt()    {}
-func (s *ExprStmt) ImplementsStmt()   {}
+func (s *EvalStmt) ImplementsStmt()   {}
 func (s *AssignStmt) ImplementsStmt() {}
 func (s *ReturnStmt) ImplementsStmt() {}
 func (s *DoneStmt) ImplementsStmt()   {}
@@ -218,7 +178,7 @@ func (t *ArrayType) ImplementsType()    {}
 func (t *FunctionType) ImplementsType() {}
 func (t *NamedType) ImplementsType()    {}
 func (t *PointerType) ImplementsType()  {}
-func (t *SimpleType) ImplementsType()   {}
+func (t *BaseType) ImplementsType()     {}
 
 type EnumItem interface {
 	Node
@@ -238,10 +198,21 @@ func (r *EachRange) ImplementsLoopRange() {}
 
 /* Concrete Nodes */
 
+type Block struct {
+	NodeBase
+	Nodes []Blockable // Block, Decl, or Stmt
+}
+
+func Blok(nodes []Blockable) *Block {
+	return &Block{Nodes: nodes}
+}
+
 // A declaration is represented by one of the following
 type (
 	ConstantDecl struct {
-		// syntactic
+		NodeBase
+
+		// syntax
 		Name *Identifier
 		Defn Defn
 
@@ -250,7 +221,9 @@ type (
 	}
 
 	MutableDecl struct {
-		// syntactic
+		NodeBase
+
+		// syntax
 		Name *Identifier
 		Type Type // <-- also semantic right now
 		Expr Expr
@@ -261,13 +234,13 @@ func Constant(name string, defn Defn) *ConstantDecl {
 	return &ConstantDecl{
 		Name: Ident(name),
 		Defn: defn,
-		Type: UninferredType,
+		Type: InferredType,
 	}
 }
 
 func Mutable(name string, typ Type, expr Expr) *MutableDecl {
 	if typ == nil {
-		typ = UninferredType
+		typ = InferredType
 	}
 
 	return &MutableDecl{
@@ -280,101 +253,178 @@ func Mutable(name string, typ Type, expr Expr) *MutableDecl {
 // A definition is represented by a tree of one or more of the following
 type (
 	EnumDefn struct {
+		NodeBase
+
+		// syntax
 		Items []EnumItem
 	}
 
 	EnumValue struct {
+		NodeBase
+
+		// syntax
 		Name  *Identifier
 		Value NumberLiteral
 		Text  TextLiteral
 	}
 
 	EnumSeparator struct {
+		NodeBase
+
+		// syntax
 		Name *Identifier
 	}
 
 	ConstantDefn struct {
+		NodeBase
+
+		// syntax
 		Expr Expr
 	}
 
 	OperatorDefn struct {
-		Name        string
+		NodeBase
+
+		// syntax
 		Literal     string
 		Overload    string
 		Type        OpType
 		Associative OpAssociation
 		Precedence  OpPrecedence
+
+		// semantics
+		Name string
 	}
 
 	StructDefn struct {
+		NodeBase
+
+		// syntax
 		Fields []StructField
 	}
 
 	StructField struct {
+		NodeBase
+
+		// syntax
 		Name *Identifier
 		Type Type
 	}
 )
 
+func ConstDef(expr Expr) *ConstantDefn {
+	return &ConstantDefn{Expr: expr}
+}
+
+func Operator(name string, lit string, ident string, typ OpType, asc OpAssociation, prec OpPrecedence) *OperatorDefn {
+	return &OperatorDefn{
+		Name:        name,
+		Literal:     lit,
+		Overload:    ident,
+		Type:        typ,
+		Associative: asc,
+		Precedence:  prec,
+	}
+}
+
 // A statement is represented by a tree of one or more of the following
 type (
-	Block struct {
-		Nodes []Blockable // Block, Decl, or Stmt
-	}
-
 	IfStmt struct {
+		NodeBase
+
+		// syntax
 		Cond Expr
 		Then Block
 		Else Block
 	}
 
 	WhileStmt struct {
+		NodeBase
+
+		// syntax
 		Cond Expr
 		Do   Block
 	}
 
 	ForStmt struct {
+		NodeBase
+
+		// syntax
 		Range LoopRange
 		Do    Block
 	}
 
 	ForRange struct {
+		NodeBase
+
+		// syntax
 		Decl   MutableDecl
 		Cond   Expr
 		Update AssignStmt
 	}
 
 	EachRange struct {
+		NodeBase
+
+		// syntax
 		Names []*Identifier
 		Expr  Expr
 		Range ExprRange
 	}
 
 	ExprRange struct {
+		NodeBase
+
+		// syntax
 		Min Expr
 		Max Expr
 	}
 
 	AssignStmt struct {
-		Assignees []Expr
-		Operator  *OperatorDefn
-		Values    []Expr
+		NodeBase
+
+		// syntax
+		Left     []Expr
+		Operator *OperatorDefn
+		Right    []Expr
 	}
 
-	ExprStmt struct {
+	EvalStmt struct {
+		NodeBase
+
+		// syntax
 		Expr Expr
 	}
 
 	ReturnStmt struct {
+		NodeBase
+
+		// syntax
 		Value Expr
 	}
 
-	DoneStmt struct{}
+	DoneStmt struct {
+		NodeBase
+	}
 )
+
+func Assign(left []Expr, op *OperatorDefn, right []Expr) *AssignStmt {
+	return &AssignStmt{
+		Left:     left,
+		Operator: op,
+		Right:    right,
+	}
+}
+
+func Eval(expr Expr) *EvalStmt {
+	return &EvalStmt{Expr: expr}
+}
 
 // An expression is represented by a tree of one or more of the following
 type (
 	PostfixExpr struct {
+		NodeBase
+
 		// syntax
 		Subexpr  Expr
 		Operator *OperatorDefn
@@ -384,6 +434,8 @@ type (
 	}
 
 	InfixExpr struct {
+		NodeBase
+
 		// syntax
 		Left     Expr
 		Operator *OperatorDefn
@@ -394,6 +446,8 @@ type (
 	}
 
 	PrefixExpr struct {
+		NodeBase
+
 		// syntax
 		Operator *OperatorDefn
 		Subexpr  Expr
@@ -403,6 +457,8 @@ type (
 	}
 
 	CallExpr struct {
+		NodeBase
+
 		// syntax
 		Function  Expr
 		Arguments []Expr
@@ -412,6 +468,8 @@ type (
 	}
 
 	FunctionExpr struct {
+		NodeBase
+
 		// syntax
 		Params []FunctionParam
 		Return Type
@@ -422,11 +480,16 @@ type (
 	}
 
 	FunctionParam struct {
+		NodeBase
+
+		// syntax
 		Name *Identifier
 		Type Type
 	}
 
 	GroupExpr struct {
+		NodeBase
+
 		// syntax
 		Subexpr Expr
 
@@ -435,6 +498,8 @@ type (
 	}
 
 	MemberExpr struct {
+		NodeBase
+
 		// syntax
 		Left   Expr
 		Member *Identifier
@@ -444,6 +509,8 @@ type (
 	}
 
 	NumberLiteral struct {
+		NodeBase
+
 		// syntax
 		Literal string
 
@@ -453,6 +520,8 @@ type (
 	}
 
 	TextLiteral struct {
+		NodeBase
+
 		// syntax
 		Literal string
 
@@ -462,12 +531,14 @@ type (
 	}
 
 	Identifier struct {
+		NodeBase
+
 		// syntax
 		Literal string
 
 		// semantics
-		Type     Type
-		Resolved Node
+		Type Type
+		Decl Decl
 	}
 
 	Value interface{}
@@ -556,26 +627,37 @@ func Ident(literal string) *Identifier {
 // A type is represented by a tree of one or more of the following
 type (
 	ArrayType struct {
+		NodeBase
+
+		// syntax
 		Length  Expr
 		Element Type
 	}
 
 	FunctionType struct {
+		NodeBase
+
+		// syntax
 		Params []Type
 		Return Type
-		// TODO: Multiple return values?
-		//Returns []Type
 	}
 
 	NamedType struct {
+		NodeBase
+
+		// syntax
 		Name Expr
 	}
 
 	PointerType struct {
+		NodeBase
+
+		// syntax
 		PointerTo Type
 	}
 
-	SimpleType struct {
+	BaseType struct {
+		NodeBase
 		Name string
 	}
 )
@@ -586,4 +668,8 @@ func NamTyp(name Expr) *NamedType {
 
 func PtrTyp(pointerTo Type) *PointerType {
 	return &PointerType{PointerTo: pointerTo}
+}
+
+func BaseTyp(name string) *BaseType {
+	return &BaseType{Name: name}
 }

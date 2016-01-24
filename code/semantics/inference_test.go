@@ -31,6 +31,7 @@ func inferBlock(t *testing.T, input string) *ast.Block {
 	}
 
 	section := code.PrepareTree(block, nil)
+	ResolveNames(&section)
 	InferTypes(&section)
 	return block
 }
@@ -101,14 +102,14 @@ func TestInferArithmetic(t *testing.T) {
 	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 * 7`).GetType())
 	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 / 7`).GetType())
 	//  - combinations (unsigned x signed)
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 + -7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 - -7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 * -7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 / -7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 + 07`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 - 07`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 * 07`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 / 07`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `07 + -7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `07 - -7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `07 * -7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `07 / -7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `-7 + 07`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `-7 - 07`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `-7 * 07`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `-7 / 07`).GetType())
 	//  - combinations (num x float)
 	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 + 7.0`).GetType())
 	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 - 7.0`).GetType())
@@ -138,55 +139,57 @@ func TestInferArithmetic(t *testing.T) {
 	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 / 7.0`).GetType())
 
 	// Propogate unknown Type
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `+(-7 + 07)`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-(-7 + 07)`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 + (-7 + 07)`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 - (-7 + 07)`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 * (-7 + 07)`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 / (-7 + 07)`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) + 7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) - 7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) * 7`).GetType())
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) / 7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `+(-7 + 07)`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `-(-7 + 07)`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `7 + (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `7 - (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `7 * (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `7 / (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `(-7 + 07) + 7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `(-7 + 07) - 7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `(-7 + 07) * 7`).GetType())
+	assert.Equal(t, ast.UncastableType, inferExpression(t, `(-7 + 07) / 7`).GetType())
 }
 
-func TestInferBlock(t *testing.T) {
-	// Declarations
+func TestInferDeclarations(t *testing.T) {
 	block := inferBlock(t, `{
 		hoge :: -3;         # constant decl
 		hoge + 2;           # one ident in expr
 
 		piyo := 0.5 * hoge; # mutable decl
 		piyo / hoge;        # two ident in expr
-
-		fuga := hogera;     # use undefined in decl
-		0755 - fuga;        # propogate undefined in expr
 	}`)
+	/*
+			fuga := hogera;     # use undefined in decl
+			0755 - fuga;        # propogate undefined in expr
+		}`)
+	*/
 	if decl, ok := block.Nodes[0].(*ast.ConstantDecl); assert.True(t, ok) {
 		if defn, ok := decl.Defn.(*ast.ConstantDefn); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredSigned, defn.Expr.GetType())
 		}
 	}
-	if stmt, ok := block.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {
+	if stmt, ok := block.Nodes[1].(*ast.EvalStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredSigned, stmt.Expr.GetType())
 	}
 	if decl, ok := block.Nodes[2].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
-		assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
+		assert.Equal(t, ast.InferredFloat, decl.Type)
 	}
-	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
+	if stmt, ok := block.Nodes[3].(*ast.EvalStmt); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
 	}
-	if decl, ok := block.Nodes[4].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.UninferredType, decl.Type)
-		assert.Equal(t, ast.UnknownType, decl.Expr.GetType())
-	}
-	if stmt, ok := block.Nodes[5].(*ast.ExprStmt); assert.True(t, ok) {
-		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
-	}
+	/*
+		if decl, ok := block.Nodes[4].(*ast.MutableDecl); assert.True(t, ok) {
+			assert.Equal(t, ast.UncastableType, decl.Typ)
+		}
+		if stmt, ok := block.Nodes[5].(*ast.EvalStmt); assert.True(t, ok) {
+			assert.Equal(t, ast.UncastableType, stmt.Expr.GetType())
+		}
+	*/
+}
 
-	// Assignment
-	block = inferBlock(t, `{
+func TestInferAssignment(t *testing.T) {
+	block := inferBlock(t, `{
 		plugh := -4;
 		xyzzy := 012;
 
@@ -194,30 +197,29 @@ func TestInferBlock(t *testing.T) {
 		xyzzy, plugh = (plugh / 5), xyzzy;
 	}`)
 	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
-		assert.Equal(t, ast.InferredSigned, decl.Expr.GetType())
+		assert.Equal(t, ast.InferredSigned, decl.Type)
 	}
 	if decl, ok := block.Nodes[1].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
-		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
+		assert.Equal(t, ast.InferredUnsigned, decl.Type)
 	}
 	if stmt, ok := block.Nodes[2].(*ast.AssignStmt); assert.True(t, ok) {
-		if assert.Equal(t, 1, len(stmt.Assignees)) && assert.Equal(t, 1, len(stmt.Values)) {
-			assert.Equal(t, ast.InferredSigned, stmt.Assignees[0].GetType())
-			assert.Equal(t, ast.InferredFloat, stmt.Values[0].GetType())
+		if assert.Equal(t, 1, len(stmt.Left)) && assert.Equal(t, 1, len(stmt.Right)) {
+			assert.Equal(t, ast.InferredSigned, stmt.Left[0].GetType())
+			assert.Equal(t, ast.InferredFloat, stmt.Right[0].GetType())
 		}
 	}
 	if stmt, ok := block.Nodes[3].(*ast.AssignStmt); assert.True(t, ok) {
-		if assert.Equal(t, 2, len(stmt.Assignees)) && assert.Equal(t, 2, len(stmt.Values)) {
-			assert.Equal(t, ast.InferredUnsigned, stmt.Assignees[0].GetType())
-			assert.Equal(t, ast.InferredSigned, stmt.Assignees[1].GetType())
-			assert.Equal(t, ast.InferredSigned, stmt.Values[0].GetType())
-			assert.Equal(t, ast.InferredUnsigned, stmt.Values[1].GetType())
+		if assert.Equal(t, 2, len(stmt.Left)) && assert.Equal(t, 2, len(stmt.Right)) {
+			assert.Equal(t, ast.InferredUnsigned, stmt.Left[0].GetType())
+			assert.Equal(t, ast.InferredSigned, stmt.Left[1].GetType())
+			assert.Equal(t, ast.InferredSigned, stmt.Right[0].GetType())
+			assert.Equal(t, ast.InferredUnsigned, stmt.Right[1].GetType())
 		}
 	}
+}
 
-	// Nested block
-	block = inferBlock(t, `{
+func TestInferNestedBlock(t *testing.T) {
+	block := inferBlock(t, `{
 		ham  := 0600;
 		eggs :: -6.29;
 
@@ -227,12 +229,13 @@ func TestInferBlock(t *testing.T) {
 			eggs;
 			ham;
 		}
-
-		eggs * spam;
 	}`)
+	/*
+			eggs * spam;
+		}`)
+	*/
 	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-		assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
-		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
+		assert.Equal(t, ast.InferredUnsigned, decl.Type)
 	}
 	if decl, ok := block.Nodes[1].(*ast.ConstantDecl); assert.True(t, ok) {
 		if defn, ok := decl.Defn.(*ast.ConstantDefn); assert.True(t, ok) {
@@ -241,20 +244,21 @@ func TestInferBlock(t *testing.T) {
 	}
 	if nest, ok := block.Nodes[2].(*ast.Block); assert.True(t, ok) {
 		if decl, ok := nest.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
-			assert.Equal(t, ast.UninferredType, decl.Type) // not overridden for now
-			assert.Equal(t, ast.InferredFloat, decl.Expr.GetType())
+			assert.Equal(t, ast.InferredFloat, decl.Type)
 		}
-		if stmt, ok := nest.Nodes[1].(*ast.ExprStmt); assert.True(t, ok) {
+		if stmt, ok := nest.Nodes[1].(*ast.EvalStmt); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
 		}
-		if stmt, ok := nest.Nodes[2].(*ast.ExprStmt); assert.True(t, ok) {
+		if stmt, ok := nest.Nodes[2].(*ast.EvalStmt); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredFloat, stmt.Expr.GetType())
 		}
-		if stmt, ok := nest.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
+		if stmt, ok := nest.Nodes[3].(*ast.EvalStmt); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredUnsigned, stmt.Expr.GetType())
 		}
 	}
-	if stmt, ok := block.Nodes[3].(*ast.ExprStmt); assert.True(t, ok) {
-		assert.Equal(t, ast.UnknownType, stmt.Expr.GetType())
-	}
+	/*
+		if stmt, ok := block.Nodes[3].(*ast.EvalStmt); assert.True(t, ok) {
+			assert.Equal(t, ast.UncastableType, stmt.Expr.GetType())
+		}
+	*/
 }

@@ -34,7 +34,7 @@ func TestFlattenBlock(t *testing.T) {
 		&ast.ConstantDefn{},
 		&ast.NumberLiteral{},
 		// (2 + foo) + baz;
-		&ast.ExprStmt{},
+		&ast.EvalStmt{},
 		&ast.InfixExpr{},
 		&ast.GroupExpr{},
 		&ast.InfixExpr{},
@@ -50,7 +50,7 @@ func TestFlattenBlock(t *testing.T) {
 		&ast.Identifier{},
 		&ast.Identifier{},
 		// 0755 - baz;
-		&ast.ExprStmt{},
+		&ast.EvalStmt{},
 		&ast.InfixExpr{},
 		&ast.NumberLiteral{},
 		&ast.OperatorDefn{},

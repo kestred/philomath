@@ -3,8 +3,8 @@ package interpreter
 import (
 	"testing"
 
-	// TODO: Maybe stop relying on parser et. al. when more code is stable?
 	"github.com/kestred/philomath/code/bytecode"
+	"github.com/kestred/philomath/code/code"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/kestred/philomath/code/semantics"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,8 @@ func evalExpression(t *testing.T, input string) bytecode.Data {
 		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 
-	semantics.InferTypes(expr)
+	section := code.PrepareTree(expr, nil)
+	semantics.InferTypes(&section)
 	scope := &bytecode.Scope{}
 	scope.Init()
 	insts := bytecode.FromExpr(expr, scope)
@@ -33,7 +34,9 @@ func evalBlock(t *testing.T, input string) bytecode.Data {
 		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
 	}
 
-	semantics.InferTypes(block)
+	section := code.PrepareTree(block, nil)
+	semantics.ResolveNames(&section)
+	semantics.InferTypes(&section)
 	scope := &bytecode.Scope{}
 	scope.Init()
 	insts := bytecode.FromBlock(block, scope)
