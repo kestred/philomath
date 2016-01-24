@@ -154,8 +154,8 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 		case *ast.Block:
 			insts = append(insts, FromBlock(n, scope)...)
 		case *ast.ConstantDecl:
-			// NOTE: an ExprDefn is the only definiton used directly in bytecode generation
-			if defn, ok := n.Defn.(*ast.ExprDefn); ok {
+			// NOTE: an ConstantDefn is the only definiton used directly in bytecode generation
+			if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
 				insts = append(insts, FromExpr(defn.Expr, scope)...)
 				scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
 			}

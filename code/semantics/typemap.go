@@ -17,7 +17,7 @@ func (typmap *TypeMap) Get(name string) ast.Type {
 	if typ, ok := typmap.types[name]; ok {
 		return typ
 	} else {
-		return nil
+		return ast.UnknownType
 	}
 }
 

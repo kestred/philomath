@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/kestred/philomath/code/ast"
-	// TODO: Maybe avoid relying on parser when more code is stable?
+	"github.com/kestred/philomath/code/code"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +17,8 @@ func numberValue(t *testing.T, input string) interface{} {
 		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
 	}
 
-	InferTypes(expr)
+	section := code.PrepareTree(expr, nil)
+	InferTypes(&section)
 	valExpr := expr.(*ast.ValueExpr)
 	numLit := valExpr.Literal.(*ast.NumberLiteral)
 	return numLit.Value
@@ -36,7 +37,7 @@ func TestLiteralValues(t *testing.T) {
 	assert.Equal(t, float64(3e-2), numberValue(t, `3e-2`))
 }
 
-func inferExpression(t *testing.T, input string) ast.Type {
+func inferExpression(t *testing.T, input string) ast.Expr {
 	var p parser.Parser
 	p.Init("example", false, []byte(input))
 	expr := p.ParseExpression()
@@ -44,9 +45,9 @@ func inferExpression(t *testing.T, input string) ast.Type {
 		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
 	}
 
-	typ := InferTypes(expr)
-	assert.Equal(t, typ, expr.GetType())
-	return typ
+	section := code.PrepareTree(expr, nil)
+	InferTypes(&section)
+	return expr
 }
 
 func inferBlock(t *testing.T, input string) *ast.Block {
@@ -57,110 +58,111 @@ func inferBlock(t *testing.T, input string) *ast.Block {
 		assert.Fail(t, "Unexpected parse error", p.Errors[0].Error())
 	}
 
-	InferTypes(block)
+	section := code.PrepareTree(block, nil)
+	InferTypes(&section)
 	return block
 }
 
 func TestInferLiterals(t *testing.T) {
-	assert.Equal(t, ast.InferredNumber, inferExpression(t, `22`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `0755`))
+	assert.Equal(t, ast.InferredNumber, inferExpression(t, `22`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `0755`).GetType())
 	// TODO: Implement hexidecimal scanning
-	// assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `0xff`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `.32`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3.2`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `0.32`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3e2`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3e+2`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3e-2`))
+	// assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `0xff`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `.32`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3.2`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `0.32`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3e2`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3e+2`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `3e-2`).GetType())
 }
 
 func TestInferArithmetic(t *testing.T) {
 	// Prefix Operators
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `+7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-07`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `+07`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `+7.0`))
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `+7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-07`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `+07`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `+7.0`).GetType())
 
 	// Group Expressions
-	assert.Equal(t, ast.InferredNumber, inferExpression(t, `(7)`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `(07)`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `(-7)`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `(7.0)`))
+	assert.Equal(t, ast.InferredNumber, inferExpression(t, `(7)`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `(07)`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `(-7)`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `(7.0)`).GetType())
 
 	// Binary Operators
 	//  - combinations (num x num)
-	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 + 7`))
-	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 - 7`))
-	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 * 7`))
-	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 / 7`))
+	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 + 7`).GetType())
+	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 - 7`).GetType())
+	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 * 7`).GetType())
+	assert.Equal(t, ast.InferredNumber, inferExpression(t, `7 / 7`).GetType())
 	//  - combinations (num x signed)
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 + 07`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 - 07`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 * 07`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 / 07`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 + 7`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 - 7`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 * 7`))
-	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 / 7`))
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 + 07`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 - 07`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 * 07`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `7 / 07`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 + 7`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 - 7`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 * 7`).GetType())
+	assert.Equal(t, ast.InferredUnsigned, inferExpression(t, `07 / 7`).GetType())
 	//  - combinations (num x signed)
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 + -7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 - -7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 * -7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 / -7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 + 7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 - 7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 * 7`))
-	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 / 7`))
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 + -7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 - -7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 * -7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `7 / -7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 + 7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 - 7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 * 7`).GetType())
+	assert.Equal(t, ast.InferredSigned, inferExpression(t, `-7 / 7`).GetType())
 	//  - combinations (unsigned x signed)
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 + -7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 - -7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 * -7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 / -7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 + 07`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 - 07`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 * 07`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 / 07`))
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 + -7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 - -7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 * -7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `07 / -7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 + 07`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 - 07`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 * 07`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `-7 / 07`).GetType())
 	//  - combinations (num x float)
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 + 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 - 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 * 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 / 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 + 7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 - 7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 * 7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 / 7`))
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 + 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 - 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 * 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7 / 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 + 7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 - 7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 * 7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 / 7`).GetType())
 	//  - combinations (unsigned x float)
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 + 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 - 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 * 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 / 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 + 07`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 - 07`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 * 07`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 / 07`))
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 + 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 - 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 * 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `07 / 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 + 07`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 - 07`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 * 07`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 / 07`).GetType())
 	//  - combinations (signed x float)
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 + -7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 - -7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 * -7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 / -7`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 + 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 - 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 * 7.0`))
-	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 / 7.0`))
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 + -7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 - -7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 * -7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `7.0 / -7`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 + 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 - 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 * 7.0`).GetType())
+	assert.Equal(t, ast.InferredFloat, inferExpression(t, `-7 / 7.0`).GetType())
 
 	// Propogate unknown Type
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `+(-7 + 07)`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `-(-7 + 07)`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 + (-7 + 07)`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 - (-7 + 07)`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 * (-7 + 07)`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 / (-7 + 07)`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) + 7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) - 7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) * 7`))
-	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) / 7`))
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `+(-7 + 07)`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `-(-7 + 07)`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 + (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 - (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 * (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `7 / (-7 + 07)`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) + 7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) - 7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) * 7`).GetType())
+	assert.Equal(t, ast.UnknownType, inferExpression(t, `(-7 + 07) / 7`).GetType())
 }
 
 func TestInferBlock(t *testing.T) {
@@ -176,7 +178,7 @@ func TestInferBlock(t *testing.T) {
 		0755 - fuga;        # propogate undefined in expr
 	}`)
 	if decl, ok := block.Nodes[0].(*ast.ConstantDecl); assert.True(t, ok) {
-		if defn, ok := decl.Defn.(*ast.ExprDefn); assert.True(t, ok) {
+		if defn, ok := decl.Defn.(*ast.ConstantDefn); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredSigned, defn.Expr.GetType())
 		}
 	}
@@ -248,7 +250,7 @@ func TestInferBlock(t *testing.T) {
 		assert.Equal(t, ast.InferredUnsigned, decl.Expr.GetType())
 	}
 	if decl, ok := block.Nodes[1].(*ast.ConstantDecl); assert.True(t, ok) {
-		if defn, ok := decl.Defn.(*ast.ExprDefn); assert.True(t, ok) {
+		if defn, ok := decl.Defn.(*ast.ConstantDefn); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredFloat, defn.Expr.GetType())
 		}
 	}

@@ -34,7 +34,7 @@ func flattenTree(node ast.Node) []ast.Node {
 		nodes = append(nodes, flattenTree(n.Expr)...)
 
 	// Definitions
-	case *ast.ExprDefn:
+	case *ast.ConstantDefn:
 		nodes = append(nodes, flattenTree(n.Expr)...)
 
 	// Statements

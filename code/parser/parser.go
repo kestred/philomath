@@ -252,7 +252,7 @@ func (p *Parser) parseDeclaration() ast.Decl {
 		if _, isFunc := expr.(*ast.FunctionExpr); !isFunc {
 			p.expect(token.SEMICOLON)
 		}
-		return ast.Constant(name, &ast.ExprDefn{expr})
+		return ast.Constant(name, &ast.ConstantDefn{expr})
 	}
 }
 

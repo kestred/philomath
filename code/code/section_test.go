@@ -32,7 +32,7 @@ func TestFlattenBlock(t *testing.T) {
 		// baz :: 1;
 		7: &ast.ConstantDecl{},
 		&ast.Identifier{},
-		&ast.ExprDefn{},
+		&ast.ConstantDefn{},
 		&ast.ValueExpr{},
 		&ast.NumberLiteral{},
 		// (2 + foo) + baz;
@@ -105,7 +105,7 @@ func TestFlattenBlock(t *testing.T) {
 		}
 	}`)
 
-	section := PrepareTree(block, nil)
+	section := Prepare(block, nil)
 	assert.Equal(t, block, section.Root)
 	assert.Equal(t, block, section.Nodes[0])
 	for i, example := range expected {

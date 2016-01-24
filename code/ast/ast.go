@@ -85,7 +85,7 @@ func (d *MutableDecl) ImplementsNode()  {}
 func (d *EnumDefn) ImplementsNode()      {}
 func (v *EnumValue) ImplementsNode()     {}
 func (s *EnumSeparator) ImplementsNode() {}
-func (d *ExprDefn) ImplementsNode()      {}
+func (d *ConstantDefn) ImplementsNode()  {}
 func (d *OperatorDefn) ImplementsNode()  {}
 func (d *StructDefn) ImplementsNode()    {}
 func (f *StructField) ImplementsNode()   {}
@@ -155,7 +155,7 @@ type Defn interface {
 }
 
 func (d *EnumDefn) ImplementsDefn()     {}
-func (d *ExprDefn) ImplementsDefn()     {}
+func (d *ConstantDefn) ImplementsDefn() {}
 func (d *OperatorDefn) ImplementsDefn() {}
 func (d *StructDefn) ImplementsDefn()   {}
 
@@ -289,7 +289,7 @@ type (
 		Name *Identifier
 	}
 
-	ExprDefn struct {
+	ConstantDefn struct {
 		Expr Expr
 	}
 
@@ -554,7 +554,7 @@ type (
 		Literal string
 
 		// semantics
-		Value interface{}
+		Value Value
 	}
 
 	TextLiteral struct {
@@ -562,7 +562,7 @@ type (
 		Literal string
 
 		// semantics
-		Value interface{}
+		Value Value
 	}
 
 	Identifier struct {
@@ -572,6 +572,8 @@ type (
 		// semantics
 		Resolved Node
 	}
+
+	Value interface{}
 )
 
 func NumLit(literal string) *NumberLiteral {

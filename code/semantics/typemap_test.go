@@ -12,6 +12,7 @@ func TestTypeMap(t *testing.T) {
 	typmap := MakeTypeMap()
 	typmap.Set("a", ast.InferredUnsigned)
 	assert.Equal(t, ast.InferredUnsigned, typmap.Get("a"))
+	assert.Equal(t, ast.UnknownType, typmap.Get("x"))
 
 	{
 		// Get on reference
@@ -32,5 +33,5 @@ func TestTypeMap(t *testing.T) {
 
 	// Get on the original
 	assert.Equal(t, ast.InferredUnsigned, typmap.Get("a"))
-	assert.Equal(t, nil, typmap.Get("b"))
+	assert.Equal(t, ast.UnknownType, typmap.Get("b"))
 }

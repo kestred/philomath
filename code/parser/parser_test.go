@@ -183,7 +183,7 @@ func TestParseArithmetic(t *testing.T) {
 func TestParseBlock(t *testing.T) {
 	expected := &ast.Block{[]ast.Blockable{
 		ast.Mutable("foo", nil, ast.ValExp(ast.NumLit("3"))),
-		ast.Constant("baz", &ast.ExprDefn{ast.ValExp(ast.NumLit("1"))}),
+		ast.Constant("baz", &ast.ConstantDefn{ast.ValExp(ast.NumLit("1"))}),
 		&ast.ExprStmt{ast.InExp(
 			ast.InExp(
 				ast.ValExp(ast.NumLit("2")),
