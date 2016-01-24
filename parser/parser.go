@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/kestred/philomath/ast"
@@ -269,7 +268,7 @@ func (p *Parser) parseStatement() ast.Stmt {
 		p.next() // eat '='
 		values := p.parseExpressionList()
 		p.expect(token.SEMICOLON)
-		return &ast.AssignStmt{exprs, ast.Operator{""}, values}
+		return &ast.AssignStmt{exprs, nil, values}
 	} else if len(exprs) == 1 {
 		p.expect(token.SEMICOLON)
 		return &ast.ExprStmt{exprs[0]}
@@ -291,7 +290,7 @@ func (p *Parser) parseExpression() ast.Expr {
 	return p.parseOperators(0)
 }
 
-func (p *Parser) parseOperators(precedence Precedence) ast.Expr {
+func (p *Parser) parseOperators(precedence ast.OpPrecedence) ast.Expr {
 	lhs := p.parseBaseExpression()
 	if p.tok == token.LEFT_BRACKET {
 		panic("TODO: Hande array subscript")
@@ -302,16 +301,16 @@ func (p *Parser) parseOperators(precedence Precedence) ast.Expr {
 	}
 
 	op := p.parseBinaryOperator()
-	consumable := MaxPrecedence
-	for (op.Type == BinaryInfix || op.Type == UnaryPostfix) &&
+	consumable := ast.MaxPrecedence
+	for (op.Type == ast.BinaryInfix || op.Type == ast.UnaryPostfix) &&
 		(precedence <= op.Precedence && op.Precedence <= consumable) {
 
 		p.next() // consume operator
-		if op.Type == BinaryInfix {
+		if op.Type == ast.BinaryInfix {
 			rhs := p.parseOperators(rightPrec(op))
-			lhs = ast.InExp(lhs, ast.Operator{op.Literal}, rhs)
+			lhs = ast.InExp(lhs, op, rhs)
 		} else {
-			lhs = ast.PostExp(lhs, ast.Operator{op.Literal})
+			lhs = ast.PostExp(lhs, op)
 		}
 
 		if p.tok.IsOperator() {
@@ -325,37 +324,37 @@ func (p *Parser) parseOperators(precedence Precedence) ast.Expr {
 	return lhs
 }
 
-func (p *Parser) parseBinaryOperator() Operator {
+func (p *Parser) parseBinaryOperator() *ast.OperatorDefn {
 	options, defined := p.operators.Lookup(p.lit)
 	if !defined {
 		panic("TODO: Handle undefined operators")
 	}
 
-	var op Operator
+	var op *ast.OperatorDefn
 	for _, opt := range options {
-		if opt.Type == BinaryInfix || opt.Type == UnaryPostfix {
+		if opt.Type == ast.BinaryInfix || opt.Type == ast.UnaryPostfix {
 			op = opt
 			break
 		}
 	}
 
-	if op.Type == Nullary {
+	if op.Type == ast.Nullary {
 		panic("TODO: Handle operator is not an infix/postfix operator")
 	}
 
 	return op
 }
 
-func rightPrec(op Operator) Precedence {
-	if op.Associative == RightAssociative {
+func rightPrec(op *ast.OperatorDefn) ast.OpPrecedence {
+	if op.Associative == ast.RightAssociative {
 		return op.Precedence
 	} else {
 		return op.Precedence + 1
 	}
 }
 
-func nextPrec(op Operator) Precedence {
-	if op.Associative == LeftAssociative || op.Type == UnaryPostfix {
+func nextPrec(op *ast.OperatorDefn) ast.OpPrecedence {
+	if op.Associative == ast.LeftAssociative || op.Type == ast.UnaryPostfix {
 		return op.Precedence
 	} else {
 		return op.Precedence - 1
@@ -370,21 +369,21 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 			panic("TODO: Handle undefined operators")
 		}
 
-		var op Operator
+		var op *ast.OperatorDefn
 		for _, opt := range options {
-			if opt.Type == UnaryPrefix {
+			if opt.Type == ast.UnaryPrefix {
 				op = opt
 				break
 			}
 		}
 
-		if op.Type == Nullary {
+		if op.Type == ast.Nullary {
 			panic("TODO: Handle operator is not a prefix operator")
 		}
 
 		p.next() // consume operator
-		expr := p.parseOperators(PrefixPrecedence)
-		return ast.PreExp(ast.Operator{op.Literal}, expr)
+		expr := p.parseOperators(ast.PrefixPrec)
+		return ast.PreExp(op, expr)
 	}
 
 	switch p.tok {
@@ -398,7 +397,7 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	case token.IDENT:
 		name := p.lit
 		p.next() // consume ident
-		return ast.ValExp(&ast.Ident{name})
+		return ast.ValExp(ast.Ident(name))
 
 	case token.TEXT:
 		panic("TODO: Handle text literals")
@@ -414,114 +413,44 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	}
 }
 
-type OperatorType uint8
-type Associative uint8
-type Precedence int8
-
-const (
-	Nullary OperatorType = iota
-	UnaryPrefix
-	UnaryPostfix
-	BinaryInfix
-)
-
-var operatorTypes = [...]string{
-	Nullary:      "Nullary",
-	UnaryPrefix:  "Prefix",
-	UnaryPostfix: "Postfix",
-	BinaryInfix:  "Infix",
-}
-
-func (typ OperatorType) String() string {
-	s := ""
-	if 0 <= typ && typ < OperatorType(len(operatorTypes)) {
-		s = operatorTypes[typ]
-	}
-	if s == "" {
-		s = "OperatorType(" + strconv.Itoa(int(typ)) + ")"
-	}
-	return s
-}
-
-const (
-	NonAssociative Associative = iota
-	LeftAssociative
-	RightAssociative
-)
-
-var associatives = [...]string{
-	NonAssociative:   "NonAssociative",
-	LeftAssociative:  "LeftAssociative",
-	RightAssociative: "RightAssociative",
-}
-
-func (asc Associative) String() string {
-	s := ""
-	if 0 <= asc && asc < Associative(len(associatives)) {
-		s = associatives[asc]
-	}
-	if s == "" {
-		s = "Associative(" + strconv.Itoa(int(asc)) + ")"
-	}
-	return s
-}
-
-const (
-	AssignmentPrecedence Precedence = 0
-	LogicalPrecedence    Precedence = 15
-	RelationPrecedence   Precedence = 31
-	InfixPrecedence      Precedence = 47
-	PrefixPrecedence     Precedence = 95
-	PostfixPrecedence    Precedence = 111
-	MaxPrecedence        Precedence = 127
-)
-
-type Operator struct {
-	Name        string
-	Literal     string
-	Overload    string
-	Type        OperatorType
-	Associative Associative
-	Precedence  Precedence
-}
-
 type Operators struct {
-	literals map[string][]Operator
+	literals map[string][]*ast.OperatorDefn
 }
 
 func (o *Operators) InitBuiltin() {
-	o.literals = make(map[string][]Operator)
+	o.literals = make(map[string][]*ast.OperatorDefn)
 	// logic operators
-	o.defineHACKY(Operator{"Logical Or", "or", "_or_", BinaryInfix, LeftAssociative, LogicalPrecedence})
-	o.defineHACKY(Operator{"Logical And", "and", "_and_", BinaryInfix, LeftAssociative, LogicalPrecedence + 1})
-	o.defineHACKY(Operator{"Inclusion", "in", "_in_", BinaryInfix, LeftAssociative, LogicalPrecedence + 1})
-	// relation operators
-	o.defineHACKY(Operator{"Identical", "is", "_is_", BinaryInfix, NonAssociative, RelationPrecedence})
-	o.defineHACKY(Operator{"Equal", "==", "_eq_", BinaryInfix, NonAssociative, RelationPrecedence})
-	o.defineHACKY(Operator{"Less", "<", "_lt_", BinaryInfix, NonAssociative, RelationPrecedence})
-	o.defineHACKY(Operator{"Less or Equal", "<=", "_lte_", BinaryInfix, NonAssociative, RelationPrecedence})
-	o.defineHACKY(Operator{"Greater", ">", "_gt_", BinaryInfix, NonAssociative, RelationPrecedence})
-	o.defineHACKY(Operator{"Greater or Equal", ">=", "_gte_", BinaryInfix, NonAssociative, RelationPrecedence})
+	o.defineHACKY(ast.BuiltinLogicalOr)
+	o.defineHACKY(ast.BuiltinLogicalAnd)
+	o.defineHACKY(ast.BuiltinElementOf)
+	o.defineHACKY(ast.BuiltinNotElementOf)
+	// comparison operators
+	o.defineHACKY(ast.BuiltinIdentical)
+	o.defineHACKY(ast.BuiltinEqual)
+	o.defineHACKY(ast.BuiltinLess)
+	o.defineHACKY(ast.BuiltinLessOrEqual)
+	o.defineHACKY(ast.BuiltinGreater)
+	o.defineHACKY(ast.BuiltinGreaterOrEqual)
 	// arithmetic operators
-	o.defineHACKY(Operator{"Compare", "<=>", "_cmp_", BinaryInfix, LeftAssociative, InfixPrecedence})
-	o.defineHACKY(Operator{"Add", "+", "_add_", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
-	o.defineHACKY(Operator{"Subtract", "-", "_sub_", BinaryInfix, LeftAssociative, InfixPrecedence + 1})
-	o.defineHACKY(Operator{"Multiply", "*", "_mul_", BinaryInfix, LeftAssociative, InfixPrecedence + 2})
-	o.defineHACKY(Operator{"Divide", "/", "_div_", BinaryInfix, LeftAssociative, InfixPrecedence + 2})
-	o.defineHACKY(Operator{"Remainder", "%", "_rem_", BinaryInfix, LeftAssociative, InfixPrecedence + 2})
-	o.defineHACKY(Operator{"Positive", "+", "pos_", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Negative", "-", "neg_", UnaryPrefix, RightAssociative, PrefixPrecedence})
+	o.defineHACKY(ast.BuiltinCompare)
+	o.defineHACKY(ast.BuiltinAdd)
+	o.defineHACKY(ast.BuiltinSubtract)
+	o.defineHACKY(ast.BuiltinMultiply)
+	o.defineHACKY(ast.BuiltinDivide)
+	o.defineHACKY(ast.BuiltinRemainder)
+	o.defineHACKY(ast.BuiltinPositive)
+	o.defineHACKY(ast.BuiltinNegative)
 	// pointer operators
-	o.defineHACKY(Operator{"Reference", "^", "ref_", UnaryPrefix, RightAssociative, PrefixPrecedence})
-	o.defineHACKY(Operator{"Dereference", "~", "deref_", UnaryPrefix, RightAssociative, PrefixPrecedence})
+	o.defineHACKY(ast.BuiltinReference)
+	o.defineHACKY(ast.BuiltinDereference)
 }
 
-func (o *Operators) defineHACKY(op Operator) {
+func (o *Operators) defineHACKY(op *ast.OperatorDefn) {
 	// TODO: Check that the operator has valid values and isn't stepping on any toes
 	o.literals[op.Literal] = append(o.literals[op.Literal], op)
 }
 
-func (o *Operators) Lookup(literal string) ([]Operator, bool) {
+func (o *Operators) Lookup(literal string) ([]*ast.OperatorDefn, bool) {
 	operators, exists := o.literals[literal]
 	return operators, exists
 }

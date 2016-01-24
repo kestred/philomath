@@ -26,10 +26,10 @@ func flattenTree(node ast.Node) []ast.Node {
 
 	// Declarations
 	case *ast.ConstantDecl:
-		nodes = append(nodes, &n.Name)
+		nodes = append(nodes, n.Name)
 		nodes = append(nodes, flattenTree(n.Defn)...)
 	case *ast.MutableDecl:
-		nodes = append(nodes, &n.Name)
+		nodes = append(nodes, n.Name)
 		//nodes = append(nodes, flattenTree(n.Type)...)
 		nodes = append(nodes, flattenTree(n.Expr)...)
 
@@ -51,13 +51,13 @@ func flattenTree(node ast.Node) []ast.Node {
 	// Expressions
 	case *ast.PostfixExpr:
 		nodes = append(nodes, flattenTree(n.Subexpr)...)
-		nodes = append(nodes, &n.Operator)
+		nodes = append(nodes, n.Operator)
 	case *ast.InfixExpr:
 		nodes = append(nodes, flattenTree(n.Left)...)
-		nodes = append(nodes, &n.Operator)
+		nodes = append(nodes, n.Operator)
 		nodes = append(nodes, flattenTree(n.Right)...)
 	case *ast.PrefixExpr:
-		nodes = append(nodes, &n.Operator)
+		nodes = append(nodes, n.Operator)
 		nodes = append(nodes, flattenTree(n.Subexpr)...)
 	case *ast.GroupExpr:
 		nodes = append(nodes, flattenTree(n.Subexpr)...)

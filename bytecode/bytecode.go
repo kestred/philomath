@@ -176,7 +176,7 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 				insts = append(insts, FromExpr(n.Values[0], scope)...)
 				rhs := insts[len(insts)-1].Out
 				if expr, ok := n.Assignees[0].(*ast.ValueExpr); ok {
-					lit, ok := expr.Literal.(*ast.Ident)
+					lit, ok := expr.Literal.(*ast.Identifier)
 					utils.Assert(ok, "Found a non-identifier literal as the assignee in assignment")
 					lhs, exists := scope.Registers[lit.Literal]
 					utils.Assert(exists, "A register was not allocated for a name before use in an expression")
@@ -199,7 +199,7 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 				}
 				for i, expr := range n.Assignees {
 					if e, ok := expr.(*ast.ValueExpr); ok {
-						lit, ok := e.Literal.(*ast.Ident)
+						lit, ok := e.Literal.(*ast.Identifier)
 						utils.Assert(ok, "Found a non-identifier literal as the assignee in assignment")
 						lhs, exists := scope.Registers[lit.Literal]
 						utils.Assert(exists, "A register was not allocated for a name before use in an expression")
@@ -243,7 +243,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 			nextConstant := len(scope.Constants)
 			scope.Constants = append(scope.Constants, Data(value))
 			return []Instruction{{Code: LOAD_CONST, Out: register, Left: Constant(nextConstant)}}
-		case *ast.Ident:
+		case *ast.Identifier:
 			register, exists := scope.Registers[lit.Literal]
 			utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 			// FIXME: currently expressions must return an instruction with the Out register set,

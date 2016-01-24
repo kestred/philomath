@@ -92,7 +92,7 @@ func inferTypesInExpr(expr ast.Expr, context TypeMap) ast.Type {
 		return e.Type
 	case *ast.ValueExpr:
 		switch literal := e.Literal.(type) {
-		case *ast.Ident:
+		case *ast.Identifier:
 			// NOTE: Assuming declarations will be in order (will stop being true eventually)
 			typ := context.Get(literal.Literal)
 			if typ != nil {
@@ -142,13 +142,13 @@ func inferTypesInExpr(expr ast.Expr, context TypeMap) ast.Type {
 	}
 }
 
-func inferPrefixType(op ast.Operator, typ ast.Type) ast.Type {
+func inferPrefixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
 	if typ == ast.UnknownType {
 		return typ
 	}
 
-	switch op.Literal {
-	case "-", "+":
+	switch op {
+	case ast.BuiltinPositive, ast.BuiltinNegative:
 		switch typ {
 		case ast.InferredNumber:
 			return ast.InferredSigned
@@ -184,25 +184,25 @@ func inferPrefixType(op ast.Operator, typ ast.Type) ast.Type {
 	}
 }
 
-func inferPostfixType(op ast.Operator, typ ast.Type) ast.Type {
+func inferPostfixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
 	if typ == ast.UnknownType {
 		return typ
 	}
 
-	switch op.Literal {
+	switch op {
 	default:
 		panic("TODO: Unhandled postfix operator in type inference")
 	}
 }
 
-func inferInfixType(op ast.Operator, left ast.Type, right ast.Type) ast.Type {
+func inferInfixType(op *ast.OperatorDefn, left ast.Type, right ast.Type) ast.Type {
 	if left == ast.UnknownType || right == ast.UnknownType {
 		return ast.UnknownType
 	}
 
-	switch op.Literal {
-	case "-", "+", "*", "/":
-		// TODO: Implement operator overload resolution for prefix -/+
+	switch op {
+	case ast.BuiltinAdd, ast.BuiltinSubtract, ast.BuiltinMultiply, ast.BuiltinDivide:
+		// TODO: Implement operator overload resolution
 		return castNumbers(left, right)
 	default:
 		panic("TODO: Unhandled infix operator in type inference")

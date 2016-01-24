@@ -90,8 +90,8 @@ greater_expr  = { ( ">=" | ">" ) , infix_expr } ;
 lesser_expr   = { ( "<=" | "<" ) , infix_expr } ;
 equality_expr = { "==" , infix_expr } ;
 identity_expr = { "is" , infix_expr } ;
-relation_expr = infix_expr , [ identity_expr | equality_expr | lesser_expr | greater_expr | includes_expr ] ;
-logic_expr    = relation_expr , { ( "and" | "or" ) relation_expr } ;
+compare_expr  = infix_expr , [ identity_expr | equality_expr | lesser_expr | greater_expr | includes_expr ] ;
+logic_expr    = compare_expr , { ( "and" | "or" ) compare_expr } ;
 expr          = logic_expr ;
 expr_list     = expr { "," expr } ;
 
@@ -114,7 +114,7 @@ normal_expr    = value_expr | group_expr | function_expr | member_expr | call_ex
                | indirect_expr | address_expr | prefix_expr | postfix_expr | infix_expr ;
 
      The grammar for comparison expressions in philomath is somewhat unusual
-     compared to other languages in that it allows expression of relations in
+     compared to other languages in that it allows expression of comparisons in
      a more math-friendly style.  Here are a few examples:
 
              a == b == c    is equivalent to    (a == b) and (b == c) and (a == c)
@@ -132,9 +132,9 @@ notequal_expr = normal_expr , { "!=" , normal_expr } ;
 equality_expr = normal_expr , { "==" , normal_expr } ;
 negident_expr = normal_expr , { "is" , "not" , normal_expr } ;
 identity_expr = normal_expr , { "is" , normal_expr } ;
-relation_expr = identity_expr | equality_expr | notequal_expr | includes_expr | lesser_expr | greater_expr ;
-logical_expr  = relation_expr , ( [ "not" ] "in" | "and" | "or" ) , relation_expr ;
-expr        = normal_expr | assign_expr | relation_expr | logical_expr ;
+compare_expr  = identity_expr | equality_expr | notequal_expr | includes_expr | lesser_expr | greater_expr ;
+logical_expr  = compare_expr , ( [ "not" ] "in" | "and" | "or" ) , compare_expr ;
+expr          = normal_expr | assign_expr | compare_expr | logical_expr ;
 
  *)
 
