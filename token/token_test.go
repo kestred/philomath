@@ -86,7 +86,6 @@ func TestTokenString(t *testing.T) {
 
 	assert.Equal(t, "struct", STRUCT.String())
 	assert.Equal(t, "module", MODULE.String())
-	assert.Equal(t, "func", FUNCTION.String())
 
 	assert.Equal(t, "Token(2000)", Token(2000).String())
 }
@@ -125,7 +124,6 @@ func TestIsOperator(t *testing.T) {
 
 	assert.Equal(t, false, STRUCT.IsOperator())
 	assert.Equal(t, false, MODULE.IsOperator())
-	assert.Equal(t, false, FUNCTION.IsOperator())
 }
 
 func TestIsKeyword(t *testing.T) {
@@ -162,5 +160,4 @@ func TestIsKeyword(t *testing.T) {
 
 	assert.Equal(t, true, STRUCT.IsKeyword())
 	assert.Equal(t, true, MODULE.IsKeyword())
-	assert.Equal(t, true, FUNCTION.IsKeyword())
 }

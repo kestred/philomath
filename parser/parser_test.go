@@ -19,7 +19,7 @@ func parseExpression(t *testing.T, input string) ast.Expr {
 
 func parseBlock(t *testing.T, input string) *ast.Block {
 	var p Parser
-	p.Init("example", true, []byte(input))
+	p.Init("example", false, []byte(input))
 	block := p.ParseBlock()
 	if len(p.Errors) > 0 {
 		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())

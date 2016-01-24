@@ -93,9 +93,8 @@ const (
 	DONE   // break
 	RETURN // return
 
-	STRUCT   // struct
-	MODULE   // module
-	FUNCTION // function
+	STRUCT // struct
+	MODULE // module
 
 	keywords_end
 )
@@ -132,9 +131,8 @@ var tokens = [...]string{
 	DONE:   "done",
 	RETURN: "return",
 
-	STRUCT:   "struct",
-	MODULE:   "module",
-	FUNCTION: "func",
+	STRUCT: "struct",
+	MODULE: "module",
 }
 
 func (tok Token) String() string {

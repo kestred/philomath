@@ -154,5 +154,5 @@ func TestEncodeBlock(t *testing.T) {
 	nerrf = tmp2
 	plugh = tmp3
 	assert.Equal(t, int64(nerrf), bytecode.ToI64(result))
-	assert.Equal(t, int64(0700 / 5), bytecode.ToI64(result))
+	assert.Equal(t, int64(0700/5), bytecode.ToI64(result))
 }

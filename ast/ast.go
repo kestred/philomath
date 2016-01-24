@@ -456,7 +456,7 @@ func GrpExp(subexpr Expr) *GroupExpr {
 	}
 }
 
-func DotExp(left Expr, member Ident) *MemberExpr {
+func GetExp(left Expr, member Ident) *MemberExpr {
 	return &MemberExpr{
 		Left:   left,
 		Member: member,
@@ -525,7 +525,11 @@ type (
 	}
 
 	Ident struct {
+		// syntax
 		Literal string
+
+		// semantics
+		Resolved Node
 	}
 
 	Operator struct {

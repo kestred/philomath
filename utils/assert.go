@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"runtime"
+	"strings"
 )
 
 type FailedAssertion string
@@ -25,4 +27,12 @@ func AssertNil(value interface{}, msg string) {
 	if reflect.ValueOf(value).IsValid() {
 		panic(FailedAssertion(fmt.Sprintf("%v (%v != nil)", msg, value)))
 	}
+}
+
+func InvalidCodePath() {
+	pc, _, line, _ := runtime.Caller(1)
+	path := strings.Split(runtime.FuncForPC(pc).Name(), ".")
+	caller := "Parser." + path[len(path)-1]
+	message := fmt.Sprintf("Reached invalid code path at %v:%v\n", caller, line)
+	panic(FailedAssertion(message))
 }
