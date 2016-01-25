@@ -153,7 +153,7 @@ func FromBlock(block *ast.Block, scope *Scope) []Instruction {
 		switch n := node.(type) {
 		case *ast.Block:
 			insts = append(insts, FromBlock(n, scope)...)
-		case *ast.ConstantDecl:
+		case *ast.ImmutableDecl:
 			// NOTE: an ConstantDefn is the only definiton used directly in bytecode generation
 			if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
 				insts = append(insts, FromExpr(defn.Expr, scope)...)

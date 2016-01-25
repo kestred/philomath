@@ -76,7 +76,7 @@ block       = short_block | long_block ;
 
 (* Expressions *)
 function_param = identifier , ":" , type
-function_expr  = "func" , "(" , [ function_param , { "," , function_param } ] , ")" , [ "->" , type ] , block ;
+function_expr  = "(" , [ function_param , { "," , function_param } ] , ")" , ( short_block | [ "->" , type ] , long_block ) ;
 group_expr     = "(" , expr , ")";
 value_expr    = identifier | text_literal | number_literal ;
 
@@ -96,10 +96,11 @@ expr          = logic_expr ;
 expr_list     = expr { "," expr } ;
 
 (* Notes:
-     Above is the unambiguous non-left-recurive grammar which can be used to
-     verify that a given sentence matches the grammar with a LL parser.
+     Above is the unambiguous non-left-recurive grammar for expressions which
+     can be used to verify that a given sentence matches the expression grammar
+     with an LL(2) or recursive descent parser.
 
-     Sadly, non-left-recursive grammars are harder to read for humans, so below
+     Sadly, concrete grammars are harder to read for humans, so below
      are simpler rules intended for human consumption.
 
 subscript_expr = expr , "[" expr "]" ;

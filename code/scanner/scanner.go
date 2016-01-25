@@ -80,7 +80,7 @@ func (s *Scanner) Init(filename string, src []byte, err ErrorHandler) {
 //
 // Added to support LL(2) parsing of declarations vs statements in block.
 // All other rules are LL(1) parsable, so this should be called infrequently.
-func (s *Scanner) Peek() (tok token.Token, lit string) {
+func (s *Scanner) Peek() (tok token.Token) {
 	// save scanner state
 	char := s.char
 	offset := s.offset
@@ -91,7 +91,7 @@ func (s *Scanner) Peek() (tok token.Token, lit string) {
 	err := s.err
 	s.err = nil // ignore errors
 
-	_, tok, lit = s.Scan()
+	_, tok, _ = s.Scan()
 
 	// restore scanner state
 	s.char = char

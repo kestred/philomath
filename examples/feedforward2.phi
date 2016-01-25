@@ -1,4 +1,4 @@
-net_input :: fn(inputs: []Float, weights: []Float) -> Float:
+net_input :: fn(inputs: []Float, weights: []Float) -> Float {
   result := 0.0;
   for input, index in inputs:
     result += input * weights[index];

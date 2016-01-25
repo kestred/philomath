@@ -287,7 +287,7 @@ func TestEncodeBlock(t *testing.T) {
 		xyzzy := 012;
 		nerrf := 14;
 
-		xyzzy = 0700;                      # assignment statement
+		xyzzy = 0700;                      # assignment
 		plugh = 0.25 * plugh;              # assignment with cast
 
 		# parallel assignment (with and without casts)

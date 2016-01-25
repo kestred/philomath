@@ -10,6 +10,29 @@ import (
 	"github.com/kestred/philomath/code/token"
 )
 
+// FIXME: The grammar feels like a hack because of the way functions are parsed
+//
+// Either allow semicolons to be skipped most of the time or also require
+// semicolons at the end of struct/etc definitions.
+//
+// I've failed semicolon handling if I don't avoid the following Go weirdness:
+//
+//   (invalid)
+//  foo := 3
+//       + 4;
+//
+//   (valid)
+//  foo := 3 +
+//         4;
+//
+// It might also be ok to consider both of the above invalid and elide
+// semicolons, but still allow a statement that looks like this:
+//
+//  foo := (13 +
+//          4 -
+//          7)
+//
+
 type ParseError struct {
 	Pos token.Position
 	Msg string
@@ -107,19 +130,32 @@ func (p *Parser) expect(tok token.Token) bool {
 		// Eventually, anywhere this is used should be replaced with a thought out message.
 		p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, tok, p.tok))
 
-		/* TODO: It would probably produce better errors if we didn't eat any delimiters (eg. [] {} () , ;)
+		/* TODO: Improvement for error messages...
+
+		   It would probably produce better errors if:
+		     When expecting a delimiter, don't eat a non-delimiter token
+		     When expecting a non-delimiter, don't eat a delimiter token
+
+		   The theory here is that most syntax errors occur at the boundary between
+		   the spoken language and punctuation.  In particular, we tend to write the
+		   the spoken part of the code correctly, but then have missing or extra punctuation.
+		   By avoiding eating non-delimiters when expecting a delimiter, we prevent
+		   ourselves from eating the first part of the next valid expression when
+		   the delimiter is missing.  On the other hand, if we are expecting
+		   a non-delimiter token and find a delimiter, then it is likely that we forgot
+		   to fill information in when writing an expression, like the type of an argument.
 
 		   In some cases that might result in an infinite loop since errors from
-		   the same source line are discared.
+		   the same source line are discared.  One way of avoiding the possibility
+		   of an infinite loop would be by quitting if the token position hasn't
+		   changed since at all since the last error (or after a few errors).
 
-		   This could be solved by quitting if the position hasn't changed since at
-		   all since the last error was reported (or after some number of reports).
+		   In the aborted infinite loop case, it probably isn't worth parsing the
+		   rest of this file because it is clearly irregular.  If we haven't reported
+		   that many errors, it could still be worth parsing the other files so that
+		   we can report an actionable number of errors.
 
-		   In this case, if we haven't reported that many errors, it would still be
-		   worth parsing the other files so that we can report an actionable number
-		   of errors.
-
-		   TODO: Part 2.
+		   TODO: Advanced mode error recovery...
 
 		   Recovery (eg. error quality) might also be better if a parsing
 		   function could register a closing delimiter and then parsing unwinds
@@ -166,21 +202,21 @@ func (p *Parser) next() {
 
 func (p *Parser) parseBlock() *ast.Block {
 	if p.tok == token.COLON {
-		p.next() // consume ":"
+		p.next() // eat ":"
 		stmt := p.parseStatement()
 		return ast.Blok([]ast.Blockable{stmt})
 	}
 
 	p.expect(token.LEFT_BRACE)
 	for p.tok == token.SEMICOLON {
-		p.next() // consume leading semicolons
+		p.next() // eat leading semicolons
 	}
 
 	var stmts []ast.Blockable
 	for p.tok != token.RIGHT_BRACE && p.tok != token.END {
 		stmts = append(stmts, p.parseBlockable())
 		for p.tok == token.SEMICOLON {
-			p.next() // consume extra semicolons
+			p.next() // eat extra semicolons
 		}
 	}
 	p.expect(token.RIGHT_BRACE)
@@ -194,7 +230,7 @@ func (p *Parser) parseBlockable() ast.Blockable {
 		return p.parseStatement()
 	}
 
-	next, _ := p.scanner.Peek()
+	next := p.scanner.Peek()
 	if next == token.CONS || next == token.COLON {
 		return p.parseDeclaration()
 	} else {
@@ -204,7 +240,7 @@ func (p *Parser) parseBlockable() ast.Blockable {
 
 func (p *Parser) parseDeclaration() ast.Decl {
 	name := p.lit
-	p.next() // eat identifier
+	p.expect(token.IDENT)
 
 	if p.tok == token.COLON {
 		// parse mutable decl
@@ -226,33 +262,11 @@ func (p *Parser) parseDeclaration() ast.Decl {
 	case token.MODULE:
 		panic("TODO: Handle modules")
 	default:
-		// HACK: This kinda feels like a big hack. Specifically, this code isn't
-		// actually a hack but rather the grammar feels like a hack because of
-		// the way functions are handled here; either allow semicolons to be
-		// skipped most of the time or also require semicolons for structs/modules.
-		//
-		// I also think I've failed if I don't avoid the following Go weirdness:
-		//
-		//   (invalid)
-		//  foo := 3
-		//       + 4;
-		//
-		//   (valid)
-		//  foo := 3 +
-		//         4;
-		//
-		// It might also be ok to consider both of the above invalid and elide
-		// semicolons, but still allow a statement that looks like this:
-		//
-		//  foo := (13 +
-		//          4 -
-		//          7)
-		//
 		expr := p.parseExpression()
-		if _, isFunc := expr.(*ast.FunctionExpr); !isFunc {
+		if _, isFunc := expr.(*ast.ProcedureExpr); !isFunc {
 			p.expect(token.SEMICOLON)
 		}
-		return ast.Constant(name, ast.ConstDef(expr))
+		return ast.Immutable(name, ast.Constant(expr))
 	}
 }
 
@@ -305,7 +319,7 @@ func (p *Parser) parseOperators(precedence ast.OpPrecedence) ast.Expr {
 	for (op.Type == ast.BinaryInfix || op.Type == ast.UnaryPostfix) &&
 		(precedence <= op.Precedence && op.Precedence <= consumable) {
 
-		p.next() // consume operator
+		p.next() // eat operator
 		if op.Type == ast.BinaryInfix {
 			rhs := p.parseOperators(rightPrec(op))
 			lhs = ast.InExp(lhs, op, rhs)
@@ -362,7 +376,7 @@ func nextPrec(op *ast.OperatorDefn) ast.OpPrecedence {
 }
 
 func (p *Parser) parseBaseExpression() ast.Expr {
-	// handle prefix expression
+	/* handle prefix expression */
 	if p.tok.IsOperator() {
 		options, defined := p.operators.Lookup(p.lit)
 		if !defined {
@@ -381,26 +395,57 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 			panic("TODO: Handle operator is not a prefix operator")
 		}
 
-		p.next() // consume operator
+		p.next() // eat operator
 		expr := p.parseOperators(ast.PrefixPrec)
 		return ast.PreExp(op, expr)
 	}
 
 	switch p.tok {
 	case token.LEFT_PAREN:
-		// handle grouped expression
-		p.next() // consume left paren
-		expr := p.parseOperators(0)
-		p.expect(token.RIGHT_PAREN)
-		return ast.GrpExp(expr)
+		p.next() // eat left paren
+		var block *ast.Block
+		var returnType ast.Type
+		var parameters []ast.ProcedureParam
+		if p.tok == token.IDENT && p.scanner.Peek() == token.COLON {
+			for p.tok == token.IDENT {
+				/* handle procedure parameters */
+				// name := p.lit
+				p.next() // eat ident
+				p.expect(token.COLON)
+				panic("TODO: Implement type parsing")
+			}
+		}
+
+		if len(parameters) > 0 || p.tok == token.RIGHT_PAREN {
+			p.expect(token.RIGHT_PAREN) // eat right paren
+
+			/* handle procedure expression */
+			if p.tok == token.ARROW {
+				p.next() // eat arrow
+				panic("TODO: Implement type parsing")
+				if p.tok == token.COLON { // #[Compiler Message]
+					p.error(p.scanner.Pos(), "Use of short block syntax is not allowed after specifying a return type")
+				}
+			}
+
+			block = p.parseBlock()
+			return ast.ProcExp(parameters, returnType, block)
+		} else {
+			/* handle grouped expression */
+			expr := p.parseOperators(0)
+			p.expect(token.RIGHT_PAREN)
+			return ast.GrpExp(expr)
+		}
 
 	case token.IDENT:
 		name := p.lit
-		p.next() // consume ident
+		p.next() // eat ident
 		return ast.Ident(name)
 
 	case token.TEXT:
-		panic("TODO: Handle text literals")
+		expr := ast.TxtLit(p.lit)
+		p.next() // eat text
+		return expr
 
 	case token.NUMBER:
 		expr := ast.NumLit(p.lit)

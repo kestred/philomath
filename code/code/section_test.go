@@ -29,7 +29,7 @@ func TestFlattenBlock(t *testing.T) {
 		&ast.OperatorDefn{},
 		&ast.NumberLiteral{},
 		// baz :: 1;
-		&ast.ConstantDecl{},
+		&ast.ImmutableDecl{},
 		&ast.Identifier{},
 		&ast.ConstantDefn{},
 		&ast.NumberLiteral{},
@@ -76,15 +76,15 @@ func TestFlattenBlock(t *testing.T) {
 
 	block := parseBlock(t, `{
 		foo := -3;     # mutable declaration
-		baz :: 1;      # constant declaration
-		(2 + foo) + baz; # expression statement
+		baz :: 1;      # constant definition
+		(2 + foo) + baz; # evaluated statement
 
 		# a nested block
 		{
 			bar := foo;
 			0755 - baz;
 
-			foo = baz * 4;		        # assignment statement
+			foo = baz * 4;		        # assignment
 			bar, foo = foo + 27, bar; # parallel assignment
 		}
 	}`)

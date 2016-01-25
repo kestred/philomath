@@ -27,7 +27,7 @@ func flattenTree(node ast.Node, parent ast.Node) []ast.Node {
 		}
 
 	// Declarations
-	case *ast.ConstantDecl:
+	case *ast.ImmutableDecl:
 		nodes = append(nodes, n.Name)
 		nodes = append(nodes, flattenTree(n.Defn, n)...)
 	case *ast.MutableDecl:

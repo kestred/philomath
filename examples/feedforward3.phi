@@ -25,10 +25,10 @@ feedfoward :: module {
     outputs: [1]output_node;
   }
 
-  netInput :: (inputs: []float, weights: []float) -> float:
+  netInput :: (inputs: []float, weights: []float):
     return Σ[inputs[n] × weights[n] for n in 0...inputs.length]
 
-  tanhError :: (output: float, errors: []float, weights: []float) -> float:
+  tanhError :: (output: float, errors: []float, weights: []float):
     return (1 - output²) × Σ[inputs[i] × weights[i] for i in 0...inputs.length]
 
   train :: (net: ^network, inputs: [1]float, outputs: [1]float) {

@@ -183,67 +183,88 @@ func TestParseArithmetic(t *testing.T) {
 func TestParseBlock(t *testing.T) {
 	expected := ast.Blok([]ast.Blockable{
 		ast.Mutable("foo", nil, ast.NumLit("3")),
-		ast.Constant("baz", ast.ConstDef(ast.NumLit("1"))),
+		ast.Immutable("baz", ast.Constant(ast.NumLit("1"))),
 		ast.Eval(ast.InExp(
-			ast.InExp(
-				ast.NumLit("2"),
-				ast.BuiltinAdd,
-				ast.Ident("foo"),
-			),
+			ast.InExp(ast.NumLit("2"), ast.BuiltinAdd, ast.Ident("foo")),
 			ast.BuiltinAdd,
 			ast.Ident("baz"),
 		)),
+		ast.Immutable("immutable", ast.Constant(
+			ast.ProcExp(nil, nil, ast.Blok([]ast.Blockable{
+				ast.Mutable("dragonfruit", nil, ast.NumLit("3.0")),
+				ast.Eval(ast.InExp(ast.Ident("dragonfruit"), ast.BuiltinDivide, ast.NumLit("1.0"))),
+			})),
+		)),
+		ast.Mutable("mutable", nil,
+			ast.ProcExp(nil, nil, ast.Blok([]ast.Blockable{
+				ast.Eval(ast.InExp(
+					ast.InExp(ast.NumLit("0700"), ast.BuiltinAdd, ast.NumLit("0040")),
+					ast.BuiltinAdd,
+					ast.NumLit("0004"),
+				)),
+			})),
+		),
+		ast.Immutable("outer", ast.Constant(
+			ast.ProcExp(nil, nil, ast.Blok([]ast.Blockable{
+				ast.Immutable("inner", ast.Constant(ast.ProcExp(nil, nil, ast.Blok(nil)))),
+			})),
+		)),
+		ast.Immutable("short", ast.Constant(
+			ast.ProcExp(nil, nil, ast.Blok([]ast.Blockable{
+				ast.Eval(ast.TxtLit(`"Hello world"`)),
+			})),
+		)),
 		ast.Blok([]ast.Blockable{
 			ast.Mutable("bar", nil, ast.Ident("foo")),
-			ast.Eval(ast.InExp(
-				ast.NumLit("0755"),
-				ast.BuiltinSubtract,
-				ast.Ident("baz"),
-			)),
+			ast.Eval(ast.InExp(ast.NumLit("0755"), ast.BuiltinSubtract, ast.Ident("baz"))),
 			ast.Assign(
-				[]ast.Expr{ast.Ident("foo")},
-				nil,
-				[]ast.Expr{ast.InExp(
-					ast.Ident("baz"),
-					ast.BuiltinMultiply,
-					ast.NumLit("4"),
-				)},
+				[]ast.Expr{ast.Ident("foo")}, nil,
+				[]ast.Expr{ast.InExp(ast.Ident("baz"), ast.BuiltinMultiply, ast.NumLit("4"))},
 			),
 			ast.Assign(
+				[]ast.Expr{ast.Ident("bar"), ast.Ident("foo")}, nil,
 				[]ast.Expr{
-					ast.Ident("bar"),
-					ast.Ident("foo"),
-				},
-				nil,
-				[]ast.Expr{
-					ast.InExp(
-						ast.Ident("foo"),
-						ast.BuiltinAdd,
-						ast.NumLit("27"),
-					),
+					ast.InExp(ast.Ident("foo"), ast.BuiltinAdd, ast.NumLit("27")),
 					ast.Ident("bar"),
 				},
 			),
 		}),
-		ast.Eval(ast.InExp(
-			ast.NumLit("8.4e-5"),
-			ast.BuiltinDivide,
-			ast.NumLit("0.5"),
-		)),
+		ast.Eval(ast.InExp(ast.NumLit("8.4e-5"), ast.BuiltinDivide, ast.NumLit("0.5"))),
 		ast.Blok(nil),
 	})
 
 	assert.Equal(t, expected, parseBlock(t, `{
 		foo := 3;      # mutable declaration
-		baz :: 1;      # constant declaration
-		2 + foo + baz; # expression statement
+		baz :: 1;      # constant definition
+		2 + foo + baz; # evaluated statement
+
+		# immutable procedure
+		immutable :: () {
+			dragonfruit := 3.0;
+			dragonfruit / 1.0;
+		}
+
+		# mutable procedure
+		mutable := () {
+			0700 + 0040 + 0004;
+		};
+
+		# nested procedures
+		outer :: () {
+			# empty procedure
+			inner :: () {
+			}
+		}
+
+		# short procedure
+		short :: (): "Hello world";
 
 		# a nested block
 		{
 			bar := foo;
 			0755 - baz;
 
-			foo = baz * 4;		        # assignment statement
+			foo = baz * 4;		        # assignment
 			bar, foo = foo + 27, bar; # parallel assignment
 		}
 

@@ -44,7 +44,7 @@ func ResolveNames(cs *code.Section) {
 		}
 
 		switch n := node.(type) {
-		case *ast.ConstantDecl:
+		case *ast.ImmutableDecl:
 			lookup[ScopedName{current, n.Name.Literal}] = n
 		case *ast.MutableDecl:
 			lookup[ScopedName{current, n.Name.Literal}] = n

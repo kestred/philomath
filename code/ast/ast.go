@@ -90,24 +90,24 @@ type Blockable interface {
 	ImplementsBlockable()
 }
 
-func (b *Block) ImplementsBlockable()        {}
-func (d *ConstantDecl) ImplementsBlockable() {}
-func (d *MutableDecl) ImplementsBlockable()  {}
-func (s *IfStmt) ImplementsBlockable()       {}
-func (s *WhileStmt) ImplementsBlockable()    {}
-func (s *ForStmt) ImplementsBlockable()      {}
-func (s *EvalStmt) ImplementsBlockable()     {}
-func (s *AssignStmt) ImplementsBlockable()   {}
-func (s *ReturnStmt) ImplementsBlockable()   {}
-func (s *DoneStmt) ImplementsBlockable()     {}
+func (b *Block) ImplementsBlockable()         {}
+func (d *ImmutableDecl) ImplementsBlockable() {}
+func (d *MutableDecl) ImplementsBlockable()   {}
+func (s *IfStmt) ImplementsBlockable()        {}
+func (s *WhileStmt) ImplementsBlockable()     {}
+func (s *ForStmt) ImplementsBlockable()       {}
+func (s *EvalStmt) ImplementsBlockable()      {}
+func (s *AssignStmt) ImplementsBlockable()    {}
+func (s *ReturnStmt) ImplementsBlockable()    {}
+func (s *DoneStmt) ImplementsBlockable()      {}
 
 type Decl interface {
 	Blockable
 	ImplementsDecl()
 }
 
-func (d *ConstantDecl) ImplementsDecl() {}
-func (d *MutableDecl) ImplementsDecl()  {}
+func (d *ImmutableDecl) ImplementsDecl() {}
+func (d *MutableDecl) ImplementsDecl()   {}
 
 type Defn interface {
 	Node
@@ -143,7 +143,7 @@ func (e *InfixExpr) ImplementsExpr()     {}
 func (e *PrefixExpr) ImplementsExpr()    {}
 func (e *CallExpr) ImplementsExpr()      {}
 func (e *GroupExpr) ImplementsExpr()     {}
-func (e *FunctionExpr) ImplementsExpr()  {}
+func (e *ProcedureExpr) ImplementsExpr() {}
 func (e *MemberExpr) ImplementsExpr()    {}
 func (l *NumberLiteral) ImplementsExpr() {}
 func (l *TextLiteral) ImplementsExpr()   {}
@@ -154,7 +154,7 @@ func (e *InfixExpr) GetType() Type     { return e.Type }
 func (e *PrefixExpr) GetType() Type    { return e.Type }
 func (e *CallExpr) GetType() Type      { return e.Type }
 func (e *GroupExpr) GetType() Type     { return e.Type }
-func (e *FunctionExpr) GetType() Type  { return e.Type }
+func (e *ProcedureExpr) GetType() Type { return e.Type }
 func (e *MemberExpr) GetType() Type    { return e.Type }
 func (l *NumberLiteral) GetType() Type { return l.Type }
 func (l *TextLiteral) GetType() Type   { return l.Type }
@@ -174,11 +174,11 @@ type Type interface {
 	ImplementsType()
 }
 
-func (t *ArrayType) ImplementsType()    {}
-func (t *FunctionType) ImplementsType() {}
-func (t *NamedType) ImplementsType()    {}
-func (t *PointerType) ImplementsType()  {}
-func (t *BaseType) ImplementsType()     {}
+func (t *ArrayType) ImplementsType()     {}
+func (t *ProcedureType) ImplementsType() {}
+func (t *NamedType) ImplementsType()     {}
+func (t *PointerType) ImplementsType()   {}
+func (t *BaseType) ImplementsType()      {}
 
 type EnumItem interface {
 	Node
@@ -209,7 +209,7 @@ func Blok(nodes []Blockable) *Block {
 
 // A declaration is represented by one of the following
 type (
-	ConstantDecl struct {
+	ImmutableDecl struct {
 		NodeBase
 
 		// syntax
@@ -230,8 +230,8 @@ type (
 	}
 )
 
-func Constant(name string, defn Defn) *ConstantDecl {
-	return &ConstantDecl{
+func Immutable(name string, defn Defn) *ImmutableDecl {
+	return &ImmutableDecl{
 		Name: Ident(name),
 		Defn: defn,
 		Type: InferredType,
@@ -312,7 +312,7 @@ type (
 	}
 )
 
-func ConstDef(expr Expr) *ConstantDefn {
+func Constant(expr Expr) *ConstantDefn {
 	return &ConstantDefn{Expr: expr}
 }
 
@@ -460,26 +460,26 @@ type (
 		NodeBase
 
 		// syntax
-		Function  Expr
+		Procedure Expr
 		Arguments []Expr
 
 		// semantics
 		Type Type
 	}
 
-	FunctionExpr struct {
+	ProcedureExpr struct {
 		NodeBase
 
 		// syntax
-		Params []FunctionParam
+		Params []ProcedureParam
 		Return Type
-		Block  Block
+		Block  *Block
 
 		// semantics
 		Type Type
 	}
 
-	FunctionParam struct {
+	ProcedureParam struct {
 		NodeBase
 
 		// syntax
@@ -569,16 +569,20 @@ func PreExp(op *OperatorDefn, subexpr Expr) *PrefixExpr {
 	}
 }
 
-func CallExp(fn Expr, args []Expr) *CallExpr {
+func CallExp(proc Expr, args []Expr) *CallExpr {
 	return &CallExpr{
-		Function:  fn,
+		Procedure: proc,
 		Arguments: args,
 		Type:      UninferredType,
 	}
 }
 
-func FnExp(params []FunctionParam, ret Type, block Block) *FunctionExpr {
-	return &FunctionExpr{
+func ProcExp(params []ProcedureParam, ret Type, block *Block) *ProcedureExpr {
+	if ret == nil {
+		ret = InferredType
+	}
+
+	return &ProcedureExpr{
 		Params: params,
 		Return: ret,
 		Block:  block,
@@ -634,7 +638,7 @@ type (
 		Element Type
 	}
 
-	FunctionType struct {
+	ProcedureType struct {
 		NodeBase
 
 		// syntax

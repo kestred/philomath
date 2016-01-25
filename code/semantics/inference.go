@@ -21,7 +21,7 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 		for _, subnode := range n.Nodes {
 			inferTypesRecursive(subnode)
 		}
-	case *ast.ConstantDecl:
+	case *ast.ImmutableDecl:
 		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
 			inferTypesRecursive(defn.Expr)
 		}
@@ -59,7 +59,7 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 	case *ast.Identifier:
 		utils.Assert(n.Decl != nil, "An unresolved identifier survived until type inferrence")
 		switch d := n.Decl.(type) {
-		case *ast.ConstantDecl:
+		case *ast.ImmutableDecl:
 			n.Type = d.Defn.(*ast.ConstantDefn).Expr.GetType()
 		case *ast.MutableDecl:
 			n.Type = d.Type

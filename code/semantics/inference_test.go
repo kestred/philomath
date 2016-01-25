@@ -164,7 +164,7 @@ func TestInferDeclarations(t *testing.T) {
 			0755 - fuga;        # propogate undefined in expr
 		}`)
 	*/
-	if decl, ok := block.Nodes[0].(*ast.ConstantDecl); assert.True(t, ok) {
+	if decl, ok := block.Nodes[0].(*ast.ImmutableDecl); assert.True(t, ok) {
 		if defn, ok := decl.Defn.(*ast.ConstantDefn); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredSigned, defn.Expr.GetType())
 		}
@@ -237,7 +237,7 @@ func TestInferNestedBlock(t *testing.T) {
 	if decl, ok := block.Nodes[0].(*ast.MutableDecl); assert.True(t, ok) {
 		assert.Equal(t, ast.InferredUnsigned, decl.Type)
 	}
-	if decl, ok := block.Nodes[1].(*ast.ConstantDecl); assert.True(t, ok) {
+	if decl, ok := block.Nodes[1].(*ast.ImmutableDecl); assert.True(t, ok) {
 		if defn, ok := decl.Defn.(*ast.ConstantDefn); assert.True(t, ok) {
 			assert.Equal(t, ast.InferredFloat, defn.Expr.GetType())
 		}
