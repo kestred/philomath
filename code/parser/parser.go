@@ -61,6 +61,12 @@ type Parser struct {
 	Errors []error
 }
 
+func Make(filename string, trace bool, src []byte) Parser {
+	p := Parser{}
+	p.Init(filename, trace, src)
+	return p
+}
+
 // Init prepares the parser p to convert a text src into an ast by starting
 // a scanner, and scanning the the first token from the source.
 func (p *Parser) Init(filename string, trace bool, src []byte) {
@@ -77,14 +83,21 @@ func (p *Parser) Init(filename string, trace bool, src []byte) {
 	p.trace = trace
 }
 
-func (p *Parser) ParseBlock() *ast.Block {
+func (p *Parser) ParseTop() *ast.TopScope {
 	defer p.recoverStopped()
-	return p.parseBlock()
+	var decls []ast.Decl
+	for p.tok != token.END {
+		decls = append(decls, p.parseDeclaration())
+		for p.tok == token.SEMICOLON {
+			p.next() // eat extra semicolons
+		}
+	}
+	return ast.Top(decls)
 }
 
-func (p *Parser) ParseExpression() ast.Expr {
+func (p *Parser) ParseEvaluable() ast.Evaluable {
 	defer p.recoverStopped()
-	return p.parseExpression()
+	return p.parseEvaluable()
 }
 
 // A stopParsing panic is raised to indicate early termination.
@@ -128,7 +141,7 @@ func (p *Parser) expect(tok token.Token) bool {
 		// TODO: While this is easy to program, it makes for absolutely terrible
 		// error messages in every single case that can be used.
 		// Eventually, anywhere this is used should be replaced with a thought out message.
-		p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, tok, p.tok))
+		p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but received '%v'.`, tok, p.tok))
 
 		/* TODO: Improvement for error messages...
 
@@ -172,7 +185,7 @@ func (p *Parser) expect(tok token.Token) bool {
 // TODO: This makes for absolutely terrible error messages.
 // Eventually, anywhere this is used should be replaced with a thought out message.
 func (p *Parser) expected(what string) {
-	p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but recieved '%v'.`, what, p.tok))
+	p.error(p.scanner.Pos(), fmt.Sprintf(`Expected '%v' but received '%v'.`, what, p.tok))
 	p.next() // eat something to make sure we don't infinite loop
 }
 
@@ -204,7 +217,7 @@ func (p *Parser) parseBlock() *ast.Block {
 	if p.tok == token.COLON {
 		p.next() // eat ":"
 		stmt := p.parseStatement()
-		return ast.Blok([]ast.Blockable{stmt})
+		return ast.Blok([]ast.Evaluable{stmt})
 	}
 
 	p.expect(token.LEFT_BRACE)
@@ -212,9 +225,9 @@ func (p *Parser) parseBlock() *ast.Block {
 		p.next() // eat leading semicolons
 	}
 
-	var stmts []ast.Blockable
+	var stmts []ast.Evaluable
 	for p.tok != token.RIGHT_BRACE && p.tok != token.END {
-		stmts = append(stmts, p.parseBlockable())
+		stmts = append(stmts, p.parseEvaluable())
 		for p.tok == token.SEMICOLON {
 			p.next() // eat extra semicolons
 		}
@@ -223,7 +236,7 @@ func (p *Parser) parseBlock() *ast.Block {
 	return ast.Blok(stmts)
 }
 
-func (p *Parser) parseBlockable() ast.Blockable {
+func (p *Parser) parseEvaluable() ast.Evaluable {
 	if p.tok == token.LEFT_BRACE {
 		return p.parseBlock()
 	} else if p.tok != token.IDENT {
@@ -295,7 +308,7 @@ func (p *Parser) parseExpressionList() []ast.Expr {
 	list := []ast.Expr{p.parseExpression()}
 	for p.tok == token.COMMA {
 		p.next() // eat ','
-		list = append(list, p.ParseExpression())
+		list = append(list, p.parseExpression())
 	}
 	return list
 }

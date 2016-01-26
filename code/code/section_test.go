@@ -9,14 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func parseBlock(t *testing.T, input string) *ast.Block {
-	var p parser.Parser
-	p.Init("example", false, []byte(input))
-	block := p.ParseBlock()
-	if len(p.Errors) > 0 {
-		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
-	}
-	return block
+func parseExample(t *testing.T, input string) ast.Node {
+	p := parser.Make("example", false, []byte(input))
+	node := p.ParseEvaluable()
+	assert.Empty(t, p.Errors, "Unexpected parser errors")
+	return node
 }
 
 func TestFlattenBlock(t *testing.T) {
@@ -74,7 +71,7 @@ func TestFlattenBlock(t *testing.T) {
 		// }
 	}
 
-	block := parseBlock(t, `{
+	block := parseExample(t, `{
 		foo := -3;     # mutable declaration
 		baz :: 1;      # constant definition
 		(2 + foo) + baz; # evaluated statement

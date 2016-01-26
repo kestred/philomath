@@ -83,26 +83,27 @@ type Scope interface {
 	ImplementsScope()
 }
 
-func (b *Block) ImplementsScope() {}
+func (t *TopScope) ImplementsScope() {}
+func (b *Block) ImplementsScope()    {}
 
-type Blockable interface {
+type Evaluable interface {
 	Node
-	ImplementsBlockable()
+	ImplementsEvaluable()
 }
 
-func (b *Block) ImplementsBlockable()         {}
-func (d *ImmutableDecl) ImplementsBlockable() {}
-func (d *MutableDecl) ImplementsBlockable()   {}
-func (s *IfStmt) ImplementsBlockable()        {}
-func (s *WhileStmt) ImplementsBlockable()     {}
-func (s *ForStmt) ImplementsBlockable()       {}
-func (s *EvalStmt) ImplementsBlockable()      {}
-func (s *AssignStmt) ImplementsBlockable()    {}
-func (s *ReturnStmt) ImplementsBlockable()    {}
-func (s *DoneStmt) ImplementsBlockable()      {}
+func (b *Block) ImplementsEvaluable()         {}
+func (d *ImmutableDecl) ImplementsEvaluable() {}
+func (d *MutableDecl) ImplementsEvaluable()   {}
+func (s *IfStmt) ImplementsEvaluable()        {}
+func (s *WhileStmt) ImplementsEvaluable()     {}
+func (s *ForStmt) ImplementsEvaluable()       {}
+func (s *EvalStmt) ImplementsEvaluable()      {}
+func (s *AssignStmt) ImplementsEvaluable()    {}
+func (s *ReturnStmt) ImplementsEvaluable()    {}
+func (s *DoneStmt) ImplementsEvaluable()      {}
 
 type Decl interface {
-	Blockable
+	Evaluable
 	ImplementsDecl()
 }
 
@@ -120,7 +121,7 @@ func (d *OperatorDefn) ImplementsDefn() {}
 func (d *StructDefn) ImplementsDefn()   {}
 
 type Stmt interface {
-	Blockable
+	Evaluable
 	ImplementsStmt()
 }
 
@@ -163,11 +164,14 @@ func (i *Identifier) GetType() Type    { return i.Type }
 type Literal interface {
 	Expr
 	ImplementsLiteral()
+	GetValue() Value
 }
 
 func (l *NumberLiteral) ImplementsLiteral() {}
 func (l *TextLiteral) ImplementsLiteral()   {}
-func (i *Identifier) ImplementsLiteral()    {}
+
+func (l *NumberLiteral) GetValue() Value { return l.Value }
+func (l *TextLiteral) GetValue() Value   { return l.Value }
 
 type Type interface {
 	Node
@@ -198,12 +202,21 @@ func (r *EachRange) ImplementsLoopRange() {}
 
 /* Concrete Nodes */
 
-type Block struct {
+type TopScope struct {
 	NodeBase
-	Nodes []Blockable // Block, Decl, or Stmt
+	Decls []Decl
 }
 
-func Blok(nodes []Blockable) *Block {
+func Top(decls []Decl) *TopScope {
+	return &TopScope{Decls: decls}
+}
+
+type Block struct {
+	NodeBase
+	Nodes []Evaluable // Block, Decl, or Stmt
+}
+
+func Blok(nodes []Evaluable) *Block {
 	return &Block{Nodes: nodes}
 }
 

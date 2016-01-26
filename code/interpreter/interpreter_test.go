@@ -10,36 +10,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func evalExpression(t *testing.T, input string) bytecode.Data {
-	p := parser.Parser{}
-	p.Init("example", false, []byte(input))
-	expr := p.ParseExpression()
-	if len(p.Errors) > 0 {
-		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
-	}
-
-	section := code.PrepareTree(expr, nil)
-	semantics.InferTypes(&section)
-	scope := &bytecode.Scope{}
-	scope.Init()
-	insts := bytecode.FromExpr(expr, scope)
-	return Evaluate(insts, scope.Constants, scope.NextRegister)
-}
-
-func evalBlock(t *testing.T, input string) bytecode.Data {
-	var p parser.Parser
-	p.Init("example", false, []byte(input))
-	block := p.ParseBlock()
-	if len(p.Errors) > 0 {
-		t.Fatalf("Unexpected parse error\n\n%v", p.Errors[0].Error())
-	}
-
-	section := code.PrepareTree(block, nil)
+func evalExample(t *testing.T, input string) bytecode.Data {
+	p := parser.Make("example", false, []byte(input))
+	node := p.ParseEvaluable()
+	assert.Empty(t, p.Errors, "Unexpected parser errors")
+	section := code.PrepareTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
-	scope := &bytecode.Scope{}
-	scope.Init()
-	insts := bytecode.FromBlock(block, scope)
+	scope := bytecode.NewScope()
+	insts := bytecode.Generate(node, scope)
 	return Evaluate(insts, scope.Constants, scope.NextRegister)
 }
 
@@ -66,42 +45,42 @@ func TestEvaluateNoop(t *testing.T) {
 
 func TestEvaluateArithmetic(t *testing.T) {
 	// constant
-	result := evalExpression(t, `22`)
+	result := evalExample(t, `22;`)
 	assert.Equal(t, int64(22), bytecode.ToI64(result))
 
 	// add, subtract, multiply, divide
-	result = evalExpression(t, `2 * 3 + 27 / 9 - 15`)
+	result = evalExample(t, `2 * 3 + 27 / 9 - 15;`)
 	assert.Equal(t, int64(2*3+27/9-15), bytecode.ToI64(result))
 	assert.Equal(t, int64(-6), bytecode.ToI64(result))
 
-	result = evalExpression(t, `2.0 * 4.0 + 8.0 / 16.0 - 32.0`)
+	result = evalExample(t, `2.0 * 4.0 + 8.0 / 16.0 - 32.0;`)
 	assert.Equal(t, float64(2.0*4.0+8.0/16.0-32.0), bytecode.ToF64(result))
 	assert.Equal(t, float64(-23.5), bytecode.ToF64(result))
 
-	result = evalExpression(t, `02 * 03 + 04 / 05 - 01`)
+	result = evalExample(t, `02 * 03 + 04 / 05 - 01;`)
 	assert.Equal(t, uint64(02*03+04/05-01), bytecode.ToU64(result))
 	assert.Equal(t, uint64(5), bytecode.ToU64(result))
 
-	result = evalExpression(t, `(2 + 3) + 4.0`)
+	result = evalExample(t, `(2 + 3) + 4.0;`)
 	assert.Equal(t, float64((2+3)+4.0), bytecode.ToF64(result))
 	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 
-	result = evalExpression(t, `(2 + 3.0) + 4`)
+	result = evalExample(t, `(2 + 3.0) + 4;`)
 	assert.Equal(t, float64((2+3.0)+4), bytecode.ToF64(result))
 	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 
-	result = evalExpression(t, `(02 + 03) + 4.0`)
+	result = evalExample(t, `(02 + 03) + 4.0;`)
 	assert.Equal(t, float64((02+03)+4.0), bytecode.ToF64(result))
 	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 
-	result = evalExpression(t, `(02 + 3.0) + 04`)
+	result = evalExample(t, `(02 + 3.0) + 04;`)
 	assert.Equal(t, float64((02+3.0)+04), bytecode.ToF64(result))
 	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
 }
 
 func TestEncodeBlock(t *testing.T) {
 	// declarations
-	result := evalBlock(t, `{
+	result := evalExample(t, `{
 		hoge :: 3;          # constant decl
 		hoge + 2;           # one ident in expr, result ignored
 
@@ -114,7 +93,7 @@ func TestEncodeBlock(t *testing.T) {
 	assert.Equal(t, float64(0.5), bytecode.ToF64(result))
 
 	// assignment Statement
-	result = evalBlock(t, `{
+	result = evalExample(t, `{
 		xyzzy := 012;
 		xyzzy = 0700;
 		xyzzy;
@@ -125,7 +104,7 @@ func TestEncodeBlock(t *testing.T) {
 	assert.Equal(t, uint64(0700), bytecode.ToU64(result))
 
 	// assignment with cast
-	result = evalBlock(t, `{
+	result = evalExample(t, `{
 		plugh := 1 - 37;
 		plugh = 0.25 * plugh;
 		plugh;
@@ -136,7 +115,7 @@ func TestEncodeBlock(t *testing.T) {
 	assert.Equal(t, int64(-9), bytecode.ToI64(result))
 
 	// parallel assignment (with and without casts)
-	result = evalBlock(t, `{
+	result = evalExample(t, `{
 		plugh := 1 - 37;
 		xyzzy := 012;
 		nerrf := 14;

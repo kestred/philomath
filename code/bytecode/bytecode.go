@@ -134,10 +134,12 @@ type Scope struct {
 	Registers    map[string]Register
 }
 
-func (s *Scope) Init() {
-	s.Constants = []Data{0} // the 0th constant is always 0
-	s.NextRegister = 1      // skip the 0th register
-	s.Registers = make(map[string]Register)
+func NewScope() *Scope {
+	return &Scope{
+		Constants:    []Data{0}, // the 0th constant is always 0
+		NextRegister: 1,         // skip the 0th register
+		Registers:    make(map[string]Register),
+	}
 }
 
 func (s *Scope) AssignRegister() Register {
@@ -147,83 +149,79 @@ func (s *Scope) AssignRegister() Register {
 	return register
 }
 
-func FromBlock(block *ast.Block, scope *Scope) []Instruction {
+func Generate(node ast.Node, scope *Scope) []Instruction {
 	var insts []Instruction
-	for _, node := range block.Nodes {
-		switch n := node.(type) {
-		case *ast.Block:
-			insts = append(insts, FromBlock(n, scope)...)
-		case *ast.ImmutableDecl:
-			// NOTE: an ConstantDefn is the only definiton used directly in bytecode generation
-			if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
-				insts = append(insts, FromExpr(defn.Expr, scope)...)
-				scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
-			}
-		case *ast.MutableDecl:
-			if n.Expr != nil {
-				insts = append(insts, FromExpr(n.Expr, scope)...)
-				scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
+	switch n := node.(type) {
+	case *ast.Block:
+		for _, subnode := range n.Nodes {
+			insts = append(insts, Generate(subnode, scope)...)
+		}
+
+	case *ast.ImmutableDecl:
+		// NOTE: an ConstantDefn is the only definiton used directly in bytecode generation
+		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
+			insts = append(insts, Generate(defn.Expr, scope)...)
+			scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
+		}
+
+	case *ast.MutableDecl:
+		if n.Expr != nil {
+			insts = append(insts, Generate(n.Expr, scope)...)
+			scope.Registers[n.Name.Literal] = insts[len(insts)-1].Out
+		} else {
+			//// TODO: zero initialization (but it won't matter until there are typed declarations)
+			//scope.Registers[n.Name.Literal] = scope.AssignRegister()
+			panic("TODO: Unhandled mutable declaration without expression")
+		}
+
+	case *ast.EvalStmt:
+		insts = append(insts, Generate(n.Expr, scope)...)
+
+	case *ast.AssignStmt:
+		utils.Assert(len(n.Left) == len(n.Right), "An unbalanced assignment survived until bytecode generation")
+		if len(n.Right) == 1 {
+			insts = append(insts, Generate(n.Right[0], scope)...)
+			rhs := insts[len(insts)-1].Out
+			if expr, ok := n.Left[0].(*ast.Identifier); ok {
+				lhs, exists := scope.Registers[expr.Literal]
+				utils.Assert(exists, "A register was not allocated for a name before use in an expression")
+
+				// copy from rhs to lhs (cast as needed)
+				rhs = insertConversion(scope, &insts, rhs, n.Right[0].GetType(), expr.Type)
+				insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
 			} else {
-				//// TODO: zero initialization (but it won't matter until there are typed declarations)
-				//scope.Registers[n.Name.Literal] = scope.AssignRegister()
-				panic("TODO: Unhandled mutable declaration without expression")
+				panic("TODO: Handle non-identifier expressions as the assignee in assignment")
 			}
-		case *ast.EvalStmt:
-			insts = append(insts, FromExpr(n.Expr, scope)...)
-		case *ast.AssignStmt:
-			utils.Assert(len(n.Left) == len(n.Right), "An unbalanced assignment survived until bytecode generation")
-			if len(n.Right) == 1 {
-				insts = append(insts, FromExpr(n.Right[0], scope)...)
+		} else {
+			tmps := make([]Register, len(n.Right))
+			for i, expr := range n.Right {
+				insts = append(insts, Generate(expr, scope)...)
 				rhs := insts[len(insts)-1].Out
-				if expr, ok := n.Left[0].(*ast.Identifier); ok {
-					lhs, exists := scope.Registers[expr.Literal]
+
+				// copy from rhs to temporary
+				tmps[i] = scope.AssignRegister()
+				insts = append(insts, Instruction{Code: COPY_VALUE, Out: tmps[i], Left: rhs})
+			}
+			for i, expr := range n.Left {
+				if e, ok := expr.(*ast.Identifier); ok {
+					lhs, exists := scope.Registers[e.Literal]
 					utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
-					// copy from rhs to lhs (cast as needed)
-					rhs = insertConversion(scope, &insts, rhs, n.Right[0].GetType(), expr.Type)
+					// copy from temporary to lhs (cast as needed)
+					rhs := insertConversion(scope, &insts, tmps[i], n.Right[i].GetType(), e.Type)
 					insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
 				} else {
 					panic("TODO: Handle non-identifier expressions as the assignee in assignment")
 				}
-			} else {
-				tmps := make([]Register, len(n.Right))
-				for i, expr := range n.Right {
-					insts = append(insts, FromExpr(expr, scope)...)
-					rhs := insts[len(insts)-1].Out
-
-					// copy from rhs to temporary
-					tmps[i] = scope.AssignRegister()
-					insts = append(insts, Instruction{Code: COPY_VALUE, Out: tmps[i], Left: rhs})
-				}
-				for i, expr := range n.Left {
-					if e, ok := expr.(*ast.Identifier); ok {
-						lhs, exists := scope.Registers[e.Literal]
-						utils.Assert(exists, "A register was not allocated for a name before use in an expression")
-
-						// copy from temporary to lhs (cast as needed)
-						rhs := insertConversion(scope, &insts, tmps[i], n.Right[i].GetType(), e.Type)
-						insts = append(insts, Instruction{Code: COPY_VALUE, Out: lhs, Left: rhs})
-					} else {
-						panic("TODO: Handle non-identifier expressions as the assignee in assignment")
-					}
-				}
 			}
-		default:
-			panic("TOOD: Unhandle node type in bytecode.FromBlock")
 		}
-	}
 
-	return insts
-}
-
-func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
-	switch e := expr.(type) {
 	case *ast.NumberLiteral:
-		utils.Assert(e.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
+		utils.Assert(n.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
 		register := scope.AssignRegister()
 
 		var value Data
-		switch v := e.Value.(type) {
+		switch v := n.Value.(type) {
 		case int64:
 			value = FromI64(v)
 		case uint64:
@@ -237,38 +235,37 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		nextConstant := len(scope.Constants)
 		scope.Constants = append(scope.Constants, Data(value))
 		return []Instruction{{Code: LOAD_CONST, Out: register, Left: Constant(nextConstant)}}
+
 	case *ast.Identifier:
-		register, exists := scope.Registers[e.Literal]
+		register, exists := scope.Registers[n.Literal]
 		utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 		// FIXME: currently expressions must return an instruction with the Out register set,
 		//        but it doesn't make a whole lot of sense to be emitting NOOPs for value loads
 		return []Instruction{{Code: NOOP, Out: register}}
 
 	case *ast.GroupExpr:
-		return FromExpr(e.Subexpr, scope)
+		return Generate(n.Subexpr, scope)
 
 	case *ast.InfixExpr:
-		var insts []Instruction
+		// TODO: casts should probably be added to the AST elsewhere and only processed here
 		var infix Instruction
 
-		// TODO: casts should probably be added to the AST elsewhere and only processed here
-
 		// instructions to evaluate left hand side
-		left := FromExpr(e.Left, scope)
+		left := Generate(n.Left, scope)
 		insts = append(insts, left...)
-		infix.Left = insertConversion(scope, &insts, insts[len(insts)-1].Out, e.Left.GetType(), e.Type)
+		infix.Left = insertConversion(scope, &insts, insts[len(insts)-1].Out, n.Left.GetType(), n.Type)
 
 		// instructions to evaluate right hand side
-		right := FromExpr(e.Right, scope)
+		right := Generate(n.Right, scope)
 		insts = append(insts, right...)
-		infix.Right = insertConversion(scope, &insts, insts[len(insts)-1].Out, e.Right.GetType(), e.Type)
+		infix.Right = insertConversion(scope, &insts, insts[len(insts)-1].Out, n.Right.GetType(), n.Type)
 
 		// TODO: table lookup?
 		// TODO: probably shouldn't have any "inferred" types by the time we get here
 		// TODO: probably shouldn't be comparing against operator literals by the time we get here
-		switch e.Operator.Literal {
+		switch n.Operator.Literal {
 		case "+":
-			switch e.Type {
+			switch n.Type {
 			// FIXME: right now "inferred numbers" are accept upto uint64 max,
 			//        but here I want to (and do) treat them as signed
 			case ast.InferredNumber, ast.InferredSigned:
@@ -281,7 +278,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				panic("TODO: Unhandle expression type in bytecode generator")
 			}
 		case "-":
-			switch e.Type {
+			switch n.Type {
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_SUBTRACT
 			case ast.InferredUnsigned:
@@ -292,7 +289,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				panic("TODO: Unhandle expression type in bytecode generator")
 			}
 		case "*":
-			switch e.Type {
+			switch n.Type {
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_MULTIPLY
 			case ast.InferredUnsigned:
@@ -303,7 +300,7 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 				panic("TODO: Unhandle expression type in bytecode generator")
 			}
 		case "/":
-			switch e.Type {
+			switch n.Type {
 			case ast.InferredNumber, ast.InferredSigned:
 				infix.Code = I64_DIVIDE
 			case ast.InferredUnsigned:
@@ -318,11 +315,12 @@ func FromExpr(expr ast.Expr, scope *Scope) []Instruction {
 		// bytecode to evaluate operator
 		infix.Out = scope.AssignRegister()
 		insts = append(insts, infix)
-		return insts
 
 	default:
-		panic("TODO: Unhandled expression type")
+		panic("TOOD: Unhandle node type in bytecode.Generate")
 	}
+
+	return insts
 }
 
 // TODO: Handle non-numeric types

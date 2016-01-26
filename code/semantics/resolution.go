@@ -3,7 +3,6 @@ package semantics
 import (
 	"github.com/kestred/philomath/code/ast"
 	"github.com/kestred/philomath/code/code"
-	"github.com/kestred/philomath/code/utils"
 )
 
 type ScopedName struct {
@@ -22,10 +21,7 @@ func FindParentScope(node ast.Node) ast.Scope {
 }
 
 func ResolveNames(cs *code.Section) {
-	_, ok := cs.Root.(ast.Scope)
-	utils.Assert(ok, "ResolveNames currently expects Section.Root to be a lexical scope")
-
-	var current ast.Scope
+	current := FindParentScope(cs.Root)
 	var lookup = make(map[ScopedName]ast.Decl)
 	for _, node := range cs.Nodes {
 		// Easy way to track the current scope; should always be correct but not sure
