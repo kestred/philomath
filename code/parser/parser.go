@@ -33,6 +33,8 @@ import (
 //          7)
 //
 
+const MaxErrors = 8 // try to choose an actionable number of errors
+
 type ParseError struct {
 	Pos token.Position
 	Msg string
@@ -128,8 +130,7 @@ func (p *Parser) error(pos token.Position, msg string) {
 	if n > 0 && p.Errors[n-1].(*ParseError).Pos.Line == pos.Line {
 		return // discard - likely a spurious error
 	}
-	// TODO: Is 8 the right number? I prefer fewer reported errors to entirely bogus errors.
-	if n > 8 {
+	if n > MaxErrors {
 		p.stopParsing()
 	}
 

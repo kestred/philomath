@@ -105,10 +105,14 @@ func (s *DoneStmt) ImplementsEvaluable()      {}
 type Decl interface {
 	Evaluable
 	ImplementsDecl()
+	GetName() *Identifier
 }
 
 func (d *ImmutableDecl) ImplementsDecl() {}
 func (d *MutableDecl) ImplementsDecl()   {}
+
+func (d *ImmutableDecl) GetName() *Identifier { return d.Name }
+func (d *MutableDecl) GetName() *Identifier   { return d.Name }
 
 type Defn interface {
 	Node

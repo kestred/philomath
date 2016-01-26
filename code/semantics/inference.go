@@ -17,6 +17,10 @@ func InferTypes(cs *code.Section) {
 
 func inferTypesRecursive(node ast.Node) ast.Type {
 	switch n := node.(type) {
+	case *ast.TopScope:
+		for _, decl := range n.Decls {
+			inferTypesRecursive(decl)
+		}
 	case *ast.Block:
 		for _, subnode := range n.Nodes {
 			inferTypesRecursive(subnode)
