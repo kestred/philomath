@@ -88,6 +88,10 @@ func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Regist
 		}
 	}
 
-	last := insts[len(insts)-1].Out
-	return registers[last]
+	if len(insts) > 0 {
+		last := insts[len(insts)-1].Out
+		return registers[last]
+	} else {
+		return 0
+	}
 }

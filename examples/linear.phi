@@ -1,27 +1,9 @@
-# TODO: formula user-defined DSL
-#netInput    :: formula { Σ[i in |inputs|] (inputs[i] × weights[i]) }
-#meanSqError :: formula { 0.5 Σ[o in |outputs|] (targets[o] - outputs[o])² }
-
 netInput :: func(inputs: []float, weights: []float) -> float {
   result := 0.0;
   for input, index in inputs:
-    # TODO: add and assign operator
-    #result += input * weights[index];
-    result = result + input * weights[index];
+    result += input * weights[index];
   return result;
 }
-
-#- TODO: dynamic arrays [..]
-linear_node :: struct {
-  output: float;
-  weights: [..]float;
-}
-
-linear_network :: struct {
-  learningRate: float;
-  outputs: [..]linear_node;
-}
--#
 
 linear_node :: struct {
   bias: float;
@@ -41,8 +23,6 @@ linear_network :: struct {
 
 trainLinear :: func(net: ^linear_network, inputs: [1]float, outputs: [1]float) {
   for ^node, index in net.outputs {
-    # TODO: keyword arguments
-    #node.output = netInput(inputs=inputs, weights=node.weights);
     node.output = netInput(inputs, node.weights);
     target := outputs[index];
     error := target - node.output;

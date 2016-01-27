@@ -152,6 +152,11 @@ func (s *Scope) AssignRegister() Register {
 func Generate(node ast.Node, scope *Scope) []Instruction {
 	var insts []Instruction
 	switch n := node.(type) {
+	case *ast.TopScope:
+		for _, decl := range n.Decls {
+			insts = append(insts, Generate(decl, scope)...)
+		}
+
 	case *ast.Block:
 		for _, subnode := range n.Nodes {
 			insts = append(insts, Generate(subnode, scope)...)
@@ -316,8 +321,11 @@ func Generate(node ast.Node, scope *Scope) []Instruction {
 		infix.Out = scope.AssignRegister()
 		insts = append(insts, infix)
 
+	case *ast.ProcedureExpr:
+		// Just ignore it for now; in the future, we will be generating more than just an array?
+
 	default:
-		panic("TOOD: Unhandle node type in bytecode.Generate")
+		panic("TODO: Unhandle node type in bytecode.Generate")
 	}
 
 	return insts

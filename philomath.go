@@ -1,7 +1,8 @@
 package main
 
 import (
-	"io"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -19,50 +20,76 @@ import (
 // support all the familar command lines that users would expect.
 import argparse "github.com/ogier/pflag"
 
-var ArgRun = argparse.BoolP("run", "r", false, "")
-var ArgRepl = argparse.BoolP("interactive", "i", false, "")
 var ArgTrace = argparse.Bool("trace", false, "")
 
 func init() {
 	log.SetFlags(0)
 	log.SetPrefix("phi: ")
 	argparse.Parse()
+	argparse.Usage = usage
+}
+
+func usage() {
+	fmt.Fprintln(os.Stderr, `
+Phi is an experimental compiler for AI research.
+
+Usage:
+  phi COMMAND [OPTIONS] [ARGS]
+
+Commands:
+  build   compile one or more files
+  run     interpret the file or input stream
+  shell   open an interactive philomath REPL
+`[1:])
 }
 
 func main() {
-	if *ArgRepl {
-		log.Fatalf("you've discovered my dark secret... the lack of a REPL")
-	}
-
-	// TODO: Move file reading and handling to a proper home
-	// TODO: Update parser to preform streaming parsing
-	file := os.Stdin
 	args := argparse.Args()
-	if len(args) == 1 {
-		var err error
-		file, err = os.Open(args[0])
-		if err != nil {
-			log.Fatalf("unable to open file: %v", err)
+	if len(args) == 0 {
+		usage()
+		os.Exit(1)
+	}
+
+	// handle command
+	command := args[0]
+	switch command {
+	case "build":
+		log.Fatalln("TODO: Implement compilation")
+	case "run":
+		doRun(args[1:])
+	case "shell":
+		log.Fatalln("TODO: Implement REPL")
+	default:
+		if len(command) > 14 {
+			command = command[:10] + " ..."
 		}
-	} else if len(args) > 2 {
-		log.Fatalln("too many arguments") // TODO: Usage text
+		log.Printf(`error: unknown command "%v"`, command)
+		usage()
+		os.Exit(1)
+	}
+}
+
+func doRun(args []string) {
+	if len(args) == 0 {
+		log.Fatalln(`error: no input files`)
 	}
 
-	source := make([]byte, 8192)
-	_, err := file.Read(source)
-	if err == io.EOF {
-		panic("TODO: handle long inputs")
-	} else if err != nil {
-		log.Fatalln(err)
+	file, err := os.Open(args[0])
+	if err != nil {
+		log.Fatalln("error:", err)
 	}
 
-	// if *ArgRun {
-	p := parser.Make("example", *ArgTrace, []byte(``))
+	source, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatalln("error:", err)
+	}
+
+	p := parser.Make(args[0], *ArgTrace, []byte(source))
 	top := p.ParseTop()
 	errcount := len(p.Errors)
 	if errcount > 0 {
 		for _, err := range p.Errors {
-			log.Println(err)
+			fmt.Errorf("%v\n", err)
 		}
 
 		if errcount >= parser.MaxErrors {
@@ -73,13 +100,13 @@ func main() {
 	}
 
 	var inits []ast.Decl
-	var main *ast.ProcedureExpr
+	var mainProc *ast.ProcedureExpr
 	for _, decl := range top.Decls {
 		if decl.GetName().Literal == "main" {
 			if imm, ok := decl.(*ast.ImmutableDecl); ok {
 				if con, ok := imm.Defn.(*ast.ConstantDefn); ok {
 					if proc, ok := con.Expr.(*ast.ProcedureExpr); ok {
-						main = proc
+						mainProc = proc
 						continue
 					}
 				}
@@ -93,19 +120,27 @@ func main() {
 		inits = append(inits, decl)
 	}
 
-	// Initialize constants/globals
+	if mainProc == nil {
+		log.Fatalf(`unable to find a procedure named "main"`)
+	}
+
+	// open interpreter scope
+	scope := bytecode.NewScope()
+
+	// initialize constants/globals
 	programData := ast.Top(inits)
 	initSection := code.PrepareTree(programData, nil)
 	semantics.ResolveNames(&initSection)
 	semantics.InferTypes(&initSection)
-	mainSection := code.PrepareTree(main.Block, &initSection)
+	insts := bytecode.Generate(programData, scope)
+
+	// bytecode for main procedure
+	mainSection := code.PrepareTree(mainProc.Block, &initSection)
 	semantics.ResolveNames(&mainSection)
 	semantics.InferTypes(&mainSection)
-	scope := bytecode.NewScope()
-	insts := bytecode.Generate(top, scope)
+	insts = append(insts, bytecode.Generate(mainProc.Block, scope)...)
+
+	// interpret bytecode
 	temp := interpreter.Evaluate(insts, scope.Constants, scope.NextRegister)
-	log.Printf("Result: %v\n", temp)
-	// } else {
-	//    TODO: COMPILE AND LINK!
-	// }
+	log.Println("result:", temp)
 }
