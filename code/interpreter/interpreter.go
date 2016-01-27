@@ -3,17 +3,16 @@ package interpreter
 import bc "github.com/kestred/philomath/code/bytecode"
 
 // for now, Evaluate will return whatever the result of the last instruction is
-func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Register) bc.Data {
+func Evaluate(program bc.Program, totalRegisters bc.Register) bc.Data {
 	registers := make([]bc.Data, uint(totalRegisters)+1)
-
-	for _, inst := range insts {
-		switch inst.Code {
+	for _, inst := range program.Instructions {
+		switch inst.Op {
 		case bc.NOOP:
 			continue
 		case bc.COPY_VALUE:
 			registers[inst.Out] = registers[inst.Left]
 		case bc.LOAD_CONST:
-			registers[inst.Out] = consts[inst.Left]
+			registers[inst.Out] = program.Constants[inst.Left]
 
 		// signed 64-bit arithmetic
 		case bc.I64_ADD:
@@ -88,8 +87,8 @@ func Evaluate(insts []bc.Instruction, consts []bc.Data, totalRegisters bc.Regist
 		}
 	}
 
-	if len(insts) > 0 {
-		last := insts[len(insts)-1].Out
+	if len(program.Instructions) > 0 {
+		last := program.LastReg()
 		return registers[last]
 	} else {
 		return 0

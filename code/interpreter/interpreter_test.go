@@ -17,29 +17,37 @@ func evalExample(t *testing.T, input string) bytecode.Data {
 	section := code.PrepareTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
-	scope := bytecode.NewScope()
-	insts := bytecode.Generate(node, scope)
-	return Evaluate(insts, scope.Constants, scope.NextRegister)
+	program, scope := bytecode.Generate(node)
+	return Evaluate(program, scope.NextRegister)
 }
 
 func TestEvaluateNoop(t *testing.T) {
-	insts := []bytecode.Instruction{{Code: bytecode.NOOP}}
-	consts := []bytecode.Data{0}
-	result := Evaluate(insts, consts, 1)
+	var program bytecode.Program
+	var result bytecode.Data
+
+	// just a noop
+	program = bytecode.Program{
+		Constants:    []bytecode.Data{0},
+		Instructions: []bytecode.Instruction{{Op: bytecode.NOOP}},
+	}
+	result = Evaluate(program, 1)
 	assert.Equal(t, 0, int(result))
 
-	insts = []bytecode.Instruction{
-		{Code: bytecode.NOOP},
-		{Code: bytecode.NOOP},
-		{Code: bytecode.NOOP},
-		{Code: bytecode.LOAD_CONST, Out: 1, Left: 1},
-		{Code: bytecode.NOOP},
-		{Code: bytecode.LOAD_CONST, Out: 2, Left: 2},
-		{Code: bytecode.NOOP},
-		{Code: bytecode.I64_ADD, Left: 1, Right: 2, Out: 3},
+	// interleaved noops
+	program = bytecode.Program{
+		Constants: []bytecode.Data{0, 1, 2},
+		Instructions: []bytecode.Instruction{
+			{Op: bytecode.NOOP},
+			{Op: bytecode.NOOP},
+			{Op: bytecode.NOOP},
+			{Op: bytecode.LOAD_CONST, Out: 1, Left: 1},
+			{Op: bytecode.NOOP},
+			{Op: bytecode.LOAD_CONST, Out: 2, Left: 2},
+			{Op: bytecode.NOOP},
+			{Op: bytecode.I64_ADD, Left: 1, Right: 2, Out: 3},
+		},
 	}
-	consts = []bytecode.Data{0, 1, 2}
-	result = Evaluate(insts, consts, 3)
+	result = Evaluate(program, 3)
 	assert.Equal(t, 3, int(result))
 }
 

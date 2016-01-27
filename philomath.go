@@ -124,23 +124,20 @@ func doRun(args []string) {
 		log.Fatalf(`unable to find a procedure named "main"`)
 	}
 
-	// open interpreter scope
-	scope := bytecode.NewScope()
-
 	// initialize constants/globals
 	programData := ast.Top(inits)
 	initSection := code.PrepareTree(programData, nil)
 	semantics.ResolveNames(&initSection)
 	semantics.InferTypes(&initSection)
-	insts := bytecode.Generate(programData, scope)
+	program, scope := bytecode.Generate(programData)
 
 	// bytecode for main procedure
 	mainSection := code.PrepareTree(mainProc.Block, &initSection)
 	semantics.ResolveNames(&mainSection)
 	semantics.InferTypes(&mainSection)
-	insts = append(insts, bytecode.Generate(mainProc.Block, scope)...)
+	program.Extend(mainProc.Block, scope)
 
 	// interpret bytecode
-	temp := interpreter.Evaluate(insts, scope.Constants, scope.NextRegister)
+	temp := interpreter.Evaluate(program, scope.NextRegister)
 	log.Println("result:", temp)
 }
