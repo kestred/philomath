@@ -13,9 +13,10 @@ var (
 	InferredUnsigned = BaseTyp("<unsigned>")   // could only be an unsigned number
 
 	// Error types
-	UninferredType = BaseTyp("<uninferred>") // used before it was inferred
-	UnresolvedType = BaseTyp("<unresolved>") // could not infer type
-	UncastableType = BaseTyp("<uncastable>") // could not cast type
+	UninferredType = BaseTyp("<uninferred>")  // used before it was inferred
+	UnresolvedType = BaseTyp("<unresolved>")  // could not infer type
+	UncastableType = BaseTyp("<uncastable>")  // could not cast type
+	PlaceholderType = BaseTyp("<placeholder>") // a placeholder until I implement more complex types
 
 	// Builtin types
 	BuiltinEmpty   = BaseTyp("empty") // the 0-byte type

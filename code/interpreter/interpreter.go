@@ -2,17 +2,36 @@ package interpreter
 
 import bc "github.com/kestred/philomath/code/bytecode"
 
-// for now, Evaluate will return whatever the result of the last instruction is
-func Evaluate(program bc.Program, totalRegisters bc.Register) bc.Data {
-	registers := make([]bc.Data, uint(totalRegisters)+1)
-	for _, inst := range program.Instructions {
+func Run(prog *bc.Program) bc.Data {
+	start := prog.Procedures[prog.Text["start_"]]
+	main := prog.Text["main"]
+	call := bc.Instruction{Op: bc.CALL, Out: start.AssignRegister(), Left: bc.Register(main)}
+	start.Instructions = append(start.Instructions, call)
+	return Evaluate(start)
+}
+
+// HACK: for now, Evaluate will return whatever the result of the last instruction is
+func Evaluate(proc bc.Procedure) bc.Data {
+	registers := make([]bc.Data, uint(proc.NextRegister))
+	returnRegister := bc.Register(-1)
+	count := len(proc.Instructions)
+	if count > 0 {
+		returnRegister = proc.Instructions[count-1].Out
+	}
+
+	for _, inst := range proc.Instructions {
 		switch inst.Op {
 		case bc.NOOP:
 			continue
 		case bc.COPY_VALUE:
 			registers[inst.Out] = registers[inst.Left]
 		case bc.LOAD_CONST:
-			registers[inst.Out] = program.Constants[inst.Left]
+			registers[inst.Out] = proc.Program.Constants[inst.Left]
+		case bc.CALL:
+			registers[inst.Out] = Evaluate(proc.Program.Procedures[inst.Left])
+		case bc.RETURN:
+			returnRegister = inst.Out
+			break
 
 		// signed 64-bit arithmetic
 		case bc.I64_ADD:
@@ -87,9 +106,8 @@ func Evaluate(program bc.Program, totalRegisters bc.Register) bc.Data {
 		}
 	}
 
-	if len(program.Instructions) > 0 {
-		last := program.LastReg()
-		return registers[last]
+	if returnRegister >= 0 {
+		return registers[returnRegister]
 	} else {
 		return 0
 	}

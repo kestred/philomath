@@ -73,6 +73,9 @@ func flattenTree(node ast.Node, parent ast.Node) []ast.Node {
 		nodes = append(nodes, flattenTree(n.Subexpr, n)...)
 	case *ast.GroupExpr:
 		nodes = append(nodes, flattenTree(n.Subexpr, n)...)
+	case *ast.ProcedureExpr:
+		nodes = append(nodes, n.Return)
+		nodes = append(nodes, flattenTree(n.Block, n)...)
 
 	// literals
 	case *ast.Identifier,
@@ -85,7 +88,6 @@ func flattenTree(node ast.Node, parent ast.Node) []ast.Node {
 		break // nothing to add
 
 	default:
-		panic("TODO: Handle all nodes types")
 		utils.InvalidCodePath()
 	}
 

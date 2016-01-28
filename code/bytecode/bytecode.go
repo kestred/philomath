@@ -60,6 +60,7 @@ const (
 	COPY_VALUE
 	LOAD_CONST
 
+	CALL
 	RETURN
 
 	I64_ADD
@@ -130,88 +131,103 @@ func ToI64(v Data) int64     { return *(*int64)(unsafe.Pointer(&v)) }
 func ToU64(v Data) uint64    { return *(*uint64)(unsafe.Pointer(&v)) }
 func ToF64(v Data) float64   { return *(*float64)(unsafe.Pointer(&v)) }
 
-type Scope struct {
-	NextRegister Register
-	Registers    map[string]Register
-}
-
-func NewScope() *Scope {
-	return &Scope{
-		// skip the 0th register
-		NextRegister: 1,
-		Registers:    make(map[string]Register),
-	}
-}
-
-func (s *Scope) AssignRegister() Register {
-	utils.Assert(s.NextRegister < OutOfRegisters, "Ran out of assignable registers.")
-	register := s.NextRegister
-	s.NextRegister += 1
-	return register
-}
-
 type Program struct {
-	// used by compiler to generate ASM
-	Data map[string]int // offset into Constants
-	Text map[string]int // offset into Instructions
-	// used while interpreting
-	Constants    []Data
+	Constants  []Data
+	Procedures []Procedure
+	Data       map[string]int // offset into Constants
+	Text       map[string]int // offset into Procedures
+}
+
+func NewProgram() *Program {
+	prog := &Program{}
+	prog.Data = map[string]int{}
+	prog.Text = map[string]int{"start_": 0}
+	prog.AddConstant(0)
+	prog.NewProcedure() // start_
+	return prog
+}
+
+func (p *Program) Extend(node ast.Node) {
+	p.Procedures[0].Extend(node)
+}
+
+func (p *Program) AddConstant(data Data) int {
+	next := len(p.Constants)
+	p.Constants = append(p.Constants, data)
+	return next
+}
+
+func (p *Program) NewProcedure() *Procedure {
+	next := len(p.Procedures)
+	p.Procedures = append(p.Procedures, Procedure{
+		Index:        next,
+		Program:      p,
+		Instructions: []Instruction{},
+		Registers:    map[string]Register{},
+		NextRegister: +0,
+		ExprRegister: -1,
+	})
+	return &p.Procedures[next]
+}
+
+type Procedure struct {
+	Index        int
+	Program      *Program
 	Instructions []Instruction
+
+	// state for bytecode generation
+	Registers    map[string]Register
+	NextRegister Register // next assignable
+	ExprRegister Register // last result
 }
 
-func Generate(node ast.Node) (prog Program, scope *Scope) {
-	scope = NewScope()
-	prog.Constants = []Data{0} // the 0th constant is always 0
-	prog.Extend(node, scope)
-	return
-}
-
-func (p *Program) Extend(node ast.Node, scope *Scope) {
+func (p *Procedure) Extend(node ast.Node) {
+	endRegister := Register(-1)
 	switch n := node.(type) {
 	case *ast.TopScope:
 		for _, decl := range n.Decls {
-			p.Extend(decl, scope)
+			p.Extend(decl)
 		}
 
 	case *ast.Block:
 		for _, subnode := range n.Nodes {
-			p.Extend(subnode, scope)
+			p.Extend(subnode)
 		}
 
 	case *ast.ImmutableDecl:
 		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
-			p.Extend(defn.Expr, scope)
-			scope.Registers[n.Name.Literal] = p.LastReg()
+			p.Extend(defn.Expr)
+			p.Registers[n.Name.Literal] = p.ExprRegister
 		}
 
 	case *ast.MutableDecl:
 		if n.Expr != nil {
-			p.Extend(n.Expr, scope)
-			scope.Registers[n.Name.Literal] = p.LastReg()
+			p.Extend(n.Expr)
+			p.Registers[n.Name.Literal] = p.ExprRegister
 		} else {
 			//// TODO: zero initialization (but it won't matter until there are type declarations)
-			//scope.Registers[n.Name.Literal] = scope.AssignRegister()
+			//p.Registers[n.Name.Literal] = p.AssignRegister()
 			panic("TODO: Unhandled mutable declaration without expression")
 		}
 
 	case *ast.EvalStmt:
-		p.Extend(n.Expr, scope)
+		p.Extend(n.Expr)
 
 	case *ast.AssignStmt:
 		utils.Assert(len(n.Left) == len(n.Right), "An unbalanced assignment survived until bytecode generation")
 
 		// simple assignment
 		if len(n.Right) == 1 {
-			p.Extend(n.Right[0], scope)
-			rhs := p.LastReg()
+			p.Extend(n.Right[0])
+			rhs := p.ExprRegister
 
 			if expr, ok := n.Left[0].(*ast.Identifier); ok {
-				lhs, exists := scope.Registers[expr.Literal]
+				lhs, exists := p.Registers[expr.Literal]
 				utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
 				// copy from rhs to lhs (cast as needed)
-				rhs = p.insertConvert(scope, rhs, n.Right[0].GetType(), expr.Type)
-				p.Instructions = append(p.Instructions, Instruction{Op: COPY_VALUE, Out: lhs, Left: rhs})
+				p.insertConvert(rhs, n.Right[0].GetType(), expr.Type)
+				p.Instructions = append(p.Instructions, Instruction{Op: COPY_VALUE, Out: lhs, Left: p.ExprRegister})
 			} else {
 				panic("TODO: Handle non-identifier expressions as the assignee in assignment")
 			}
@@ -222,21 +238,21 @@ func (p *Program) Extend(node ast.Node, scope *Scope) {
 		// parallel assignment
 		tmps := make([]Register, len(n.Right))
 		for i, expr := range n.Right {
-			p.Extend(expr, scope)
-			rhs := p.LastReg()
+			p.Extend(expr)
+			rhs := p.ExprRegister
 
 			// copy from rhs to temporary
-			tmps[i] = scope.AssignRegister()
+			tmps[i] = p.AssignRegister()
 			p.Instructions = append(p.Instructions, Instruction{Op: COPY_VALUE, Out: tmps[i], Left: rhs})
 		}
 		for i, expr := range n.Left {
 			if e, ok := expr.(*ast.Identifier); ok {
-				lhs, exists := scope.Registers[e.Literal]
+				lhs, exists := p.Registers[e.Literal]
 				utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
 				// copy from temporary to lhs (cast as needed)
-				rhs := p.insertConvert(scope, tmps[i], n.Right[i].GetType(), e.Type)
-				p.Instructions = append(p.Instructions, Instruction{Op: COPY_VALUE, Out: lhs, Left: rhs})
+				p.insertConvert(tmps[i], n.Right[i].GetType(), e.Type)
+				p.Instructions = append(p.Instructions, Instruction{Op: COPY_VALUE, Out: lhs, Left: p.ExprRegister})
 			} else {
 				panic("TODO: Handle non-identifier expressions as the assignee in assignment")
 			}
@@ -244,7 +260,7 @@ func (p *Program) Extend(node ast.Node, scope *Scope) {
 
 	case *ast.NumberLiteral:
 		utils.Assert(n.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
-		register := scope.AssignRegister()
+		register := p.AssignRegister()
 
 		var value Data
 		switch v := n.Value.(type) {
@@ -258,30 +274,31 @@ func (p *Program) Extend(node ast.Node, scope *Scope) {
 			panic("TODO: Unhandled value type")
 		}
 
-		constant := len(p.Constants)
+		constant := p.Program.AddConstant(Data(value))
 		instruction := Instruction{Op: LOAD_CONST, Out: register, Left: Constant(constant)}
-		p.Constants = append(p.Constants, Data(value))
 		p.Instructions = append(p.Instructions, instruction)
+		endRegister = register
 
 	case *ast.Identifier:
-		register, exists := scope.Registers[n.Literal]
+		register, exists := p.Registers[n.Literal]
 		utils.Assert(exists, "A register was not allocated for a name before use in an expression")
-		// FIXME: currently expressions must return an instruction with the Out register set,
-		//        but it doesn't make a whole lot of sense to be emitting NOOPs for value loads
-		p.Instructions = append(p.Instructions, Instruction{Op: NOOP, Out: register})
+		endRegister = register
 
 	case *ast.GroupExpr:
-		p.Extend(n.Subexpr, scope)
+		p.Extend(n.Subexpr)
+		endRegister = p.ExprRegister
 
 	case *ast.InfixExpr:
 		// TODO: casts should probably be added to the AST elsewhere and only processed here
 		var infix Instruction
 
 		// instructions to evaluate arguments
-		p.Extend(n.Left, scope)
-		infix.Left = p.insertConvert(scope, p.LastReg(), n.Left.GetType(), n.Type)
-		p.Extend(n.Right, scope)
-		infix.Right = p.insertConvert(scope, p.LastReg(), n.Right.GetType(), n.Type)
+		p.Extend(n.Left)
+		p.insertConvert(p.ExprRegister, n.Left.GetType(), n.Type)
+		infix.Left = p.ExprRegister
+		p.Extend(n.Right)
+		p.insertConvert(p.ExprRegister, n.Right.GetType(), n.Type)
+		infix.Right = p.ExprRegister
 
 		// TODO: table lookup?
 		// TODO: probably shouldn't have any "inferred" types by the time we get here
@@ -335,25 +352,39 @@ func (p *Program) Extend(node ast.Node, scope *Scope) {
 		}
 
 		// bytecode to evaluate operator
-		infix.Out = scope.AssignRegister()
+		infix.Out = p.AssignRegister()
 		p.Instructions = append(p.Instructions, infix)
+		endRegister = infix.Out
 
 	case *ast.ProcedureExpr:
-		// Just ignore it for now; in the future, we will be generating more than just an array?
+		proc := p.Program.NewProcedure()
+		if defn, ok := n.Parent.(*ast.ConstantDefn); ok {
+			if decl, ok := defn.Parent.(*ast.ImmutableDecl); ok {
+				p.Program.Text[decl.Name.Literal] = proc.Index
+			}
+		}
+		proc.Extend(n.Block)
 
 	default:
 		panic("TODO: Unhandle node type in bytecode.Generate")
 	}
+
+	// set the result of this expression
+	p.ExprRegister = endRegister
 }
 
-func (p *Program) LastReg() Register {
-	return p.Instructions[len(p.Instructions)-1].Out
+func (p *Procedure) AssignRegister() Register {
+	utils.Assert(p.NextRegister < OutOfRegisters, "Ran out of assignable registers.")
+	register := p.NextRegister
+	p.NextRegister += 1
+	return register
 }
 
 // TODO: Handle non-numeric types
-func (p *Program) insertConvert(scope *Scope, loc Register, from ast.Type, to ast.Type) Register {
+func (p *Procedure) insertConvert(loc Register, from ast.Type, to ast.Type) {
+	p.ExprRegister = loc
 	if from == to {
-		return loc
+		return
 	}
 
 	// TODO: maybe insert overflow check for integer conversions?
@@ -363,32 +394,30 @@ func (p *Program) insertConvert(scope *Scope, loc Register, from ast.Type, to as
 	//        but here I want to (and do) treat them as signed
 	case ast.InferredNumber, ast.InferredSigned:
 		if to == ast.InferredFloat {
-			convert := Instruction{Op: CONVERT_I64_TO_F64, Out: scope.AssignRegister()}
+			convert := Instruction{Op: CONVERT_I64_TO_F64, Out: p.AssignRegister()}
 			convert.Left = loc
 			p.Instructions = append(p.Instructions, convert)
-			return convert.Out
+			p.ExprRegister = convert.Out
 		}
 	case ast.InferredUnsigned:
 		if to == ast.InferredFloat {
-			convert := Instruction{Op: CONVERT_U64_TO_F64, Out: scope.AssignRegister()}
+			convert := Instruction{Op: CONVERT_U64_TO_F64, Out: p.AssignRegister()}
 			convert.Left = loc
 			p.Instructions = append(p.Instructions, convert)
-			return convert.Out
+			p.ExprRegister = convert.Out
 		}
 	case ast.InferredFloat:
 		switch to {
 		case ast.InferredNumber, ast.InferredSigned:
-			convert := Instruction{Op: CONVERT_F64_TO_I64, Out: scope.AssignRegister()}
+			convert := Instruction{Op: CONVERT_F64_TO_I64, Out: p.AssignRegister()}
 			convert.Left = loc
 			p.Instructions = append(p.Instructions, convert)
-			return convert.Out
+			p.ExprRegister = convert.Out
 		case ast.InferredUnsigned:
-			convert := Instruction{Op: CONVERT_F64_TO_U64, Out: scope.AssignRegister()}
+			convert := Instruction{Op: CONVERT_F64_TO_U64, Out: p.AssignRegister()}
 			convert.Left = loc
 			p.Instructions = append(p.Instructions, convert)
-			return convert.Out
+			p.ExprRegister = convert.Out
 		}
 	}
-
-	return loc
 }

@@ -17,37 +17,40 @@ func evalExample(t *testing.T, input string) bytecode.Data {
 	section := code.PrepareTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
-	program, scope := bytecode.Generate(node)
-	return Evaluate(program, scope.NextRegister)
+	program := bytecode.NewProgram()
+	program.Extend(node)
+
+	t.Log(program.Procedures[0].Instructions)
+	return Evaluate(program.Procedures[0])
 }
 
 func TestEvaluateNoop(t *testing.T) {
-	var program bytecode.Program
+	var program *bytecode.Program
 	var result bytecode.Data
 
 	// just a noop
-	program = bytecode.Program{
-		Constants:    []bytecode.Data{0},
-		Instructions: []bytecode.Instruction{{Op: bytecode.NOOP}},
-	}
-	result = Evaluate(program, 1)
+	program = bytecode.NewProgram()
+	program.Procedures[0].NextRegister = 1
+	program.Procedures[0].Instructions = []bytecode.Instruction{{Op: bytecode.NOOP}}
+	result = Evaluate(program.Procedures[0])
 	assert.Equal(t, 0, int(result))
 
 	// interleaved noops
-	program = bytecode.Program{
-		Constants: []bytecode.Data{0, 1, 2},
-		Instructions: []bytecode.Instruction{
-			{Op: bytecode.NOOP},
-			{Op: bytecode.NOOP},
-			{Op: bytecode.NOOP},
-			{Op: bytecode.LOAD_CONST, Out: 1, Left: 1},
-			{Op: bytecode.NOOP},
-			{Op: bytecode.LOAD_CONST, Out: 2, Left: 2},
-			{Op: bytecode.NOOP},
-			{Op: bytecode.I64_ADD, Left: 1, Right: 2, Out: 3},
-		},
+	program = bytecode.NewProgram()
+	program.Constants = []bytecode.Data{0, 1, 2}
+	program.Procedures[0].ExprRegister = 3
+	program.Procedures[0].NextRegister = 4
+	program.Procedures[0].Instructions = []bytecode.Instruction{
+		{Op: bytecode.NOOP},
+		{Op: bytecode.NOOP},
+		{Op: bytecode.NOOP},
+		{Op: bytecode.LOAD_CONST, Out: 1, Left: 1},
+		{Op: bytecode.NOOP},
+		{Op: bytecode.LOAD_CONST, Out: 2, Left: 2},
+		{Op: bytecode.NOOP},
+		{Op: bytecode.I64_ADD, Out: 3, Left: 1, Right: 2},
 	}
-	result = Evaluate(program, 3)
+	result = Evaluate(program.Procedures[0])
 	assert.Equal(t, 3, int(result))
 }
 
@@ -104,7 +107,7 @@ func TestEncodeBlock(t *testing.T) {
 	result = evalExample(t, `{
 		xyzzy := 012;
 		xyzzy = 0700;
-		xyzzy;
+		xyzzy + 0;
 	}`)
 	var xyzzy = uint64(012)
 	xyzzy = uint64(0700)
@@ -115,7 +118,7 @@ func TestEncodeBlock(t *testing.T) {
 	result = evalExample(t, `{
 		plugh := 1 - 37;
 		plugh = 0.25 * plugh;
-		plugh;
+		plugh + 0;
 	}`)
 	var plugh = int64(1) - int64(37)
 	plugh = int64(0.25 * float64(plugh))
@@ -133,7 +136,7 @@ func TestEncodeBlock(t *testing.T) {
 
 		# parallel assignment (with and without casts)
 		xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
-		nerrf;
+		nerrf + 0;
 	}`)
 
 	var nerrf = int64(14)

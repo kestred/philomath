@@ -60,6 +60,10 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 	case *ast.GroupExpr:
 		n.Type = inferTypesRecursive(n.Subexpr)
 		return n.Type
+	case *ast.ProcedureExpr:
+		n.Type = ast.PlaceholderType // TODO: ProcedureType(s)
+		inferTypesRecursive(n.Block)
+		return n.Type
 	case *ast.Identifier:
 		utils.Assert(n.Decl != nil, "An unresolved identifier survived until type inferrence")
 		switch d := n.Decl.(type) {

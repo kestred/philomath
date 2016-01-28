@@ -31,14 +31,14 @@ func init() {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, `
-Phi is an experimental compiler for AI research.
+Phi is a compiler for Philomath. It was written as a learning project.
 
 Usage:
   phi COMMAND [OPTIONS] [ARGS]
 
 Commands:
   build   compile one or more files
-  run     interpret the file or input stream
+  run     interpret a philomath file
   shell   open an interactive philomath REPL
 `[1:])
 }
@@ -84,11 +84,11 @@ func doRun(args []string) {
 		log.Fatalln("error:", err)
 	}
 
-	p := parser.Make(args[0], *ArgTrace, []byte(source))
-	top := p.ParseTop()
-	errcount := len(p.Errors)
+	psr := parser.Make(args[0], *ArgTrace, []byte(source))
+	tree := psr.ParseTop()
+	errcount := len(psr.Errors)
 	if errcount > 0 {
-		for _, err := range p.Errors {
+		for _, err := range psr.Errors {
 			fmt.Errorf("%v\n", err)
 		}
 
@@ -99,15 +99,12 @@ func doRun(args []string) {
 		}
 	}
 
-	var inits []ast.Decl
-	var mainProc *ast.ProcedureExpr
-	for _, decl := range top.Decls {
+	for _, decl := range tree.Decls {
 		if decl.GetName().Literal == "main" {
 			if imm, ok := decl.(*ast.ImmutableDecl); ok {
 				if con, ok := imm.Defn.(*ast.ConstantDefn); ok {
-					if proc, ok := con.Expr.(*ast.ProcedureExpr); ok {
-						mainProc = proc
-						continue
+					if _, ok := con.Expr.(*ast.ProcedureExpr); ok {
+						break
 					}
 				}
 
@@ -116,28 +113,18 @@ func doRun(args []string) {
 				log.Fatalf(`your "main" procedure must use "::" instead of ":="`)
 			}
 		}
-
-		inits = append(inits, decl)
 	}
 
-	if mainProc == nil {
+	section := code.PrepareTree(tree, nil)
+	semantics.ResolveNames(&section)
+	semantics.InferTypes(&section)
+	program := bytecode.NewProgram()
+	program.Extend(tree)
+
+	if _, ok := program.Text["main"]; !ok {
 		log.Fatalf(`unable to find a procedure named "main"`)
 	}
 
-	// initialize constants/globals
-	programData := ast.Top(inits)
-	initSection := code.PrepareTree(programData, nil)
-	semantics.ResolveNames(&initSection)
-	semantics.InferTypes(&initSection)
-	program, scope := bytecode.Generate(programData)
-
-	// bytecode for main procedure
-	mainSection := code.PrepareTree(mainProc.Block, &initSection)
-	semantics.ResolveNames(&mainSection)
-	semantics.InferTypes(&mainSection)
-	program.Extend(mainProc.Block, scope)
-
-	// interpret bytecode
-	temp := interpreter.Evaluate(program, scope.NextRegister)
-	log.Println("result:", temp)
+	tmp := interpreter.Run(program)
+	log.Println("result:", tmp)
 }
