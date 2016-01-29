@@ -1,0 +1,17 @@
+
+
+unix_stdin :: 0
+unix_stdout :: 1
+unix_stderr :: 2
+
+unix_read :: 0
+unix_write :: 1
+unix_open :: 2
+unix_close :: 3
+unix_mmap :: 9
+unix_mprotect :: 10
+unix_munmap :: 11
+
+main :: () {
+  syscall unix_write, unix_stdout, "Hello world!\n", 13;
+}

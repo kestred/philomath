@@ -58,17 +58,18 @@ function_type = "(" , [ type , { "," , type } ] , ")" , [ "->" , type ] ;
 type          = array_type | function_type | named_type | pointer_type ;
 
 (* Statements *)
-done_stmt   = "done" , ";" ;
-return_stmt = "return" , expr , ";" ;
-assignment  = expr_list , [ operator ] , "=" , expr_list ;
-assign_stmt = assignment , ";" ;
-expr_range  = infix_expr , ".." , infix_expr ;
-each_range  = identifier , [ "," , identifier ] , "in" , ( infix_expr | expr_range ) ;
-for_range   = mutable_decl , expr , ";" , assignment ;
-for_stmt    = "for" , ( for_range | each_range ) , assignment ;
-while_stmt  = "while" , expr , block ;
-if_stmt     = "if" , expr , block , { "else" , "if" , expr , block } , [ "else" , block ] ;
-stmt        = expr , ";" | if_stmt | for_stmt | while_stmt | assign_stmt | done_stmt | return_stmt ;
+done_stmt    = "done" , ";" ;
+return_stmt  = "return" , expr , ";" ;
+syscall_stmt = "syscall" , expr , { "," , expr } ; (* max 6, but repeat is easier to read *)
+assignment   = expr_list , [ operator ] , "=" , expr_list ;
+assign_stmt  = assignment , ";" ;
+expr_range   = infix_expr , ".." , infix_expr ;
+each_range   = identifier , [ "," , identifier ] , "in" , ( infix_expr | expr_range ) ;
+for_range    = mutable_decl , expr , ";" , assignment ;
+for_stmt     = "for" , ( for_range | each_range ) , assignment ;
+while_stmt   = "while" , expr , block ;
+if_stmt      = "if" , expr , block , { "else" , "if" , expr , block } , [ "else" , block ] ;
+stmt         = expr , ";" | if_stmt | for_stmt | while_stmt | assign_stmt | done_stmt | return_stmt ;
 
 short_block = ":" , stmt ;
 long_block  = "{" , { stmt | decl | long_block } , "}" ;

@@ -13,9 +13,9 @@ var (
 	InferredUnsigned = BaseTyp("<unsigned>")   // could only be an unsigned number
 
 	// Error types
-	UninferredType = BaseTyp("<uninferred>")  // used before it was inferred
-	UnresolvedType = BaseTyp("<unresolved>")  // could not infer type
-	UncastableType = BaseTyp("<uncastable>")  // could not cast type
+	UninferredType  = BaseTyp("<uninferred>")  // used before it was inferred
+	UnresolvedType  = BaseTyp("<unresolved>")  // could not infer type
+	UncastableType  = BaseTyp("<uncastable>")  // could not cast type
 	PlaceholderType = BaseTyp("<placeholder>") // a placeholder until I implement more complex types
 
 	// Builtin types
@@ -100,6 +100,7 @@ func (s *WhileStmt) ImplementsEvaluable()     {}
 func (s *ForStmt) ImplementsEvaluable()       {}
 func (s *EvalStmt) ImplementsEvaluable()      {}
 func (s *AssignStmt) ImplementsEvaluable()    {}
+func (s *SyscallStmt) ImplementsEvaluable()   {}
 func (s *ReturnStmt) ImplementsEvaluable()    {}
 func (s *DoneStmt) ImplementsEvaluable()      {}
 
@@ -130,13 +131,14 @@ type Stmt interface {
 	ImplementsStmt()
 }
 
-func (s *IfStmt) ImplementsStmt()     {}
-func (s *WhileStmt) ImplementsStmt()  {}
-func (s *ForStmt) ImplementsStmt()    {}
-func (s *EvalStmt) ImplementsStmt()   {}
-func (s *AssignStmt) ImplementsStmt() {}
-func (s *ReturnStmt) ImplementsStmt() {}
-func (s *DoneStmt) ImplementsStmt()   {}
+func (s *IfStmt) ImplementsStmt()      {}
+func (s *WhileStmt) ImplementsStmt()   {}
+func (s *ForStmt) ImplementsStmt()     {}
+func (s *EvalStmt) ImplementsStmt()    {}
+func (s *AssignStmt) ImplementsStmt()  {}
+func (s *SyscallStmt) ImplementsStmt() {}
+func (s *ReturnStmt) ImplementsStmt()  {}
+func (s *DoneStmt) ImplementsStmt()    {}
 
 type Expr interface {
 	Node
@@ -412,6 +414,14 @@ type (
 
 		// syntax
 		Expr Expr
+	}
+
+	SyscallStmt struct {
+		NodeBase
+
+		// syntax
+		Number    Expr
+		Arguments [6]Expr
 	}
 
 	ReturnStmt struct {
