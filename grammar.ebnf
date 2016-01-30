@@ -7,16 +7,13 @@
 hex_digit      = "0" ;.. "9" | "A" ;.. "F" | "a" ;.. "f" ;
 octal_digit    = "0" ;.. "7" ;
 decimal_digit  = "0" ;.. "9" ;
-unicode_digit  = ? a Unicode character categorized as "Decimal Digit" ? ;
-unicode_math   = ? a Unicode character categorized as "Symbol, Math" ? ;
-unicode_letter = ? a Unicode character categorized as "Letter" ? ;
 text_character = ? space, tab, or any Unicode character greater than U+0020 ? ;
 ascii_letter   = "A" ;.. "F" | "a" ;.. "f" ;
-alphanumeric   = unicode_letter | unicode_digit ;
+ascii_alphanum = ascii_letter | decimal_digit ;
 character      = text_character | newline | carriage_return ;
 
 (* Literals *)
-identifier        = unicode_letter , { [ "_" ] alphanumeric } ;
+identifier        = ascii_letter , { [ "_" ] ascii_alphanum } ;
 scoped_identifier = [ identifier , "." ] , identifier ;
 
 hex_literal      = "0" , ( "x" ) , { hex_digit } ;
@@ -35,20 +32,13 @@ float_literal    = mantissa , "." , [ decimals ] , [ exponent ]
 number_literal  = integer_literal | float_literal ;
 text_literal    = '"' , { text_character } , '"' ;
 
-
-(* Notes:
-     Maybe eventually we'll accept any unicode math symbol, for now I'm just
-     using the reduced symbol set after this comment.
-
-math_symbol = ( unicode_math - ( "=" | ">" | "<" | "~" ) ) | "%" | "*" | "/" ;
-operator    = math_symbol , { math_symbol } ;
-
-*)
 infix_name   = "_" , { ascii_letter | decimal_digit } , "_" ;
 prefix_name  = { ascii_letter | decimal_digit } , "_" ;
 postfix_name = "_" , { ascii_letter | decimal_digit } ;
 math_symbol  = "+", "-", "*", "/", "%" ;
 operator     = math_symbol | infix_name | prefix_name | postfix_name ;
+
+directive    = "#" , identifier ;
 
 (* Types *)
 named_type    = scoped_identifier ;
@@ -60,7 +50,6 @@ type          = array_type | function_type | named_type | pointer_type ;
 (* Statements *)
 done_stmt    = "done" , ";" ;
 return_stmt  = "return" , expr , ";" ;
-syscall_stmt = "syscall" , expr , { "," , expr } ; (* max 6, but repeat is easier to read *)
 assignment   = expr_list , [ operator ] , "=" , expr_list ;
 assign_stmt  = assignment , ";" ;
 expr_range   = infix_expr , ".." , infix_expr ;
@@ -72,7 +61,7 @@ if_stmt      = "if" , expr , block , { "else" , "if" , expr , block } , [ "else"
 stmt         = expr , ";" | if_stmt | for_stmt | while_stmt | assign_stmt | done_stmt | return_stmt ;
 
 short_block = ":" , stmt ;
-long_block  = "{" , { stmt | decl | long_block } , "}" ;
+long_block  = { directive } , "{" , { stmt | decl | long_block } , "}" ;
 block       = short_block | long_block ;
 
 (* Expressions *)

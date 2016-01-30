@@ -13,5 +13,17 @@ unix_mprotect :: 10
 unix_munmap :: 11
 
 main :: () {
-  syscall unix_write, unix_stdout, "Hello world!\n", 13;
+  message := "Hello world!\n"
+  retval := 0
+
+  #asm {
+    mov     %rax, unix_write
+    mov     %rdi, unix_stdout
+    mov     %rsi, foo
+    mov     %rdx, 13
+    syscall
+    mov     retval, %rax
+  }
+
+  return retval
 }
