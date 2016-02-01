@@ -227,6 +227,20 @@ func TestScansIdentifier(t *testing.T) {
 	}
 }
 
+func TestScansDirective(t *testing.T) {
+	// ignore a shebang line
+	scan, err := scanOnce("#!/usr/bin/phi run\n   3    ")
+	assert.Nil(t, err)
+	assert.Equal(t, token.NUMBER, scan.tok)
+
+	// scan a directive
+	scan, err = scanOnce("#asm")
+	assert.Nil(t, err)
+	assert.Equal(t, token.DIRECTIVE, scan.tok)
+	assert.Equal(t, 0, scan.pos)
+	assert.Equal(t, `asm`, scan.lit)
+}
+
 func TestScansStrings(t *testing.T) {
 	scan, err := scanOnce(`"simple"`)
 	assert.Nil(t, err)
