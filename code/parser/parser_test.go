@@ -58,9 +58,9 @@ func TestParseDeclarations(t *testing.T) {
 	})
 
 	assert.Equal(t, expected, parseAny(t, `{
-		foo := 3;      # mutable declaration
-		baz :: 1;      # constant definition
-		2 + foo + baz; # evaluated statement
+		foo := 3;      // mutable declaration
+		baz :: 1;      // constant definition
+		2 + foo + baz; // evaluated statement
 	}`))
 }
 
@@ -94,25 +94,25 @@ func TestParseProcedures(t *testing.T) {
 	})
 
 	assert.Equal(t, expected, parseAny(t, `{
-		# immutable procedure
+		// immutable procedure
 		immutable :: () {
 			dragonfruit := 3.0;
 			dragonfruit / 1.0;
 		}
 
-		# mutable procedure
+		// mutable procedure
 		mutable := () {
 			0700 + 0040 + 0004;
 		};
 
-		# nested procedures
+		// nested procedures
 		outer :: () {
-			# empty procedure
+			// empty procedure
 			inner :: () {
 			}
 		}
 
-		# short procedure
+		// short procedure
 		short :: (): "Hello world";
 	}`))
 }
@@ -139,23 +139,23 @@ func TestParseBlocks(t *testing.T) {
 	})
 
 	assert.Equal(t, expected, parseAny(t, `{
-		; # ignore extra semicolons occuring before a statement
+		; // ignore extra semicolons occuring before a statement
 
-		# a nested block
+		// a nested block
 		{
 			bar := foo;
 			0755 - baz;
 
-			foo = baz * 4;		        # assignment
-			bar, foo = foo + 27, bar; # parallel assignment
+			foo = baz * 4;		        // assignment
+			bar, foo = foo + 27, bar; // parallel assignment
 		}
 
-		# ignore extra semicolons
+		// ignore extra semicolons
 		; ;
 		8.4e-5 / 0.5;; ;
 		;
 
-		# empty block
+		// empty block
 		{
 		}
 	}`))

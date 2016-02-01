@@ -133,11 +133,24 @@ scanAgain:
 		case -1:
 			tok = token.END
 		case '#':
-			if s.scanComment() {
-				goto scanAgain
+			// NOTE: Ignore leading "#!/usr/bin/philomath run" et. al.
+			if s.char == '!' {
+				// TODO: Error unless the shebang includes "run"
+				// TODO: Error unless the shebang is on the first line
+				s.next()
+				if s.scanComment(false) {
+					goto scanAgain
+				} else {
+					tok = token.INVALID
+				}
+			} else if isLetter(s.char) {
+				lit = s.scanIdentifier()
+				tok = token.DIRECTIVE
 			} else {
+				s.error(pos, fmt.Sprintf("unexpected character %#U", ch))
 				tok = token.INVALID
 			}
+			// TODO: Scan directive
 		case '"':
 			tok, lit = s.scanText()
 		case '.':
@@ -146,8 +159,26 @@ scanAgain:
 			} else {
 				tok = token.PERIOD
 			}
-		case '+', '*', '/', '%':
+		case '+', '*', '%':
 			tok = token.OPERATOR
+		case '/':
+			if s.char == '/' {
+				s.next()
+				if s.scanComment(false) {
+					goto scanAgain
+				} else {
+					tok = token.INVALID
+				}
+			} else if s.char == '*' {
+				s.next()
+				if s.scanComment(true) {
+					goto scanAgain
+				} else {
+					tok = token.INVALID
+				}
+			} else {
+				tok = token.OPERATOR
+			}
 		case '-':
 			if s.char == '>' {
 				s.next()
@@ -318,13 +349,13 @@ func (s *Scanner) scanIdentifier() string {
 	return string(s.src[offset:s.offset])
 }
 
-// scanComment eats either a line or block comment.
+// scanComment eats a (line or block) comment.
 // In case of an error, it returns false. Otherwise it returns true.
-func (s *Scanner) scanComment() bool {
-	// initial '#' already consumed
-	offset := s.offset - 1
-	if s.char == '-' {
-		// #- block comment -#
+func (s *Scanner) scanComment(block bool) bool {
+	// initial "//" or "/*" already consumed
+	offset := s.offset - 2
+	if block {
+		/* block comment */
 		s.next()
 
 		nesting := 0
@@ -332,13 +363,13 @@ func (s *Scanner) scanComment() bool {
 			ch := s.char
 			s.next()
 
-			if ch == '#' {
-				if s.char == '-' {
+			if ch == '/' {
+				if s.char == '*' {
 					s.next()
 					nesting += 1
 				}
-			} else if ch == '-' {
-				if s.char == '#' {
+			} else if ch == '*' {
+				if s.char == '/' {
 					s.next()
 					if nesting > 0 {
 						nesting -= 1
@@ -349,7 +380,7 @@ func (s *Scanner) scanComment() bool {
 			}
 		}
 	} else {
-		// # line comment
+		// // line comment
 		for (s.char != '\n' && s.char != '\r') && s.char >= 0 {
 			s.next()
 		}

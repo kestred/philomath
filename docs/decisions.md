@@ -153,33 +153,7 @@ Alternatives:
      Using "unicode" or "codepoint" is too long, and "code" is too confusing
      Char sould be more intuitive to students than rune
 
-### [5] Line comments
-Decisions:
- * Line comments start with "#"
-
-Reasoning:
- * Allows for use as an interpreted shell "#!" script
- * Using "#" is shorter than "//" (both should be familiar)
- * Using "#" with directives (as in rust) feels strange to
-   me except at the beginning of a line (as in the C preprocessor)
-
-### [6] Block comments
-Decisions:
- * Block comments start with "#-" and end with "-#"
- * Block comments are nestable
-
-Reasoning:
- * Feels similar to `//` vs `/* */`, so should be more familiar
- * Looks better than for example `#*` and `*#`
- * Using `#-` instead of `/*`, `"""`, etc because it reduces the
-   number of symbols we use as part of the primary language syntax,
-   allowing those to be used elsewhere for something else
- * Its easy to turn a line comment into a block comment
- * Nesting allows the programmer to comment out large sections
-   even when a smaller section was already block commented
-   (for example for documentation, or to temporarily disable a change)
-
-### [7] Variable initialization
+### [5] Variable initialization
 Decisions:
  * Variables are initialized to 0 by default
  * Variables can be explicitly declared uninitialized
@@ -191,7 +165,7 @@ Reasoning:
    within tight loops, although the compiler should also attempt
    to detect and optimize away unnecessary initialization
 
-### [8] Enumerations
+### [6] Enumerations
 Concerns:
  * It may be nice if enums where more generally flexibile
    For example I may want to have some "Monster" enum where each monster type
@@ -261,7 +235,7 @@ Examples:
    }
     ```
 
-### [9] User-defined definitions
+### [7] User-defined definitions
 Thoughts:
  * User-defined definitions have the syntax `IDENT₁ :: IDENT₂ { DSL_SOURCE }`
  * Parsing the source should be deferred until the IDENT₂ identifier is resolved
@@ -311,7 +285,7 @@ Concerns:
  * User-defined definitions may still be valuable for some case I've not thought
    of yet (like DSLs, maybe for testing?) so I'm not yet ruling the feature out
 
-### [10] User defined context
+### [8] User defined context
 Decisions:
  * Allow users to define a "context" (and functions within that context) that is
    implicitly passed to each function call

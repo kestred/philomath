@@ -57,6 +57,7 @@ const (
 
 	// Identifier
 	IDENT
+	DIRECTIVE
 
 	// Literals
 	NUMBER
@@ -103,7 +104,8 @@ var tokens = [...]string{
 	INVALID: "Invalid token",
 	END:     "End of source",
 
-	IDENT: "Identifier",
+	IDENT:     "Identifier",
+	DIRECTIVE: "Directive",
 
 	NUMBER: "Number",
 	TEXT:   "Text",

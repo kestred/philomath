@@ -91,14 +91,14 @@ func TestSkipsWhitesace(t *testing.T) {
 	assert.Equal(t, "for", scan.lit)
 
 	scan, err = scanOnce(`
-    # line comment
-#- block comment
--#
-	  for food in corncupia#comment
+    // line comment
+/* block comment
+*/
+	  for food in corncupia//comment
 `)
 	assert.Nil(t, err)
 	assert.Equal(t, token.FOR, scan.tok)
-	assert.Equal(t, 43, scan.pos)
+	assert.Equal(t, 44, scan.pos)
 	assert.Equal(t, "for", scan.lit)
 
 	scan, err = scanOnce("\n    \r\n   \n\r for food in cornucopia\n")
@@ -109,19 +109,19 @@ func TestSkipsWhitesace(t *testing.T) {
 }
 
 func TestScansComment(t *testing.T) {
-	scan, err := scanOnce("# line comment\nfor food in cornucopia")
+	scan, err := scanOnce("// line comment\nfor food in cornucopia")
 	assert.Equal(t, token.FOR, scan.tok)
 	assert.Nil(t, err)
 
-	scan, err = scanOnce("#- block comment -#for food in cornucopia")
+	scan, err = scanOnce("/* block comment */for food in cornucopia")
 	assert.Equal(t, token.FOR, scan.tok)
 	assert.Nil(t, err)
 
-	scan, err = scanOnce("#- #- nested comment -# -# for food in cornucopia")
+	scan, err = scanOnce("/* /* nested comment */ */ for food in cornucopia")
 	assert.Equal(t, token.FOR, scan.tok)
 	assert.Nil(t, err)
 
-	scan, err = scanOnce("#-\nThis comment is unterminated\n")
+	scan, err = scanOnce("/*\nThis comment is unterminated\n")
 	assert.Equal(t, token.INVALID, scan.tok)
 	if assert.NotNil(t, err) {
 		assert.Equal(t, 0, err.pos.Offset)

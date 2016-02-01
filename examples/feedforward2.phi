@@ -1,3 +1,5 @@
+#!/usr/bin/phi run
+
 net_input :: fn(inputs: []Float, weights: []Float) -> Float {
   result := 0.0;
   for input, index in inputs:
@@ -12,7 +14,7 @@ tanh_error :: fn(output: Float, errors: []Float, weights: []Float) -> Float {
   return result * (1 - output * output);
 }
 
-feedforward :: module {
+Feedforward :: module {
   HiddenNode :: struct {
     output: Float;
     bias: Float;
@@ -28,7 +30,7 @@ feedforward :: module {
     weight_deltas: [2]Float;
   }
 
-  # a feedfoward neural network with a hidden layer, back propogation, and online learning
+  // a feedfoward neural network with a hidden layer, back propogation, and online learning
   Network :: struct {
     learning_rate: Float;
     hidden: [2]HiddenNode;
@@ -39,19 +41,19 @@ feedforward :: module {
 train_feedforward :: fn(net: ^feedforward.Network, inputs: [1]Float, outputs: [1]Float) {
   hidden_outputs : [2] Float;
   for node, index in net.hidden
-    # 1. Compute net input and output for hidden nodes (tanh)\
+    // 1. Compute net input and output for hidden nodes (tanh)\
     hidden_outputs[index] = math_tanh(net_input(inputs, node.weights));
 
   outputErrors : [1] Float;
   for node, index in net.outputs {
-    # 2. Compute net input and ouput for output nodes (identity)
+    // 2. Compute net input and ouput for output nodes (identity)
     output := net_input(net.inputs, node.weights);
 
-    # 3. Compute error for outputs nodes
+    // 3. Compute error for outputs nodes
     error := outputs[index] - output;
     outputErrors[index] = error;
 
-    # 4. Update weights for output nodes (online learning)
+    // 4. Update weights for output nodes (online learning)
     node.bias_delta = node.bias_delta + error;
     node.bias = node.bias + (node.bias_delta * net.learning_rate);
     for weight, index in node.weights {
@@ -62,10 +64,10 @@ train_feedforward :: fn(net: ^feedforward.Network, inputs: [1]Float, outputs: [1
   }
 
   for ^node, index in net.hidden {
-    # 5. Compute error for hidden nodes
+    // 5. Compute error for hidden nodes
     error := tanh_error(node.output, errors, node.weights);
 
-    # 6. Update weights for hidden nodes (online learning)
+    // 6. Update weights for hidden nodes (online learning)
     node.bias_delta = node.bias_delta + error;
     node.bias = node.bias + (node.bias_delta * net.learning_rate);
     for weight, index in node.weights {
@@ -81,16 +83,16 @@ ExamplePattern :: struct {
   outputs: []Float;
 }
 
-#- not Floatly sure what the best syntax for array and struct "literals" is
+/* not sure what the best syntax for array and struct "literals" is
 examples : []ExamplePattern = [
   {[ 0.4,  0.1,  0.2, 0.7, 0.3], [0.1, 0.2, 0.3, 0.4, 0.5]},
   {[0.25, 0.35, 0.45, 0.6, 1.1], [0.1, 0.2, 0.3, 0.4, 0.5]},
 ];
--#
+*/
 examples : []ExamplePattern;
 
 main :: () {
-  neural_net : feedforward.Network;
+  neural_net : Feedforward.Network;
   for example in examples:
     train_feedforward(^neural_net, example.inputs, example.outputs);
 }

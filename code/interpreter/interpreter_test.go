@@ -92,11 +92,11 @@ func TestEvaluateArithmetic(t *testing.T) {
 func TestEncodeBlock(t *testing.T) {
 	// declarations
 	result := evalExample(t, `{
-		hoge :: 3;          # constant decl
-		hoge + 2;           # one ident in expr, result ignored
+		hoge :: 3;          // constant decl
+		hoge + 2;           // one ident in expr, result ignored
 
-		piyo := 0.5 * hoge; # mutable decl
-		piyo / hoge;        # two ident in expr; TODO: return statement
+		piyo := 0.5 * hoge; // mutable decl
+		piyo / hoge;        // two ident in expr; TODO: return statement
 	}`)
 	const hoge = 3
 	var piyo = 0.5 * float64(hoge)
@@ -134,7 +134,7 @@ func TestEncodeBlock(t *testing.T) {
 		xyzzy = 0700;
 		plugh = 0.25 * plugh;
 
-		# parallel assignment (with and without casts)
+		// parallel assignment (with and without casts)
 		xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
 		nerrf + 0;
 	}`)

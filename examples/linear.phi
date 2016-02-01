@@ -1,3 +1,5 @@
+#!/usr/bin/phi run
+
 netInput :: func(inputs: []float, weights: []float) -> float {
   result := 0.0;
   for input, index in inputs:
@@ -12,10 +14,10 @@ linear_node :: struct {
   weightDeltas: [1]float;
 }
 
-# a linear neural network with online learning
-#
-# useful for calculating a linear regression in an "online" environment,
-# like from a stream of application events
+// a linear neural network with online learning
+//
+// useful for calculating a linear regression in an "online" environment,
+// like from a stream of application events
 linear_network :: struct {
   learningRate: float;
   outputs: [1]linear_node;

@@ -194,11 +194,11 @@ func TestEncodeBlock(t *testing.T) {
 		{Op: F64_DIVIDE, Out: Register(7), Left: Register(5), Right: Register(6)},
 	}
 	program := generateBytecode(t, `{
-		hoge :: 3;          # constant decl
-		hoge + 2;           # one ident in expr, result ignored
+		hoge :: 3;          // constant decl
+		hoge + 2;           // one ident in expr, result ignored
 
-		piyo := 0.5 * hoge; # mutable decl
-		piyo / hoge;        # two ident in expr; TODO: return statement
+		piyo := 0.5 * hoge; // mutable decl
+		piyo / hoge;        // two ident in expr; TODO: return statement
 	}`)
 	assert.Equal(t, constants, program.Constants)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
@@ -258,10 +258,10 @@ func TestEncodeBlock(t *testing.T) {
 		xyzzy := 012;
 		nerrf := 14;
 
-		xyzzy = 0700;                      # assignment
-		plugh = 0.25 * plugh;              # assignment with cast
+		xyzzy = 0700;                      // assignment
+		plugh = 0.25 * plugh;              // assignment with cast
 
-		# parallel assignment (with and without casts)
+		// parallel assignment (with and without casts)
 		xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
 		barrf := xyzzy * 10000 + nerrf * 100;
 	}`)

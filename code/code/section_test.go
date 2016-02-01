@@ -74,17 +74,17 @@ func TestFlattenBlock(t *testing.T) {
 	}
 
 	block := parseExample(t, `{
-		foo := -3;     # mutable declaration
-		baz :: 1;      # constant definition
-		(2 + foo) + baz; # evaluated statement
+		foo := -3;     // mutable declaration
+		baz :: 1;      // constant definition
+		(2 + foo) + baz; // evaluated statement
 
-		# a nested block
+		// a nested block
 		{
 			bar := foo;
 			0755 - baz;
 
-			foo = baz * 4;		        # assignment
-			bar, foo = foo + 27, bar; # parallel assignment
+			foo = baz * 4;		        // assignment
+			bar, foo = foo + 27, bar; // parallel assignment
 		}
 	}`)
 

@@ -1,4 +1,6 @@
-#- TODO: modules (ie. namespaces), this might be a good syntax?
+#!/usr/bin/phi run
+
+/* TODO: modules (ie. namespaces), this might be a good syntax?
 feedfoward :: module {
   hidden_node :: struct {
     output: float;
@@ -24,7 +26,7 @@ feedfoward :: module {
     outputs: [1]output_node;
   }
 }
--#
+*/
 
 netInput :: func(inputs: []float, weights: []float) -> float {
   result := 0.0;
@@ -55,7 +57,7 @@ output_node :: struct {
   weightDeltas: [2]float;
 }
 
-# a feedfoward neural network with a hidden layer, back propogation, and online learning
+// a feedfoward neural network with a hidden layer, back propogation, and online learning
 feedforward_network :: struct {
   learningRate: float;
   hidden: [2]hidden_node;
@@ -65,20 +67,20 @@ feedforward_network :: struct {
 trainFeedforward :: func(net: ^feedforward_network, inputs: [1]float, outputs: [1]float) {
   hiddenOutputs : [2] float;
   for node, index in net.hidden:
-    # 1. Compute net input and output for hidden nodes (tanh)
-    # TODO: intrinsics, modulize math?, etc
+    // 1. Compute net input and output for hidden nodes (tanh)
+    // TODO: intrinsics, modulize math?, etc
     hiddenOutputs[index] = math_tanh(netInput(inputs, node.weights));
 
   outputErrors : [1] float;
   for node, index in net.outputs {
-    # 2. Compute net input and ouput for output nodes (identity)
+    // 2. Compute net input and ouput for output nodes (identity)
     output := netInput(net.inputs, node.weights);
 
-    # 3. Compute error for outputs nodes
+    // 3. Compute error for outputs nodes
     error := outputs[index] - output;
     outputErrors[index] = error;
 
-    # 4. Update weights for output nodes (online learning)
+    // 4. Update weights for output nodes (online learning)
     node.biasDelta = node.biasDelta + error;
     node.bias = node.bias + (node.biasDelta * net.learningRate);
     for weight, index in node.weights {
@@ -89,10 +91,10 @@ trainFeedforward :: func(net: ^feedforward_network, inputs: [1]float, outputs: [
   }
 
   for ^node, index in net.hidden {
-    # 5. Compute error for hidden nodes
+    // 5. Compute error for hidden nodes
     error := tanhError(node.output, errors, node.weights);
 
-    # 6. Update weights for hidden nodes (online learning)
+    // 6. Update weights for hidden nodes (online learning)
     node.biasDelta = node.biasDelta + error;
     node.bias = node.bias + (node.biasDelta * net.learningRate);
     for weight, index in node.weights {
@@ -108,12 +110,12 @@ example_pattern :: struct {
   outputs: []float;
 }
 
-#- not really sure what the best syntax for array and struct "literals" is
+/* not really sure what the best syntax for array and struct "literals" is
 examples : []example_pattern = [
   {[ 0.4,  0.1,  0.2, 0.7, 0.3], [0.1, 0.2, 0.3, 0.4, 0.5]},
   {[0.25, 0.35, 0.45, 0.6, 1.1], [0.1, 0.2, 0.3, 0.4, 0.5]},
 ];
--#
+*/
 examples : []example_pattern;
 
 main :: func() {

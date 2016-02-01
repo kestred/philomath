@@ -21,11 +21,11 @@ func inferAny(t *testing.T, input string) ast.Node {
 
 func TestInferDeclarations(t *testing.T) {
 	block := inferAny(t, `{
-		hoge :: -3;         # constant decl
-		hoge + 2;           # one ident in expr
+		hoge :: -3;         // constant decl
+		hoge + 2;           // one ident in expr
 
-		piyo := 0.5 * hoge; # mutable decl
-		piyo / hoge;        # two ident in expr
+		piyo := 0.5 * hoge; // mutable decl
+		piyo / hoge;        // two ident in expr
 	}`).(*ast.Block)
 
 	decl0 := block.Nodes[0].(*ast.ImmutableDecl)

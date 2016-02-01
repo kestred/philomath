@@ -366,7 +366,7 @@ func (p *Parser) parseBinaryOperator() *ast.OperatorDefn {
 		}
 	}
 
-	if op.Type == ast.Nullary {
+	if op == nil {
 		panic("TODO: Handle operator is not an infix/postfix operator")
 	}
 
@@ -405,7 +405,7 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 			}
 		}
 
-		if op.Type == ast.Nullary {
+		if op == nil {
 			panic("TODO: Handle operator is not a prefix operator")
 		}
 

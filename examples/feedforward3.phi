@@ -1,4 +1,4 @@
-#!/bin/phi
+#!/usr/bin/phi run
 
 feedfoward :: module {
   hidden_node :: struct {

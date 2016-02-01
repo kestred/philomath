@@ -52,6 +52,7 @@ func TestTokenString(t *testing.T) {
 	assert.Equal(t, "End of source", END.String())
 
 	assert.Equal(t, "Identifier", IDENT.String())
+	assert.Equal(t, "Directive", DIRECTIVE.String())
 
 	assert.Equal(t, "Number", NUMBER.String())
 	assert.Equal(t, "Text", TEXT.String())
@@ -95,6 +96,7 @@ func TestIsOperator(t *testing.T) {
 	assert.Equal(t, false, END.IsOperator())
 
 	assert.Equal(t, false, IDENT.IsOperator())
+	assert.Equal(t, false, DIRECTIVE.IsOperator())
 
 	assert.Equal(t, false, NUMBER.IsOperator())
 	assert.Equal(t, false, TEXT.IsOperator())
@@ -131,6 +133,7 @@ func TestIsKeyword(t *testing.T) {
 	assert.Equal(t, false, END.IsKeyword())
 
 	assert.Equal(t, false, IDENT.IsKeyword())
+	assert.Equal(t, false, DIRECTIVE.IsKeyword())
 
 	assert.Equal(t, false, NUMBER.IsKeyword())
 	assert.Equal(t, false, TEXT.IsKeyword())

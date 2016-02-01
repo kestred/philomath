@@ -1,3 +1,5 @@
+#!/usr/bin/phi run
+
 token :: enum {
   > Specials
   Invalid 0 "Invalid character"
@@ -40,20 +42,20 @@ token :: enum {
   Module "module"
 }
 
-#- maybe below is a good syntax for tagged unions?
+/* maybe below is a good syntax for tagged unions?
    the question of tagging vs untagged is also uncertain
 
      :: variant ?
 
--#
-# abstract nodes
+*/
+// abstract nodes
 node :: union { decl|defn|expr|type }
 decl :: union { ^constant_decl|^mutable_decl }
 defn :: union { ^struct_defn|^union_defn|^user_defn|^value_defn }
 expr :: union { ^ident|^scoped_ident }
 type :: union { ^array_type|^function_type|^named_type|^pointer_type }
 
-# concrete nodes
+// concrete nodes
 constant_decl :: struct { name: ident; definition: defn; }
 mutable_decl  :: struct { name: ident; definition: defn; }
 
@@ -65,14 +67,14 @@ value_defn   :: struct { type: type; value: expr; }
 
 ident        :: struct { literal: text; }
 scoped_ident :: struct { scope: text; name: ident; }
-# ... some other expression nodes
+// ... some other expression nodes
 
 array_type    :: struct { length: expr; element: type; }
 function_type :: struct { params: []type; return: type; }
 named_type    :: struct { name: scoped_ident; }
 pointer_type  :: struct { type: type; }
 
-# parser "global" node references
+// parser "global" node references
 ast_context :: context {
   inferred_type : named_type;
 }

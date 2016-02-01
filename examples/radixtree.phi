@@ -1,3 +1,5 @@
+#!/usr/bin/phi run
+
 radix_tree   :: union { ^radix_branch|^radix_leaf }
 radix_leaf   :: struct { label: text; value: any; }
 radix_branch :: struct { label: text; edges: [..]radix_tree; }

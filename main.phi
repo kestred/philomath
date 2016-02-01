@@ -1,4 +1,4 @@
-
+#!philomath
 
 unix_stdin :: 0
 unix_stdout :: 1
