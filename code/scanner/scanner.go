@@ -264,6 +264,10 @@ func (s *Scanner) LineAt(offset int) token.Line {
 	return result
 }
 
+func (s *Scanner) SourceAt(start, end int) string {
+	return string(s.src[start : end+1])
+}
+
 func (s *Scanner) error(offset int, msg string) {
 	if s.err != nil {
 		line := s.LineAt(offset)

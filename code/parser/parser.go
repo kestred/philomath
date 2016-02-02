@@ -215,30 +215,62 @@ func (p *Parser) next() {
 }
 
 func (p *Parser) parseBlock() *ast.Block {
+	var directives []string
+	if p.tok == token.DIRECTIVE {
+		directives = append(directives, p.lit)
+		p.next()
+	}
+
 	if p.tok == token.COLON {
+		if len(directives) > 0 {
+			p.error(p.scanner.Pos(), "Use of short block syntax is not allowed after specifying directives")
+		}
 		p.next() // eat ":"
 		stmt := p.parseStatement()
 		return ast.Blok([]ast.Evaluable{stmt})
 	}
 
-	p.expect(token.LEFT_BRACE)
-	for p.tok == token.SEMICOLON {
-		p.next() // eat leading semicolons
-	}
-
-	var stmts []ast.Evaluable
-	for p.tok != token.RIGHT_BRACE && p.tok != token.END {
-		stmts = append(stmts, p.parseEvaluable())
-		for p.tok == token.SEMICOLON {
-			p.next() // eat extra semicolons
+	// TODO: Proper directive handling
+	if len(directives) > 0 && directives[0] == "asm" {
+		var start, end, depth int
+		depth = 1
+		start = p.pos + 1
+		linepos := p.scanner.Pos()
+		p.expect(token.LEFT_BRACE)
+		for depth > 0 {
+			switch p.tok {
+			case token.LEFT_BRACE:
+				depth += 1
+			case token.RIGHT_BRACE:
+				depth -= 1
+				end = p.pos - 1
+			case token.END:
+				p.error(linepos, `Missing a matching '}' to close an "#asm" block`)
+				p.stopParsing()
+			}
+			p.next()
 		}
+		return ast.Blok([]ast.Evaluable{ast.Asm(p.scanner.SourceAt(start, end))})
+	} else {
+		p.expect(token.LEFT_BRACE)
+		for p.tok == token.SEMICOLON {
+			p.next() // eat leading semicolons
+		}
+
+		var stmts []ast.Evaluable
+		for p.tok != token.RIGHT_BRACE && p.tok != token.END {
+			stmts = append(stmts, p.parseEvaluable())
+			for p.tok == token.SEMICOLON {
+				p.next() // eat extra semicolons
+			}
+		}
+		p.expect(token.RIGHT_BRACE)
+		return ast.Blok(stmts)
 	}
-	p.expect(token.RIGHT_BRACE)
-	return ast.Blok(stmts)
 }
 
 func (p *Parser) parseEvaluable() ast.Evaluable {
-	if p.tok == token.LEFT_BRACE {
+	if p.tok == token.LEFT_BRACE || p.tok == token.DIRECTIVE {
 		return p.parseBlock()
 	} else if p.tok != token.IDENT {
 		return p.parseStatement()

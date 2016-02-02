@@ -161,6 +161,32 @@ func TestParseBlocks(t *testing.T) {
 	}`))
 }
 
+func TestParseAsmBlock(t *testing.T) {
+	// GNU Assembler using .intel_syntax
+	expected := ast.Blok([]ast.Evaluable{
+		ast.Asm(`
+.somedirective
+	mov     %rax, unix_write
+	mov     %rdi, unix_stdout
+	mov     %rsi, [message+2*3+4]
+	mov     %rdx, 13
+syscallmania:
+	syscall
+	mov     retval, %rax
+`),
+	})
+	assert.Equal(t, expected, parseAny(t, `#asm {
+.somedirective
+	mov     %rax, unix_write
+	mov     %rdi, unix_stdout
+	mov     %rsi, [message+2*3+4]
+	mov     %rdx, 13
+syscallmania:
+	syscall
+	mov     retval, %rax
+}`))
+}
+
 func parseExpr(t *testing.T, input string) ast.Expr {
 	p := Make("example", false, []byte(input))
 	node := p.ParseEvaluable()

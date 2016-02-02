@@ -93,6 +93,7 @@ type Evaluable interface {
 }
 
 func (b *Block) ImplementsEvaluable()         {}
+func (s *InlineAsm) ImplementsEvaluable()     {}
 func (d *ImmutableDecl) ImplementsEvaluable() {}
 func (d *MutableDecl) ImplementsEvaluable()   {}
 func (s *IfStmt) ImplementsEvaluable()        {}
@@ -225,6 +226,15 @@ type Block struct {
 
 func Blok(nodes []Evaluable) *Block {
 	return &Block{Nodes: nodes}
+}
+
+type InlineAsm struct {
+	NodeBase
+	Source string
+}
+
+func Asm(source string) *InlineAsm {
+	return &InlineAsm{Source: source}
 }
 
 // A declaration is represented by one of the following
