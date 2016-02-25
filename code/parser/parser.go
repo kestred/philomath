@@ -28,9 +28,9 @@ import (
 // It might also be ok to consider both of the above invalid and elide
 // semicolons, but still allow a statement that looks like this:
 //
-//  foo := (13 +
-//          4 -
-//          7)
+//  foo := (13
+//        + 4
+//        - 7)
 //
 
 const MaxErrors = 8 // try to choose an actionable number of errors

@@ -170,7 +170,7 @@ func TestParseAsmBlock(t *testing.T) {
 	mov     %rdi, unix_stdout
 	mov     %rsi, [message+2*3+4]
 	mov     %rdx, 13
-syscallmania:
+mania:
 	syscall
 	mov     retval, %rax
 `),
@@ -181,7 +181,7 @@ syscallmania:
 	mov     %rdi, unix_stdout
 	mov     %rsi, [message+2*3+4]
 	mov     %rdx, 13
-syscallmania:
+mania:
 	syscall
 	mov     retval, %rax
 }`))
