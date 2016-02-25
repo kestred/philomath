@@ -1,9 +1,6 @@
 package semantics
 
-import (
-	"github.com/kestred/philomath/code/ast"
-	"github.com/kestred/philomath/code/code"
-)
+import "github.com/kestred/philomath/code/ast"
 
 type ScopedName struct {
 	Scope ast.Scope
@@ -20,7 +17,7 @@ func FindParentScope(node ast.Node) ast.Scope {
 	return nil
 }
 
-func ResolveNames(cs *code.Section) {
+func ResolveNames(cs *ast.Section) {
 	current := FindParentScope(cs.Root)
 	var lookup = make(map[ScopedName]ast.Decl)
 	for _, node := range cs.Nodes {

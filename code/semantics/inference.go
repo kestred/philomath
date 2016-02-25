@@ -5,13 +5,12 @@ import (
 	"strings"
 
 	"github.com/kestred/philomath/code/ast"
-	"github.com/kestred/philomath/code/code"
 	"github.com/kestred/philomath/code/utils"
 )
 
 // TODO: Break-out operator overload resolution
 
-func InferTypes(cs *code.Section) {
+func InferTypes(cs *ast.Section) {
 	inferTypesRecursive(cs.Root)
 }
 

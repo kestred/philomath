@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/kestred/philomath/code/ast"
-	"github.com/kestred/philomath/code/code"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +12,7 @@ func inferAny(t *testing.T, input string) ast.Node {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := code.PrepareTree(node, nil)
+	section := ast.FlattenTree(node, nil)
 	ResolveNames(&section)
 	InferTypes(&section)
 	return node
@@ -111,7 +110,7 @@ func inferLiteral(t *testing.T, input string) ast.Literal {
 	p := parser.Make("example", false, []byte(input+";"))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := code.PrepareTree(node, nil)
+	section := ast.FlattenTree(node, nil)
 	InferTypes(&section)
 	return node.(*ast.EvalStmt).Expr.(ast.Literal)
 }
@@ -142,7 +141,7 @@ func inferExpression(t *testing.T, input string) ast.Expr {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := code.PrepareTree(node, nil)
+	section := ast.FlattenTree(node, nil)
 	InferTypes(&section)
 	return node.(*ast.EvalStmt).Expr
 }

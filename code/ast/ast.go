@@ -93,7 +93,7 @@ type Evaluable interface {
 }
 
 func (b *Block) ImplementsEvaluable()         {}
-func (s *InlineAsm) ImplementsEvaluable()     {}
+func (s *AsmBlock) ImplementsEvaluable()      {}
 func (d *ImmutableDecl) ImplementsEvaluable() {}
 func (d *MutableDecl) ImplementsEvaluable()   {}
 func (s *IfStmt) ImplementsEvaluable()        {}
@@ -101,7 +101,6 @@ func (s *WhileStmt) ImplementsEvaluable()     {}
 func (s *ForStmt) ImplementsEvaluable()       {}
 func (s *EvalStmt) ImplementsEvaluable()      {}
 func (s *AssignStmt) ImplementsEvaluable()    {}
-func (s *SyscallStmt) ImplementsEvaluable()   {}
 func (s *ReturnStmt) ImplementsEvaluable()    {}
 func (s *DoneStmt) ImplementsEvaluable()      {}
 
@@ -132,14 +131,13 @@ type Stmt interface {
 	ImplementsStmt()
 }
 
-func (s *IfStmt) ImplementsStmt()      {}
-func (s *WhileStmt) ImplementsStmt()   {}
-func (s *ForStmt) ImplementsStmt()     {}
-func (s *EvalStmt) ImplementsStmt()    {}
-func (s *AssignStmt) ImplementsStmt()  {}
-func (s *SyscallStmt) ImplementsStmt() {}
-func (s *ReturnStmt) ImplementsStmt()  {}
-func (s *DoneStmt) ImplementsStmt()    {}
+func (s *IfStmt) ImplementsStmt()     {}
+func (s *WhileStmt) ImplementsStmt()  {}
+func (s *ForStmt) ImplementsStmt()    {}
+func (s *EvalStmt) ImplementsStmt()   {}
+func (s *AssignStmt) ImplementsStmt() {}
+func (s *ReturnStmt) ImplementsStmt() {}
+func (s *DoneStmt) ImplementsStmt()   {}
 
 type Expr interface {
 	Node
@@ -228,13 +226,24 @@ func Blok(nodes []Evaluable) *Block {
 	return &Block{Nodes: nodes}
 }
 
-type InlineAsm struct {
+type AsmBlock struct {
 	NodeBase
+
+	// syntax
 	Source string
+
+	// semantics
+	Inputs  []AsmBinding
+	Outputs []AsmBinding
 }
 
-func Asm(source string) *InlineAsm {
-	return &InlineAsm{Source: source}
+type AsmBinding struct {
+	Name   *Identifier
+	Offset int
+}
+
+func Asm(source string) *AsmBlock {
+	return &AsmBlock{Source: source}
 }
 
 // A declaration is represented by one of the following
@@ -424,14 +433,6 @@ type (
 
 		// syntax
 		Expr Expr
-	}
-
-	SyscallStmt struct {
-		NodeBase
-
-		// syntax
-		Number    Expr
-		Arguments [6]Expr
 	}
 
 	ReturnStmt struct {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/kestred/philomath/code/ast"
 	"github.com/kestred/philomath/code/bytecode"
-	"github.com/kestred/philomath/code/code"
 	"github.com/kestred/philomath/code/interpreter"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/kestred/philomath/code/semantics"
@@ -115,7 +114,8 @@ func doRun(args []string) {
 		}
 	}
 
-	section := code.PrepareTree(tree, nil)
+	section := ast.FlattenTree(tree, nil)
+	semantics.ProcessAssembly(&section)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	program := bytecode.NewProgram()

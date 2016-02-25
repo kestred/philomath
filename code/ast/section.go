@@ -1,20 +1,17 @@
-package code
+package ast
 
-import (
-	"github.com/kestred/philomath/code/ast"
-	"github.com/kestred/philomath/code/utils"
-)
+import "github.com/kestred/philomath/code/utils"
 
 type Section struct {
-	Root     ast.Node
-	Nodes    []ast.Node
+	Root     Node
+	Nodes    []Node
 	Parent   *Section
 	Progress int
 }
 
-func PrepareTree(root ast.Node, parent *Section) Section {
+func FlattenTree(root Node, parent *Section) Section {
 	// TODO: get parentNode properly
-	var top ast.Node = nil
+	var top Node = nil
 	if parent != nil {
 		top = parent.Root
 	}
@@ -23,36 +20,38 @@ func PrepareTree(root ast.Node, parent *Section) Section {
 	return Section{Root: root, Nodes: nodes, Parent: parent}
 }
 
-func flattenTree(node ast.Node, parent ast.Node) []ast.Node {
+func flattenTree(node Node, parent Node) []Node {
 	node.SetParent(parent)
-	nodes := []ast.Node{node}
+	nodes := []Node{node}
 	switch n := node.(type) {
-	case *ast.TopScope:
+	case *TopScope:
 		for _, decl := range n.Decls {
 			nodes = append(nodes, flattenTree(decl, n)...)
 		}
-	case *ast.Block:
+	case *Block:
 		for _, subnode := range n.Nodes {
 			nodes = append(nodes, flattenTree(subnode, n)...)
 		}
+	case *AsmBlock:
+		break // nothing to add
 
 	// declarations
-	case *ast.ImmutableDecl:
+	case *ImmutableDecl:
 		nodes = append(nodes, n.Name)
 		nodes = append(nodes, flattenTree(n.Defn, n)...)
-	case *ast.MutableDecl:
+	case *MutableDecl:
 		nodes = append(nodes, n.Name)
 		nodes = append(nodes, flattenTree(n.Type, n)...)
 		nodes = append(nodes, flattenTree(n.Expr, n)...)
 
 	// definitions
-	case *ast.ConstantDefn:
+	case *ConstantDefn:
 		nodes = append(nodes, flattenTree(n.Expr, n)...)
 
 	// statements
-	case *ast.EvalStmt:
+	case *EvalStmt:
 		nodes = append(nodes, flattenTree(n.Expr, n)...)
-	case *ast.AssignStmt:
+	case *AssignStmt:
 		for _, expr := range n.Left {
 			nodes = append(nodes, flattenTree(expr, n)...)
 		}
@@ -61,30 +60,30 @@ func flattenTree(node ast.Node, parent ast.Node) []ast.Node {
 		}
 
 	// expressions
-	case *ast.PostfixExpr:
+	case *PostfixExpr:
 		nodes = append(nodes, flattenTree(n.Subexpr, n)...)
 		nodes = append(nodes, n.Operator)
-	case *ast.InfixExpr:
+	case *InfixExpr:
 		nodes = append(nodes, flattenTree(n.Left, n)...)
 		nodes = append(nodes, n.Operator)
 		nodes = append(nodes, flattenTree(n.Right, n)...)
-	case *ast.PrefixExpr:
+	case *PrefixExpr:
 		nodes = append(nodes, n.Operator)
 		nodes = append(nodes, flattenTree(n.Subexpr, n)...)
-	case *ast.GroupExpr:
+	case *GroupExpr:
 		nodes = append(nodes, flattenTree(n.Subexpr, n)...)
-	case *ast.ProcedureExpr:
+	case *ProcedureExpr:
 		nodes = append(nodes, n.Return)
 		nodes = append(nodes, flattenTree(n.Block, n)...)
 
 	// literals
-	case *ast.Identifier,
-		*ast.NumberLiteral,
-		*ast.TextLiteral:
+	case *Identifier,
+		*NumberLiteral,
+		*TextLiteral:
 		break // nothing to add
 
 	// types
-	case *ast.BaseType:
+	case *BaseType:
 		break // nothing to add
 
 	default:
