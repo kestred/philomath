@@ -15,6 +15,7 @@ func generateBytecode(t *testing.T, input string) *Program {
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
 	section := ast.FlattenTree(node, nil)
+	semantics.PreprocessAssembly(&section)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	program := NewProgram()
@@ -301,4 +302,33 @@ func TestEncodeBlock(t *testing.T) {
 	}`)
 	assert.Equal(t, constants, program.Constants)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
+
+	// Inline assembly
+	constants = []Data{
+		0: 0,
+		1: FromU64(3),
+		2: FromU64(0),
+	}
+	expected = []Instruction{
+		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
+		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
+		{Op: CALL_ASM, Left: Metadata(1)},
+	}
+	program = generateBytecode(t, `{
+	  input := 3;
+		output := 0;
+
+	  #asm { mov output, input }
+
+		output;
+	}`)
+	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, expected, program.Procedures[0].Instructions)
+	if assert.Equal(t, 2, len(program.Metadata)) {
+		asm := program.Metadata[1].(*Assembly)
+		assert.Equal(t, " mov output, input ", asm.Source)
+		assert.Equal(t, []Register{0}, asm.InputRegisters)
+		assert.Equal(t, Register(1), asm.OutputRegister)
+		assert.True(t, asm.HasOutput)
+	}
 }

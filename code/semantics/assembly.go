@@ -6,7 +6,7 @@ import (
 	"github.com/kestred/philomath/code/token"
 )
 
-func ProcessAssembly(cs *ast.Section) {
+func PreprocessAssembly(cs *ast.Section) {
 	// TODO: I really shouldn't need to check ALL nodes for this
 	for _, node := range cs.Nodes {
 		if asm, ok := node.(*ast.AsmBlock); ok {

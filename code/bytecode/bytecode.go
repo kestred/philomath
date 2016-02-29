@@ -37,6 +37,9 @@ type Register int16
 // TODO: Make constant indexes 32-bit using both the left and right registers
 func Constant(i int) Register { return Register(i) }
 
+// See Constant(...)
+func Metadata(i int) Register { return Register(i) }
+
 const OutOfRegisters = 32767
 const (
 	NOOP Opcode = iota
@@ -61,6 +64,7 @@ const (
 	LOAD_CONST
 
 	CALL
+	CALL_ASM
 	RETURN
 
 	I64_ADD
@@ -89,6 +93,10 @@ var opcodes = [...]string{
 
 	COPY_VALUE: "Copy value",
 	LOAD_CONST: "Load constant",
+
+	CALL:     "Call procedure",
+	CALL_ASM: "Call assembly",
+	RETURN:   "Return",
 
 	I64_ADD:      "Signed Addition",
 	I64_SUBTRACT: "Signed Subtraction",
@@ -134,6 +142,7 @@ func ToF64(v Data) float64   { return *(*float64)(unsafe.Pointer(&v)) }
 type Program struct {
 	Constants  []Data
 	Procedures []Procedure
+	Metadata   []interface{}
 	Data       map[string]int // offset into Constants
 	Text       map[string]int // offset into Procedures
 }
@@ -143,6 +152,7 @@ func NewProgram() *Program {
 	prog.Data = map[string]int{}
 	prog.Text = map[string]int{"start_": 0}
 	prog.AddConstant(0)
+	prog.AddMetadata(nil)
 	prog.NewProcedure() // start_
 	return prog
 }
@@ -157,6 +167,12 @@ func (p *Program) AddConstant(data Data) int {
 	return next
 }
 
+func (p *Program) AddMetadata(data interface{}) int {
+	next := len(p.Metadata)
+	p.Metadata = append(p.Metadata, data)
+	return next
+}
+
 func (p *Program) NewProcedure() *Procedure {
 	next := len(p.Procedures)
 	p.Procedures = append(p.Procedures, Procedure{
@@ -168,6 +184,17 @@ func (p *Program) NewProcedure() *Procedure {
 		ExprRegister: -1,
 	})
 	return &p.Procedures[next]
+}
+
+type Assembly struct {
+	Source  string
+	Wrapper unsafe.Pointer // for interpreter
+
+	HasOutput      bool
+	OutputBinding  ast.AsmBinding
+	OutputRegister Register
+	InputBindings  []ast.AsmBinding
+	InputRegisters []Register
 }
 
 type Procedure struct {
@@ -193,6 +220,30 @@ func (p *Procedure) Extend(node ast.Node) {
 		for _, subnode := range n.Nodes {
 			p.Extend(subnode)
 		}
+
+	case *ast.AsmBlock:
+		asm := new(Assembly)
+		asm.Source = n.Source
+		asm.InputBindings = n.Inputs
+		asm.InputRegisters = make([]Register, len(n.Inputs))
+		for i, binding := range n.Inputs {
+			reg, exists := p.Registers[binding.Name.Literal]
+			utils.Assert(exists, "A register was not allocated for a name before use in inline assembly")
+			asm.InputRegisters[i] = reg
+		}
+
+		if len(n.Outputs) > 0 {
+			// NOTE: inline assembly is currently limited to one output
+			reg, exists := p.Registers[n.Outputs[0].Name.Literal]
+			utils.Assert(exists, "A register was not allocated for a name before use in inline assembly")
+			asm.OutputRegister = reg
+			asm.OutputBinding = n.Outputs[0]
+			asm.HasOutput = true
+		}
+
+		metadata := p.Program.AddMetadata(asm)
+		instruction := Instruction{Op: CALL_ASM, Left: Metadata(metadata)}
+		p.Instructions = append(p.Instructions, instruction)
 
 	case *ast.ImmutableDecl:
 		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {

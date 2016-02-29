@@ -24,6 +24,8 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 		for _, subnode := range n.Nodes {
 			inferTypesRecursive(subnode)
 		}
+	case *ast.AsmBlock:
+		break // nothing to do
 	case *ast.ImmutableDecl:
 		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
 			inferTypesRecursive(defn.Expr)

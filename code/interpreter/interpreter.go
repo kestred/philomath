@@ -19,6 +19,7 @@ func Evaluate(proc bc.Procedure) bc.Data {
 		returnRegister = proc.Instructions[count-1].Out
 	}
 
+InstructionLoop:
 	for _, inst := range proc.Instructions {
 		switch inst.Op {
 		case bc.NOOP:
@@ -29,9 +30,12 @@ func Evaluate(proc bc.Procedure) bc.Data {
 			registers[inst.Out] = proc.Program.Constants[inst.Left]
 		case bc.CALL:
 			registers[inst.Out] = Evaluate(proc.Program.Procedures[inst.Left])
+		case bc.CALL_ASM:
+			asm := proc.Program.Metadata[inst.Left].(*bc.Assembly)
+			CallAsm(asm, registers)
 		case bc.RETURN:
 			returnRegister = inst.Out
-			break
+			break InstructionLoop
 
 		// signed 64-bit arithmetic
 		case bc.I64_ADD:

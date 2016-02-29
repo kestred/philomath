@@ -10,11 +10,11 @@ import (
 func processAsm(t *testing.T, input string) *ast.AsmBlock {
 	asm := ast.Asm(input)
 	section := ast.FlattenTree(asm, nil)
-	ProcessAssembly(&section)
+	PreprocessAssembly(&section)
 	return asm
 }
 
-func TestProcessAsm(t *testing.T) {
+func TestPreprocessAsm(t *testing.T) {
 	var asm *ast.AsmBlock
 
 	// simple syscall example
