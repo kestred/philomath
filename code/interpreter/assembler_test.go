@@ -10,10 +10,10 @@ import (
 
 func TestGenerate(t *testing.T) {
 	asm := &bytecode.Assembly{
-		Source:        " mov output, input ",
+		Source:        "  mov output, input",
 		HasOutput:     true,
-		OutputBinding: ast.AsmBinding{ast.Ident("output"), 5},
-		InputBindings: []ast.AsmBinding{{ast.Ident("input"), 13}},
+		OutputBinding: ast.AsmBinding{ast.Ident("output"), 6},
+		InputBindings: []ast.AsmBinding{{ast.Ident("input"), 14}},
 	}
 
 	label, source := generateAssembly(asm)
@@ -24,7 +24,7 @@ func TestGenerate(t *testing.T) {
 .section .text
 
 interpreter.wrapper1:
- mov %rax, %rdi 
+  mov %rax, %rdi
   ret
 `, source)
 }

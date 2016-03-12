@@ -1,5 +1,6 @@
 #!philomath
 
+/*
 unix_stdin :: 0
 unix_stdout :: 1
 unix_stderr :: 2
@@ -11,19 +12,24 @@ unix_close :: 3
 unix_mmap :: 9
 unix_mprotect :: 10
 unix_munmap :: 11
+*/
 
 main :: () {
-  message := "Hello world!\n"
-  retval := 0
+  unix_write :: 1;
+  unix_stdout :: 1;
+  message :: "Hello world!\n";
+  length :: 14;
+
+  retval := 0;
 
   #asm {
     mov     %rax, unix_write
     mov     %rdi, unix_stdout
     mov     %rsi, message
-    mov     %rdx, 13
+    mov     %rdx, length
     syscall
     mov     retval, %rax
   }
 
-  return retval
+//  return retval;
 }

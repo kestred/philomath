@@ -125,6 +125,5 @@ func doRun(args []string) {
 		log.Fatalf(`unable to find a procedure named "main"`)
 	}
 
-	tmp := interpreter.Run(program)
-	log.Println("result:", tmp)
+	interpreter.Run(program)
 }

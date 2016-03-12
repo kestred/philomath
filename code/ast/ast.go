@@ -7,6 +7,7 @@ var (
 
 	// Relaxed types
 	InferredType     = BaseTyp("<inferrable>") // could be any type
+	InferredText     = BaseTyp("<text>")       // could only be char/text/bytes/etc
 	InferredNumber   = BaseTyp("<number>")     // could only be a number
 	InferredFloat    = BaseTyp("<float>")      // could only be a float number
 	InferredSigned   = BaseTyp("<signed>")     // could only be a signed number
@@ -20,6 +21,8 @@ var (
 
 	// Builtin types
 	BuiltinEmpty   = BaseTyp("empty") // the 0-byte type
+	BuiltinText    = BaseTyp("text")
+	BuiltinChar    = BaseTyp("char")
 	BuiltinFloat   = BaseTyp("float")
 	BuiltinFloat32 = BaseTyp("f32")
 	BuiltinFloat64 = BaseTyp("f64")

@@ -1,6 +1,7 @@
 package semantics
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -77,6 +78,9 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 	case *ast.NumberLiteral:
 		n.Type, n.Value = parseNumber(n.Literal)
 		return n.Type
+	case *ast.TextLiteral:
+		n.Type = ast.InferredText
+		n.Value = parseString(n.Literal)
 	default:
 		utils.InvalidCodePath()
 	}
@@ -150,6 +154,20 @@ func inferInfixType(op *ast.OperatorDefn, left ast.Type, right ast.Type) ast.Typ
 	default:
 		panic("TODO: Unhandled infix operator in type inference")
 	}
+}
+
+// TODO: Stop being lazy (using regexp) and replace escape sequences properly
+var escNewline = regexp.MustCompile(`\\n`)
+var escReturn = regexp.MustCompile(`\\r`)
+var escTab = regexp.MustCompile(`\\t`)
+
+func parseString(lit string) []byte {
+	utils.Assert(len(lit) >= 2, "Expected string literal to still be quoted in type inference")
+	result := []byte(lit[1 : len(lit)-1])
+	result = escNewline.ReplaceAll(result, []byte("\n"))
+	result = escReturn.ReplaceAll(result, []byte("\r"))
+	result = escTab.ReplaceAll(result, []byte("\t"))
+	return result
 }
 
 // TODO: Should literals continue to be parsed here, or elsewhere?

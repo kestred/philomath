@@ -112,14 +112,14 @@ func Assemble(asm *bytecode.Assembly) {
 	if err != nil {
 		panic(err) //return nil, err
 	}
-	//os.RemoveAll(tmpdir) // TODO: Clean up the temp directory later (not at function exit)
+	defer os.RemoveAll(tmpdir)
 
 	objpath := tmpdir + "/" + label + ".o"
 	cmd := exec.Command("/usr/bin/as", "-o", objpath)
 	cmd.Stdin = strings.NewReader(source)
 	// TODO: Collect stderr and return it if err is not nil
-	// cmd.Stdout = os.Stdout
-	// cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		panic(err) //return nil, err
@@ -136,9 +136,6 @@ func Assemble(asm *bytecode.Assembly) {
 	}
 
 	loaded := C.LoadCode(C.CString(libpath), C.CString(label))
-	//
-	fmt.Println(libpath, loaded.Fn, C.GoString(loaded.Err))
-	//
 	if loaded.Err != nil {
 		panic(C.GoString(loaded.Err)) //return nil, err
 	}
@@ -151,9 +148,18 @@ var nextLabel uint
 
 // TODO: more intelligent asm generation
 func generateAssembly(asm *bytecode.Assembly) (label string, source string) {
-	fmt.Println(asm)
-	source = asm.Source
+	var offset int
+	var parts []string
 	for i, binding := range asm.InputBindings {
+		// insert the output binding if it appears before this input
+		if asm.HasOutput && asm.OutputBinding.Offset < binding.Offset {
+			binding := asm.OutputBinding
+			register := "%rax"
+
+			parts = append(parts, asm.Source[offset:binding.Offset], register)
+			offset = binding.Offset + len(binding.Name.Literal)
+		}
+
 		var register string
 		switch i {
 		case 0:
@@ -170,21 +176,23 @@ func generateAssembly(asm *bytecode.Assembly) (label string, source string) {
 			register = "%r9"
 		}
 
-		a := binding.Offset
-		b := binding.Offset + len(binding.Name.Literal)
-		c := len(source)
-		source = strings.Join([]string{source[0:a], register, source[b:c]}, "")
+
+		parts = append(parts, asm.Source[offset:binding.Offset], register)
+		offset = binding.Offset + len(binding.Name.Literal)
 	}
 
-	if asm.HasOutput {
+	// insert the output binding if it has not yet been inserted
+	if asm.HasOutput && asm.OutputBinding.Offset >= offset {
 		binding := asm.OutputBinding
 		register := "%rax"
 
-		a := binding.Offset
-		b := binding.Offset + len(binding.Name.Literal)
-		c := len(source)
-		source = strings.Join([]string{source[0:a], register, source[b:c]}, "")
+		parts = append(parts, asm.Source[offset:binding.Offset], register)
+		offset = binding.Offset + len(binding.Name.Literal)
 	}
+
+	// combine the parts into an updated source
+	parts = append(parts, asm.Source[offset:len(asm.Source)])
+	source = strings.Join(parts, "")
 
 	nextLabel += 1
 	label = fmt.Sprintf("interpreter.wrapper%d", nextLabel)
@@ -206,7 +214,7 @@ func CallAsm(asm *bytecode.Assembly, registers []bytecode.Data) {
 	}
 
 	params := make([]bytecode.Data, len(asm.InputRegisters))
-	for i, register := range params {
+	for i, register := range asm.InputRegisters {
 		params[i] = registers[register]
 	}
 

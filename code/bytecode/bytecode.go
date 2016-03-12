@@ -189,6 +189,7 @@ func (p *Program) NewProcedure() *Procedure {
 type Assembly struct {
 	Source  string
 	Wrapper unsafe.Pointer // for interpreter
+	Tempdir string
 
 	HasOutput      bool
 	OutputBinding  ast.AsmBinding
@@ -309,6 +310,17 @@ func (p *Procedure) Extend(node ast.Node) {
 			}
 		}
 
+	case *ast.TextLiteral:
+		utils.Assert(n.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
+		register := p.AssignRegister()
+
+		constant := p.Program.AddConstant(Data(unsafe.Pointer(&n.Value.([]byte)[0])))
+		p.Program.AddMetadata(n.Value)
+
+		instruction := Instruction{Op: LOAD_CONST, Out: register, Left: Constant(constant)}
+		p.Instructions = append(p.Instructions, instruction)
+		endRegister = register
+
 	case *ast.NumberLiteral:
 		utils.Assert(n.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
 		register := p.AssignRegister()
@@ -417,7 +429,7 @@ func (p *Procedure) Extend(node ast.Node) {
 		proc.Extend(n.Block)
 
 	default:
-		panic("TODO: Unhandle node type in bytecode.Generate")
+		panic("TODO: Unhandled node type in bytecode.Generate")
 	}
 
 	// set the result of this expression
