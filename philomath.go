@@ -88,7 +88,7 @@ func doRun(args []string) {
 	errcount := len(psr.Errors)
 	if errcount > 0 {
 		for _, err := range psr.Errors {
-			fmt.Errorf("%v\n", err)
+			fmt.Printf("%v\n", err)
 		}
 
 		if errcount >= parser.MaxErrors {
