@@ -15,7 +15,6 @@ func generateBytecode(t *testing.T, input string) *Program {
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
 	section := ast.FlattenTree(node, nil)
-	semantics.PreprocessAssembly(&section)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	program := NewProgram()

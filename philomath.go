@@ -115,7 +115,6 @@ func doRun(args []string) {
 	}
 
 	section := ast.FlattenTree(tree, nil)
-	semantics.PreprocessAssembly(&section)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	program := bytecode.NewProgram()

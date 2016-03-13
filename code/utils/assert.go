@@ -2,10 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
-	"os"
 )
 
 func Assert(truthy bool, msg string) {

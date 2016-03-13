@@ -163,8 +163,7 @@ func TestParseBlocks(t *testing.T) {
 
 func TestParseAsmBlock(t *testing.T) {
 	// GNU Assembler using .intel_syntax
-	expected := ast.Blok([]ast.Evaluable{
-		ast.Asm(`
+	asm := ast.Asm(`
 .somedirective
 	mov     %rax, unix_write
 	mov     %rdi, unix_stdout
@@ -173,8 +172,10 @@ func TestParseAsmBlock(t *testing.T) {
 mania:
 	syscall
 	mov     retval, %rax
-`),
-	})
+`)
+	parseAssembly(asm)
+
+	expected := ast.Blok([]ast.Evaluable{asm})
 	assert.Equal(t, expected, parseAny(t, `#asm {
 .somedirective
 	mov     %rax, unix_write

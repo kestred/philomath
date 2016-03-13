@@ -1,4 +1,4 @@
-package semantics
+package parser
 
 import (
 	"github.com/kestred/philomath/code/ast"
@@ -6,16 +6,7 @@ import (
 	"github.com/kestred/philomath/code/token"
 )
 
-func PreprocessAssembly(cs *ast.Section) {
-	// TODO: I really shouldn't need to check ALL nodes for this
-	for _, node := range cs.Nodes {
-		if asm, ok := node.(*ast.AsmBlock); ok {
-			detectInputsOutputs(asm)
-		}
-	}
-}
-
-func detectInputsOutputs(asm *ast.AsmBlock) {
+func parseAssembly(asm *ast.AsmBlock) {
 	var labels []string
 
 	// TODO: Stop using this scanner

@@ -1,4 +1,4 @@
-package semantics
+package parser
 
 import (
 	"testing"
@@ -7,18 +7,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func processAsm(t *testing.T, input string) *ast.AsmBlock {
+func parseAsm(t *testing.T, input string) *ast.AsmBlock {
 	asm := ast.Asm(input)
-	section := ast.FlattenTree(asm, nil)
-	PreprocessAssembly(&section)
+	parseAssembly(asm)
 	return asm
 }
 
-func TestPreprocessAsm(t *testing.T) {
+func TestParseAsm(t *testing.T) {
 	var asm *ast.AsmBlock
 
 	// simple syscall example
-	asm = processAsm(t, `
+	asm = parseAsm(t, `
 		mov     %rax, unix_write
 		mov     %rdi, unix_stdout
 		mov     %rsi, message
@@ -36,22 +35,22 @@ func TestPreprocessAsm(t *testing.T) {
 	}, asm.Outputs)
 
 	// memory operands
-	asm = processAsm(t, `mov [retval], %rax`)
+	asm = parseAsm(t, `mov [retval], %rax`)
 	assert.Equal(t, []ast.AsmBinding{{ast.Ident("retval"), 5}}, asm.Inputs)
 	assert.Equal(t, []ast.AsmBinding(nil), asm.Outputs)
 
 	// non-mov instruction
-	asm = processAsm(t, `push retval`)
+	asm = parseAsm(t, `push retval`)
 	assert.Equal(t, []ast.AsmBinding{{ast.Ident("retval"), 5}}, asm.Inputs)
 	assert.Equal(t, []ast.AsmBinding(nil), asm.Outputs)
 
 	// other-mov instruction
-	asm = processAsm(t, `movnti retval, %rax`)
+	asm = parseAsm(t, `movnti retval, %rax`)
 	assert.Equal(t, []ast.AsmBinding(nil), asm.Inputs)
 	assert.Equal(t, []ast.AsmBinding{{ast.Ident("retval"), 7}}, asm.Outputs)
 
 	// ignore size specifiers
-	asm = processAsm(t, `
+	asm = parseAsm(t, `
 		mov %eax, dword ptr [%ecx]
 		mov %eax, DWORD PTR [%ecx]
 	`)
@@ -59,7 +58,7 @@ func TestPreprocessAsm(t *testing.T) {
 	assert.Equal(t, []ast.AsmBinding(nil), asm.Outputs)
 
 	// ignore labels
-	asm = processAsm(t, `
+	asm = parseAsm(t, `
 		jump someplace
 someplace:
 		mov  %ebx, 1

@@ -250,7 +250,10 @@ func (p *Parser) parseBlock() *ast.Block {
 			}
 			p.next()
 		}
-		return ast.Blok([]ast.Evaluable{ast.Asm(p.scanner.SourceAt(start, end))})
+
+		asm := ast.Asm(p.scanner.SourceAt(start, end))
+		parseAssembly(asm)
+		return ast.Blok([]ast.Evaluable{asm})
 	} else {
 		p.expect(token.LEFT_BRACE)
 		for p.tok == token.SEMICOLON {

@@ -176,7 +176,6 @@ func generateAssembly(asm *bytecode.Assembly) (label string, source string) {
 			register = "%r9"
 		}
 
-
 		parts = append(parts, asm.Source[offset:binding.Offset], register)
 		offset = binding.Offset + len(binding.Name.Literal)
 	}
