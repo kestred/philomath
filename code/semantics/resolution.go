@@ -21,17 +21,10 @@ func ResolveNames(cs *ast.Section) {
 	current := FindParentScope(cs.Root)
 	var lookup = make(map[ScopedName]ast.Decl)
 	for _, node := range cs.Nodes {
-		// Easy way to track the current scope; should always be correct but not sure
-		// Suppose an example tree...
+		// Track the current scope by always updating the current scope if we reach
+		// a node and that node's parent provides a scope.
 		//
-		//   BlockA
-		//     Decl     -> parent is BlockA
-		//     BlockB
-		//       Decl   -> parent is BlockB
-		//       Stmt   -> parent is BlockB
-		//         Expr
-		//     Decl     -> parent is BlockA
-		//
+		// It should mostly be correct, but I haven't thought about it that hard.
 		if scope, ok := node.GetParent().(ast.Scope); ok {
 			current = scope
 		}

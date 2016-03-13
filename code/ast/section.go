@@ -33,7 +33,12 @@ func flattenTree(node Node, parent Node) []Node {
 			nodes = append(nodes, flattenTree(subnode, n)...)
 		}
 	case *AsmBlock:
-		break // nothing to add
+		for _, binding := range n.Inputs {
+			nodes = append(nodes, binding.Name)
+		}
+		for _, binding := range n.Outputs {
+			nodes = append(nodes, binding.Name)
+		}
 
 	// declarations
 	case *ImmutableDecl:
