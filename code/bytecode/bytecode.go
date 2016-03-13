@@ -8,18 +8,6 @@ import (
 	"github.com/kestred/philomath/code/utils"
 )
 
-/* TODO: Handle shadowed variable names
-
-   I'm putting this off right now because I think that by the time I get to
-   the bytecode generator, I should not be operating on variable names at all
-   and so I don't want to build a complicated solution for it.
-
-   In the short term, this will be handled (for nested block scopes) as a check
-   at the semantic level.  Note that the semantic check is not intended to avoid
-   implementing shadowing, but rather because I think the bytecode generator
-	 is not the right place to implement variable shadowing;
-*/
-
 type Instruction struct {
 	Op    Opcode
 	Out   Register
@@ -30,14 +18,9 @@ type Instruction struct {
 type Opcode int16
 type Register int16
 
-// Constant converts a constant table index to a register value.
-//
-// This function's main purpose is to visually distinguish between register
-// assignment and constant indexes, and to make it easier to search for its use.
-// TODO: Make constant indexes 32-bit using both the left and right registers
+// Constant and Metadata are used to visually distinguish between register
+// assignment and constant indexes, and to make it easier to search for their use.
 func Constant(i int) Register { return Register(i) }
-
-// See Constant(...)
 func Metadata(i int) Register { return Register(i) }
 
 const OutOfRegisters = 32767
@@ -179,7 +162,7 @@ func (p *Program) NewProcedure() *Procedure {
 		Index:        next,
 		Program:      p,
 		Instructions: []Instruction{},
-		Registers:    map[string]Register{},
+		Registers:    map[ast.Decl]Register{},
 		NextRegister: +0,
 		ExprRegister: -1,
 	})
@@ -204,7 +187,7 @@ type Procedure struct {
 	Instructions []Instruction
 
 	// state for bytecode generation
-	Registers    map[string]Register
+	Registers    map[ast.Decl]Register
 	NextRegister Register // next assignable
 	ExprRegister Register // last result
 }
@@ -228,17 +211,26 @@ func (p *Procedure) Extend(node ast.Node) {
 		asm.InputBindings = n.Inputs
 		asm.InputRegisters = make([]Register, len(n.Inputs))
 		for i, binding := range n.Inputs {
-			reg, exists := p.Registers[binding.Name.Literal]
-			utils.Assert(exists, "A register was not allocated for a name before use in inline assembly")
+			decl := binding.Name.Decl
+			utils.Assert(decl != nil, "An unresolved identifier survived until bytecode generation")
+
+			reg, exists := p.Registers[decl]
+			utils.Assert(exists, "A register was not allocated for a declaration before use in inline assembly")
+
 			asm.InputRegisters[i] = reg
 		}
 
 		if len(n.Outputs) > 0 {
-			// NOTE: inline assembly is currently limited to one output
-			reg, exists := p.Registers[n.Outputs[0].Name.Literal]
-			utils.Assert(exists, "A register was not allocated for a name before use in inline assembly")
+			binding := n.Outputs[0] // currently limited to one output
+
+			decl := binding.Name.Decl
+			utils.Assert(decl != nil, "An unresolved identifier survived until bytecode generation")
+
+			reg, exists := p.Registers[decl]
+			utils.Assert(exists, "A register was not allocated for a declaration before use in inline assembly")
+
 			asm.OutputRegister = reg
-			asm.OutputBinding = n.Outputs[0]
+			asm.OutputBinding = binding
 			asm.HasOutput = true
 		}
 
@@ -249,17 +241,17 @@ func (p *Procedure) Extend(node ast.Node) {
 	case *ast.ImmutableDecl:
 		if defn, ok := n.Defn.(*ast.ConstantDefn); ok {
 			p.Extend(defn.Expr)
-			p.Registers[n.Name.Literal] = p.ExprRegister
+			p.Registers[n] = p.ExprRegister
 		}
 
 	case *ast.MutableDecl:
 		if n.Expr != nil {
 			p.Extend(n.Expr)
-			p.Registers[n.Name.Literal] = p.ExprRegister
+			p.Registers[n] = p.ExprRegister
 		} else {
 			//// TODO: zero initialization (but it won't matter until there are type declarations)
-			//p.Registers[n.Name.Literal] = p.AssignRegister()
-			panic("TODO: Unhandled mutable declaration without expression")
+			//p.Registers[n] = p.AssignRegister()
+			panic("TODO: Unhandled mutable declaration without an expression")
 		}
 
 	case *ast.EvalStmt:
@@ -274,7 +266,8 @@ func (p *Procedure) Extend(node ast.Node) {
 			rhs := p.ExprRegister
 
 			if expr, ok := n.Left[0].(*ast.Identifier); ok {
-				lhs, exists := p.Registers[expr.Literal]
+				utils.Assert(expr.Decl != nil, "An unresolved identifier survived until bytecode generation")
+				lhs, exists := p.Registers[expr.Decl]
 				utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
 				// copy from rhs to lhs (cast as needed)
@@ -299,7 +292,8 @@ func (p *Procedure) Extend(node ast.Node) {
 		}
 		for i, expr := range n.Left {
 			if e, ok := expr.(*ast.Identifier); ok {
-				lhs, exists := p.Registers[e.Literal]
+				utils.Assert(e.Decl != nil, "An unresolved identifier survived until bytecode generation")
+				lhs, exists := p.Registers[e.Decl]
 				utils.Assert(exists, "A register was not allocated for a name before use in an expression")
 
 				// copy from temporary to lhs (cast as needed)
@@ -343,8 +337,9 @@ func (p *Procedure) Extend(node ast.Node) {
 		endRegister = register
 
 	case *ast.Identifier:
-		register, exists := p.Registers[n.Literal]
-		utils.Assert(exists, "A register was not allocated for a name before use in an expression")
+		utils.Assert(n.Decl != nil, "An unresolved identifier survived until bytecode generation")
+		register, exists := p.Registers[n.Decl]
+		utils.Assert(exists, "A register was not allocated for a declaration before use in an expression")
 		endRegister = register
 
 	case *ast.GroupExpr:

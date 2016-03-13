@@ -1,6 +1,7 @@
 package semantics
 
 import "github.com/kestred/philomath/code/ast"
+import "github.com/kestred/philomath/code/utils"
 
 type ScopedName struct {
 	Scope ast.Scope
@@ -13,7 +14,9 @@ func FindParentScope(node ast.Node) ast.Scope {
 		if scope, ok := node.(ast.Scope); ok {
 			return scope
 		}
+		node = node.GetParent()
 	}
+
 	return nil
 }
 
@@ -41,7 +44,7 @@ func ResolveNames(cs *ast.Section) {
 					n.Decl = decl
 					break
 				} else if search == nil {
-					panic("TODO: out-of-order declaration lookup")
+					utils.NotImplemented("out-of-order declaration lookup")
 				} else {
 					search = FindParentScope(search)
 				}

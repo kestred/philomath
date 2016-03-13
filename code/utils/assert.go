@@ -8,11 +8,15 @@ import (
 	"strings"
 )
 
-func Assert(truthy bool, msg string) {
+// Puts is useful for debugging to avoid adding and removing imports for fmt
+// constantly if utils has already been imported
+func Puts(value interface{}) {
+	fmt.Printf("%v:%v\n", reflect.ValueOf(value).Type(), value)
+}
+
+func Assert(truthy bool, msg string, args ...interface{}) {
 	if !truthy {
-		fmt.Println("Assertion:", msg)
-		printStack()
-		os.Exit(1)
+		AssertionFailed(msg, args...)
 	}
 }
 
@@ -22,29 +26,32 @@ func AssertNil(value interface{}, msg string) {
 	//   IsValid returns true unless called on the zero Value
 	//
 	if reflect.ValueOf(value).IsValid() {
-		fmt.Printf("Assertion: %v (%v != nil)\n", msg, value)
-		printStack()
-		os.Exit(1)
+		AssertionFailed("%v (%v != nil)", msg, value)
 	}
+}
+
+func NotImplemented(what string) {
+	AssertionFailed("\"%s\" hasn't been implemented", what)
 }
 
 func InvalidCodePath() {
 	pc, _, line, _ := runtime.Caller(1)
 	path := strings.Split(runtime.FuncForPC(pc).Name(), "/")
 	caller := path[len(path)-1]
-
-	fmt.Printf("Assertion: Reached invalid code path at %v:%v\n", caller, line)
-	printStack()
-	os.Exit(1)
+	AssertionFailed("Reached invalid code path at %v:%v", caller, line)
 }
 
-func printStack() {
+func AssertionFailed(msg string, args ...interface{}) {
+	fmt.Printf("Assertion: "+msg+"\n", args...)
+
+	// print call stack
+	stackEnded := false
 	fmt.Println()
-	for i := 2; i < 50; i++ {
+	for i := 2; i < 30; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
-			fmt.Println()
-			return
+			stackEnded = true
+			break
 		}
 
 		pathParts := strings.Split(file, "/")
@@ -57,6 +64,10 @@ func printStack() {
 		caller := callerParts[len(callerParts)-1]
 		fmt.Printf("  %16s  %s:%d\n", path, caller, line)
 	}
+	fmt.Println()
 
-	fmt.Println("Why things fail: your stack is to deep for sanity...")
+	if !stackEnded {
+		fmt.Println("\nWhy things fail: your stack is to deep for sanity...")
+	}
+	os.Exit(1)
 }

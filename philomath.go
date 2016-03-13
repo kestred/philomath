@@ -30,7 +30,7 @@ func init() {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, `
-Phi is a compiler for Philomath. It was written as a learning project.
+Phi is the compiler for Philomath.
 
 Usage:
   phi COMMAND [OPTIONS] [ARGS]
