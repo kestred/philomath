@@ -22,154 +22,147 @@ func generateBytecode(t *testing.T, input string) *Program {
 	return program
 }
 
-func TestUnsafeSafety(t *testing.T) {
-	// from Number (to Data)
-	ldata := FromU64(2)
-	idata := FromI64(-2)
-	rdata := FromF64(2.0)
-	assert.NotEqual(t, ldata, idata)
-	assert.NotEqual(t, idata, rdata)
-	assert.NotEqual(t, ldata, rdata)
-	assert.Equal(t, Data(2), ldata)
-	assert.Equal(t, Data(^uint(0)-1), idata)
-	assert.Equal(t, Data(0x4000000000000000), rdata)
-
-	// (from Data) to Number
-	lhs := ToI64(Data(2))
-	rhs := ToF64(Data(2))
-	assert.NotEqual(t, float64(lhs), float64(rhs))
-	assert.Equal(t, int64(2), lhs)
-	assert.Equal(t, float64(1e-323), rhs)
-
-	// round-trip
-	assert.Equal(t, float64(-37.84), ToF64(FromF64(-37.84)))
-	assert.Equal(t, int64(-488), ToI64(FromI64(-488)))
-	assert.Equal(t, uint64(1099511627776), ToU64(FromU64(1099511627776)))
-}
-
 func TestEncodeArithmetic(t *testing.T) {
 	// constants
-	constants := []Data{0, 22}
-	expected := []Instruction{{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)}}
+	constants := map[string][]byte{".LC1": Pack(int64(22))}
+	expected := []Instruction{{LOAD, Constant(".LC1", Rg(0, Int64))}}
 	program := generateBytecode(t, `22;`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
-	constants = []Data{0, FromU64(0755)}
-	expected = []Instruction{{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)}}
+	constants = map[string][]byte{".LC1": Pack(uint64(0755))}
+	expected = []Instruction{{LOAD, Constant(".LC1", Rg(0, Uint64))}}
 	program = generateBytecode(t, `0755;`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
-	constants = []Data{0, FromF64(2.0)}
-	expected = []Instruction{{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)}}
+	constants = map[string][]byte{".LC1": Pack(2.0)}
+	expected = []Instruction{{LOAD, Constant(".LC1", Rg(0, Float64))}}
 	program = generateBytecode(t, `2.0;`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	// add, subtract, multiply, divide
-	constants = []Data{0, 2, 3, 4, 5, 6}
+	constants = map[string][]byte{
+		".LC1": Pack(int64(2)),
+		".LC2": Pack(int64(3)),
+		".LC3": Pack(int64(4)),
+		".LC4": Pack(int64(5)),
+		".LC5": Pack(int64(6)),
+	}
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: I64_MULTIPLY, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: LOAD_CONST, Out: Register(3), Left: Constant(3)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(4)},
-		{Op: I64_DIVIDE, Out: Register(5), Left: Register(3), Right: Register(4)},
-		{Op: I64_ADD, Out: Register(6), Left: Register(2), Right: Register(5)},
-		{Op: LOAD_CONST, Out: Register(7), Left: Constant(5)},
-		{Op: I64_SUBTRACT, Out: Register(8), Left: Register(6), Right: Register(7)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{LOAD, Constant(".LC2", Rg(1, Int64))},
+		{MULTIPLY, Binary(Rg(0, Int64), Rg(1, Int64), Rg(2, Int64))},
+		{LOAD, Constant(".LC3", Rg(3, Int64))},
+		{LOAD, Constant(".LC4", Rg(4, Int64))},
+		{DIVIDE, Binary(Rg(3, Int64), Rg(4, Int64), Rg(5, Int64))},
+		{ADD, Binary(Rg(2, Int64), Rg(5, Int64), Rg(6, Int64))},
+		{LOAD, Constant(".LC5", Rg(7, Int64))},
+		{SUBTRACT, Binary(Rg(6, Int64), Rg(7, Int64), Rg(8, Int64))},
 	}
 	program = generateBytecode(t, `2 * 3 + 4 / 5 - 6;`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
-	constants = []Data{0, FromF64(2.0), FromF64(4.0), FromF64(8.0), FromF64(16.0), FromF64(32.0)}
+	constants = map[string][]byte{
+		".LC1": Pack(2.0),
+		".LC2": Pack(4.0),
+		".LC3": Pack(8.0),
+		".LC4": Pack(16.0),
+		".LC5": Pack(32.0),
+	}
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: F64_MULTIPLY, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: LOAD_CONST, Out: Register(3), Left: Constant(3)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(4)},
-		{Op: F64_DIVIDE, Out: Register(5), Left: Register(3), Right: Register(4)},
-		{Op: F64_ADD, Out: Register(6), Left: Register(2), Right: Register(5)},
-		{Op: LOAD_CONST, Out: Register(7), Left: Constant(5)},
-		{Op: F64_SUBTRACT, Out: Register(8), Left: Register(6), Right: Register(7)},
+		{LOAD, Constant(".LC1", Rg(0, Float64))},
+		{LOAD, Constant(".LC2", Rg(1, Float64))},
+		{MULTIPLY, Binary(Rg(0, Float64), Rg(1, Float64), Rg(2, Float64))},
+		{LOAD, Constant(".LC3", Rg(3, Float64))},
+		{LOAD, Constant(".LC4", Rg(4, Float64))},
+		{DIVIDE, Binary(Rg(3, Float64), Rg(4, Float64), Rg(5, Float64))},
+		{ADD, Binary(Rg(2, Float64), Rg(5, Float64), Rg(6, Float64))},
+		{LOAD, Constant(".LC5", Rg(7, Float64))},
+		{SUBTRACT, Binary(Rg(6, Float64), Rg(7, Float64), Rg(8, Float64))},
 	}
 	program = generateBytecode(t, `2.0 * 4.0 + 8.0 / 16.0 - 32.0;`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
-	constants = []Data{0, FromU64(2), FromU64(3), FromU64(4), FromU64(5), FromU64(6)}
+	constants = map[string][]byte{
+		".LC1": Pack(int64(2)),
+		".LC2": Pack(int64(3)),
+		".LC3": Pack(int64(4)),
+		".LC4": Pack(int64(5)),
+		".LC5": Pack(int64(6)),
+	}
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: U64_MULTIPLY, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: LOAD_CONST, Out: Register(3), Left: Constant(3)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(4)},
-		{Op: U64_DIVIDE, Out: Register(5), Left: Register(3), Right: Register(4)},
-		{Op: U64_ADD, Out: Register(6), Left: Register(2), Right: Register(5)},
-		{Op: LOAD_CONST, Out: Register(7), Left: Constant(5)},
-		{Op: U64_SUBTRACT, Out: Register(8), Left: Register(6), Right: Register(7)},
+		{LOAD, Constant(".LC1", Rg(0, Uint64))},
+		{LOAD, Constant(".LC2", Rg(1, Uint64))},
+		{MULTIPLY, Binary(Rg(0, Uint64), Rg(1, Uint64), Rg(2, Uint64))},
+		{LOAD, Constant(".LC3", Rg(3, Uint64))},
+		{LOAD, Constant(".LC4", Rg(4, Uint64))},
+		{DIVIDE, Binary(Rg(3, Uint64), Rg(4, Uint64), Rg(5, Uint64))},
+		{ADD, Binary(Rg(2, Uint64), Rg(5, Uint64), Rg(6, Uint64))},
+		{LOAD, Constant(".LC5", Rg(7, Uint64))},
+		{SUBTRACT, Binary(Rg(6, Uint64), Rg(7, Uint64), Rg(8, Uint64))},
 	}
 	program = generateBytecode(t, `02 * 03 + 04 / 05 - 06;`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	// grouping
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: I64_ADD, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: LOAD_CONST, Out: Register(3), Left: Constant(3)},
-		{Op: I64_MULTIPLY, Out: Register(4), Left: Register(2), Right: Register(3)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{LOAD, Constant(".LC2", Rg(1, Int64))},
+		{ADD, Binary(Rg(0, Int64), Rg(1, Int64), Rg(2, Int64))},
+		{LOAD, Constant(".LC3", Rg(3, Int64))},
+		{MULTIPLY, Binary(Rg(2, Int64), Rg(3, Int64), Rg(4, Int64))},
 	}
 	program = generateBytecode(t, `(2 + 3) * 4;`)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	// conversions
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: I64_ADD, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(3), Left: Register(2)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(3)},
-		{Op: F64_ADD, Out: Register(5), Left: Register(3), Right: Register(4)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{LOAD, Constant(".LC2", Rg(1, Int64))},
+		{ADD, Binary(Rg(0, Int64), Rg(1, Int64), Rg(2, Int64))},
+		{CAST_F64, Unary(Rg(2, Int64), Rg(3, Float64))},
+		{LOAD, Constant(".LC3", Rg(4, Float64))},
+		{ADD, Binary(Rg(3, Float64), Rg(4, Float64), Rg(5, Float64))},
 	}
 	program = generateBytecode(t, `(2 + 3) + 4.0;`)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(1), Left: Register(0)},
-		{Op: LOAD_CONST, Out: Register(2), Left: Constant(2)},
-		{Op: F64_ADD, Out: Register(3), Left: Register(1), Right: Register(2)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(3)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(5), Left: Register(4)},
-		{Op: F64_ADD, Out: Register(6), Left: Register(3), Right: Register(5)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{CAST_F64, Unary(Rg(0, Int64), Rg(1, Float64))},
+		{LOAD, Constant(".LC2", Rg(2, Float64))},
+		{ADD, Binary(Rg(1, Float64), Rg(2, Float64), Rg(3, Float64))},
+		{LOAD, Constant(".LC3", Rg(4, Int64))},
+		{CAST_F64, Unary(Rg(4, Int64), Rg(5, Float64))},
+		{ADD, Binary(Rg(3, Float64), Rg(5, Float64), Rg(6, Float64))},
 	}
 	program = generateBytecode(t, `(2 + 3.0) + 4;`)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: U64_ADD, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: CONVERT_U64_TO_F64, Out: Register(3), Left: Register(2)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(3)},
-		{Op: F64_ADD, Out: Register(5), Left: Register(3), Right: Register(4)},
+		{LOAD, Constant(".LC1", Rg(0, Uint64))},
+		{LOAD, Constant(".LC2", Rg(1, Uint64))},
+		{ADD, Binary(Rg(0, Uint64), Rg(1, Uint64), Rg(2, Uint64))},
+		{CAST_F64, Unary(Rg(2, Uint64), Rg(3, Float64))},
+		{LOAD, Constant(".LC3", Rg(4, Float64))},
+		{ADD, Binary(Rg(3, Float64), Rg(4, Float64), Rg(5, Float64))},
 	}
 	program = generateBytecode(t, `(02 + 03) + 4.0;`)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: CONVERT_U64_TO_F64, Out: Register(1), Left: Register(0)},
-		{Op: LOAD_CONST, Out: Register(2), Left: Constant(2)},
-		{Op: F64_ADD, Out: Register(3), Left: Register(1), Right: Register(2)},
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(3)},
-		{Op: CONVERT_U64_TO_F64, Out: Register(5), Left: Register(4)},
-		{Op: F64_ADD, Out: Register(6), Left: Register(3), Right: Register(5)},
+		{LOAD, Constant(".LC1", Rg(0, Uint64))},
+		{CAST_F64, Unary(Rg(0, Uint64), Rg(1, Float64))},
+		{LOAD, Constant(".LC2", Rg(2, Float64))},
+		{ADD, Binary(Rg(1, Float64), Rg(2, Float64), Rg(3, Float64))},
+		{LOAD, Constant(".LC3", Rg(4, Uint64))},
+		{CAST_F64, Unary(Rg(4, Uint64), Rg(5, Float64))},
+		{ADD, Binary(Rg(3, Float64), Rg(5, Float64), Rg(6, Float64))},
 	}
 	program = generateBytecode(t, `(02 + 3.0) + 04;`)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
@@ -177,21 +170,20 @@ func TestEncodeArithmetic(t *testing.T) {
 
 func TestEncodeBlock(t *testing.T) {
 	// Declarations
-	constants := []Data{
-		0: 0,
-		1: 3,
-		2: 2,
-		3: FromF64(0.5),
+	constants := map[string][]byte{
+		".LC1": Pack(int64(3)),
+		".LC2": Pack(int64(2)),
+		".LC3": Pack(0.5),
 	}
 	expected := []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: I64_ADD, Out: Register(2), Left: Register(0), Right: Register(1)},
-		{Op: LOAD_CONST, Out: Register(3), Left: Constant(3)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(4), Left: Register(0)},
-		{Op: F64_MULTIPLY, Out: Register(5), Left: Register(3), Right: Register(4)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(6), Left: Register(0)},
-		{Op: F64_DIVIDE, Out: Register(7), Left: Register(5), Right: Register(6)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{LOAD, Constant(".LC2", Rg(1, Int64))},
+		{ADD, Binary(Rg(0, Int64), Rg(1, Int64), Rg(2, Int64))},
+		{LOAD, Constant(".LC3", Rg(3, Float64))},
+		{CAST_F64, Unary(Rg(0, Int64), Rg(4, Float64))},
+		{MULTIPLY, Binary(Rg(3, Float64), Rg(4, Float64), Rg(5, Float64))},
+		{CAST_F64, Unary(Rg(0, Int64), Rg(6, Float64))},
+		{DIVIDE, Binary(Rg(5, Float64), Rg(6, Float64), Rg(7, Float64))},
 	}
 	program := generateBytecode(t, `{
 		hoge :: 3;          // constant decl
@@ -200,57 +192,60 @@ func TestEncodeBlock(t *testing.T) {
 		piyo := 0.5 * hoge; // mutable decl
 		piyo / hoge;        // two ident in expr; TODO: return statement
 	}`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
+	t.Log(Pretty(program.Procedures[0].Instructions))
 
 	// Simple and Parallel Assignment
-	constants = []Data{
-		0: 0,
-		1: 1,
-		2: 4,
-		3: FromU64(012),
-		4: 14,
-		5: FromU64(0700),
-		6: FromF64(0.25),
-		7: FromF64(5.0),
-		8: 10000,
-		9: 100,
+	constants = map[string][]byte{
+		".LC1": Pack(int64(1)),
+		".LC2": Pack(int64(4)),
+		".LC3": Pack(uint64(012)),
+		".LC4": Pack(int64(14)),
+		".LC5": Pack(uint64(0700)),
+		".LC6": Pack(0.25),
+		".LC7": Pack(5.0),
+		".LC8": Pack(int64(10000)),
+		".LC9": Pack(int64(100)),
 	}
 	expected = []Instruction{
 		// plugh := 1 - 3;
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: I64_SUBTRACT, Out: Register(2), Left: Register(0), Right: Register(1)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{LOAD, Constant(".LC2", Rg(1, Int64))},
+		{SUBTRACT, Binary(Rg(0, Int64), Rg(1, Int64), Rg(2, Int64))},
 		// xyzzy := 012;
-		{Op: LOAD_CONST, Out: Register(3), Left: Constant(3)},
+		{LOAD, Constant(".LC3", Rg(3, Uint64))},
 		// nerrf := 14;
-		{Op: LOAD_CONST, Out: Register(4), Left: Constant(4)},
+		{LOAD, Constant(".LC4", Rg(4, Int64))},
 		// xyzzy = 0700;
-		{Op: LOAD_CONST, Out: Register(5), Left: Constant(5)},
-		{Op: COPY_VALUE, Out: Register(3), Left: Register(5)},
+		{LOAD, Constant(".LC5", Rg(5, Uint64))},
+		{COPY, Unary(Rg(5, Uint64), Rg(3, Uint64))},
 		// plugh = 0.25 * plugh;
-		{Op: LOAD_CONST, Out: Register(6), Left: Constant(6)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(7), Left: Register(2)},
-		{Op: F64_MULTIPLY, Out: Register(8), Left: Register(6), Right: Register(7)},
-		{Op: CONVERT_F64_TO_I64, Out: Register(9), Left: Register(8)},
-		{Op: COPY_VALUE, Out: Register(2), Left: Register(9)},
+		{LOAD, Constant(".LC6", Rg(6, Float64))},
+		{CAST_F64, Unary(Rg(2, Int64), Rg(7, Float64))},
+		{MULTIPLY, Binary(Rg(6, Float64), Rg(7, Float64), Rg(8, Float64))},
+		{CAST_I64, Unary(Rg(8, Float64), Rg(9, Int64))},
+		{COPY, Unary(Rg(9, Int64), Rg(2, Int64))},
 		// xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
-		{Op: COPY_VALUE, Out: Register(10), Left: Register(2)},
-		{Op: CONVERT_U64_TO_F64, Out: Register(11), Left: Register(3)},
-		{Op: LOAD_CONST, Out: Register(12), Left: Constant(7)},
-		{Op: F64_DIVIDE, Out: Register(13), Left: Register(11), Right: Register(12)},
-		{Op: COPY_VALUE, Out: Register(14), Left: Register(13)},
-		{Op: COPY_VALUE, Out: Register(15), Left: Register(4)},
-		{Op: COPY_VALUE, Out: Register(3), Left: Register(10)},
-		{Op: CONVERT_F64_TO_I64, Out: Register(16), Left: Register(14)},
-		{Op: COPY_VALUE, Out: Register(4), Left: Register(16)},
-		{Op: COPY_VALUE, Out: Register(2), Left: Register(15)},
+		{COPY, Unary(Rg(2, Int64), Rg(10, Int64))},
+		{CAST_F64, Unary(Rg(3, Uint64), Rg(11, Float64))},
+		{LOAD, Constant(".LC7", Rg(12, Float64))},
+		{DIVIDE, Binary(Rg(11, Float64), Rg(12, Float64), Rg(13, Float64))},
+		{COPY, Unary(Rg(13, Float64), Rg(14, Float64))},
+		{COPY, Unary(Rg(4, Int64), Rg(15, Int64))},
+		{CAST_U64, Unary(Rg(10, Int64), Rg(16, Uint64))},
+		{COPY, Unary(Rg(16, Uint64), Rg(3, Uint64))},
+		{CAST_I64, Unary(Rg(14, Float64), Rg(17, Int64))},
+		{COPY, Unary(Rg(17, Int64), Rg(4, Int64))},
+		{COPY, Unary(Rg(15, Int64), Rg(2, Int64))},
 		// barrf := xyzzy * 10000 + nerrf * 100;
-		{Op: LOAD_CONST, Out: Register(17), Left: Constant(8)},
-		{Op: U64_MULTIPLY, Out: Register(18), Left: Register(3), Right: Register(17)},
-		{Op: LOAD_CONST, Out: Register(19), Left: Constant(9)},
-		{Op: I64_MULTIPLY, Out: Register(20), Left: Register(4), Right: Register(19)},
-		{Op: U64_ADD, Out: Register(21), Left: Register(18), Right: Register(20)},
+		{LOAD, Constant(".LC8", Rg(18, Int64))},
+		{CAST_U64, Unary(Rg(18, Int64), Rg(19, Uint64))},
+		{MULTIPLY, Binary(Rg(3, Uint64), Rg(19, Uint64), Rg(20, Uint64))},
+		{LOAD, Constant(".LC9", Rg(21, Int64))},
+		{MULTIPLY, Binary(Rg(4, Int64), Rg(21, Int64), Rg(22, Int64))},
+		{CAST_U64, Unary(Rg(22, Int64), Rg(23, Uint64))},
+		{ADD, Binary(Rg(20, Uint64), Rg(23, Uint64), Rg(24, Uint64))},
 	}
 	// FIXME: This example will break with more strict with implict casts
 	program = generateBytecode(t, `{
@@ -265,27 +260,27 @@ func TestEncodeBlock(t *testing.T) {
 		xyzzy, nerrf, plugh = plugh, (xyzzy / 5.0), nerrf;
 		barrf := xyzzy * 10000 + nerrf * 100;
 	}`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	// Nested block
-	constants = []Data{
-		0: 0,
-		1: FromU64(0600),
-		2: FromF64(6.29),
-		3: 2,
-		4: 3,
+	constants = map[string][]byte{
+		".LC1": Pack(uint64(0600)),
+		".LC2": Pack(6.29),
+		".LC3": Pack(int64(2)),
+		".LC4": Pack(int64(3)),
 	}
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: LOAD_CONST, Out: Register(2), Left: Constant(3)},
-		{Op: CONVERT_I64_TO_F64, Out: Register(3), Left: Register(2)},
-		{Op: F64_DIVIDE, Out: Register(4), Left: Register(1), Right: Register(3)},
-		{Op: CONVERT_U64_TO_F64, Out: Register(5), Left: Register(0)},
-		{Op: F64_SUBTRACT, Out: Register(6), Left: Register(4), Right: Register(5)},
-		{Op: LOAD_CONST, Out: Register(7), Left: Constant(4)},
-		{Op: COPY_VALUE, Out: Register(0), Left: Register(7)},
+		{LOAD, Constant(".LC1", Rg(0, Uint64))},
+		{LOAD, Constant(".LC2", Rg(1, Float64))},
+		{LOAD, Constant(".LC3", Rg(2, Int64))},
+		{CAST_F64, Unary(Rg(2, Int64), Rg(3, Float64))},
+		{DIVIDE, Binary(Rg(1, Float64), Rg(3, Float64), Rg(4, Float64))},
+		{CAST_F64, Unary(Rg(0, Uint64), Rg(5, Float64))},
+		{SUBTRACT, Binary(Rg(4, Float64), Rg(5, Float64), Rg(6, Float64))},
+		{LOAD, Constant(".LC4", Rg(7, Int64))},
+		{CAST_U64, Unary(Rg(7, Int64), Rg(8, Uint64))},
+		{COPY, Unary(Rg(8, Uint64), Rg(0, Uint64))},
 	}
 	program = generateBytecode(t, `{
 		ham  := 0600;
@@ -299,19 +294,15 @@ func TestEncodeBlock(t *testing.T) {
 
 		eggs;
 	}`)
-	assert.Equal(t, constants, program.Constants)
+	assert.Equal(t, constants, program.Data)
 	assert.Equal(t, expected, program.Procedures[0].Instructions)
 
 	// Inline assembly
-	constants = []Data{
-		0: 0,
-		1: FromU64(3),
-		2: FromU64(0),
-	}
+	constants = map[string][]byte{".LC1": Pack(int64(3)), ".LC2": Pack(int64(0))}
 	expected = []Instruction{
-		{Op: LOAD_CONST, Out: Register(0), Left: Constant(1)},
-		{Op: LOAD_CONST, Out: Register(1), Left: Constant(2)},
-		{Op: CALL_ASM, Left: Metadata(1)},
+		{LOAD, Constant(".LC1", Rg(0, Int64))},
+		{LOAD, Constant(".LC2", Rg(1, Uint64))},
+		{CALL_ASM, nil},
 	}
 	program = generateBytecode(t, `{
 	  input := 3;
@@ -321,13 +312,16 @@ func TestEncodeBlock(t *testing.T) {
 
 		output;
 	}`)
-	assert.Equal(t, constants, program.Constants)
-	assert.Equal(t, expected, program.Procedures[0].Instructions)
-	if assert.Equal(t, 2, len(program.Metadata)) {
-		asm := program.Metadata[1].(*Assembly)
+	assert.Equal(t, constants, program.Data)
+	insts := program.Procedures[0].Instructions
+	for i, inst := range insts {
+		assert.Equal(t, expected[i].Op, inst.Op)
+	}
+	if assert.Equal(t, 3, len(insts)) {
+		asm := insts[2].Args.(*AssemblyArgs)
 		assert.Equal(t, " mov output, input ", asm.Source)
-		assert.Equal(t, []Register{0}, asm.InputRegisters)
-		assert.Equal(t, Register(1), asm.OutputRegister)
+		assert.Equal(t, []Register{Rg(0, Int64)}, asm.InputRegisters)
+		assert.Equal(t, Rg(1, Uint64), asm.OutputRegister)
 		assert.True(t, asm.HasOutput)
 	}
 }
