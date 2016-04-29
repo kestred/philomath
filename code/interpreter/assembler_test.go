@@ -9,7 +9,7 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	asm := &bytecode.Assembly{
+	asm := &bytecode.AssemblyArgs{
 		Source:        "  mov output, input",
 		HasOutput:     true,
 		OutputBinding: ast.AsmBinding{ast.Ident("output"), 6},

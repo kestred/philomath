@@ -106,7 +106,7 @@ import (
 
 type Function c.Pointer
 
-func Assemble(asm *bytecode.Assembly) {
+func Assemble(asm *bytecode.AssemblyArgs) {
 	label, source := generateAssembly(asm)
 	tmpdir, err := ioutil.TempDir("", "phi-")
 	if err != nil {
@@ -147,7 +147,7 @@ func Assemble(asm *bytecode.Assembly) {
 var nextLabel uint
 
 // TODO: more intelligent asm generation
-func generateAssembly(asm *bytecode.Assembly) (label string, source string) {
+func generateAssembly(asm *bytecode.AssemblyArgs) (label string, source string) {
 	var offset int
 	var parts []string
 	for i, binding := range asm.InputBindings {
@@ -207,19 +207,30 @@ func generateAssembly(asm *bytecode.Assembly) (label string, source string) {
 	return
 }
 
-func CallAsm(asm *bytecode.Assembly, registers []bytecode.Data) {
+func u64Pack(i C.u64) []byte {
+	return bytecode.Pack(uint64(i))
+}
+
+func u64Unpack(b []byte) C.u64 {
+	var ui uint64
+	err := bytecode.Unpack(b, &ui)
+	utils.Assert(err == nil, `%v (at inline assembly)`, err)
+	return C.u64(ui)
+}
+
+func CallAsm(asm *bytecode.AssemblyArgs, registers [][]byte) {
 	if asm.Wrapper == nil {
 		Assemble(asm)
 	}
 
-	params := make([]bytecode.Data, len(asm.InputRegisters))
+	params := make([][]byte, len(asm.InputRegisters))
 	for i, register := range asm.InputRegisters {
-		params[i] = registers[register]
+		params[i] = registers[register.Loc]
 	}
 
 	if asm.HasOutput {
 		// if ast.IsFloat(asm.OutputBinding.Name.Type) {
-		returns := registers[asm.OutputRegister : asm.OutputRegister+1]
+		returns := registers[asm.OutputRegister.Loc : asm.OutputRegister.Loc+1]
 		CallAsmInt(Function(asm.Wrapper), params, returns)
 		// }
 	} else if len(asm.InputBindings) > 0 {
@@ -232,35 +243,35 @@ func CallAsm(asm *bytecode.Assembly, registers []bytecode.Data) {
 }
 
 // FIXME: outs shouldn't be an array anymore
-func CallAsmInt(fn Function, ins []bytecode.Data, outs []bytecode.Data) {
+func CallAsmInt(fn Function, ins [][]byte, outs [][]byte) {
 	index := callIndex(len(ins), len(outs))
 	switch index {
 	case index1x0:
-		C.CallInt1x0(c.Pointer(fn), C.u64(ins[0]))
+		C.CallInt1x0(c.Pointer(fn), u64Unpack(ins[0]))
 	case index2x0:
-		C.CallInt2x0(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]))
+		C.CallInt2x0(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]))
 	case index3x0:
-		C.CallInt3x0(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]))
+		C.CallInt3x0(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]))
 	case index4x0:
-		C.CallInt4x0(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]), C.u64(ins[3]))
+		C.CallInt4x0(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]), u64Unpack(ins[3]))
 	case index5x0:
-		C.CallInt4x0(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]), C.u64(ins[3]))
+		C.CallInt4x0(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]), u64Unpack(ins[3]))
 	case index6x0:
-		C.CallInt4x0(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]), C.u64(ins[3]))
+		C.CallInt4x0(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]), u64Unpack(ins[3]))
 	case index0x1:
-		outs[0] = bytecode.Data(C.CallInt0x1(c.Pointer(fn)))
+		outs[0] = u64Pack(C.CallInt0x1(c.Pointer(fn)))
 	case index1x1:
-		outs[0] = bytecode.Data(C.CallInt1x1(c.Pointer(fn), C.u64(ins[0])))
+		outs[0] = u64Pack(C.CallInt1x1(c.Pointer(fn), u64Unpack(ins[0])))
 	case index2x1:
-		outs[0] = bytecode.Data(C.CallInt2x1(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1])))
+		outs[0] = u64Pack(C.CallInt2x1(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1])))
 	case index3x1:
-		outs[0] = bytecode.Data(C.CallInt3x1(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2])))
+		outs[0] = u64Pack(C.CallInt3x1(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2])))
 	case index4x1:
-		outs[0] = bytecode.Data(C.CallInt4x1(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]), C.u64(ins[3])))
+		outs[0] = u64Pack(C.CallInt4x1(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]), u64Unpack(ins[3])))
 	case index5x1:
-		outs[0] = bytecode.Data(C.CallInt5x1(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]), C.u64(ins[3]), C.u64(ins[4])))
+		outs[0] = u64Pack(C.CallInt5x1(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]), u64Unpack(ins[3]), u64Unpack(ins[4])))
 	case index6x1:
-		outs[0] = bytecode.Data(C.CallInt6x1(c.Pointer(fn), C.u64(ins[0]), C.u64(ins[1]), C.u64(ins[2]), C.u64(ins[3]), C.u64(ins[4]), C.u64(ins[5])))
+		outs[0] = u64Pack(C.CallInt6x1(c.Pointer(fn), u64Unpack(ins[0]), u64Unpack(ins[1]), u64Unpack(ins[2]), u64Unpack(ins[3]), u64Unpack(ins[4]), u64Unpack(ins[5])))
 	default:
 		utils.InvalidCodePath()
 	}

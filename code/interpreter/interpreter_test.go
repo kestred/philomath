@@ -4,20 +4,21 @@ import (
 	"testing"
 
 	"github.com/kestred/philomath/code/ast"
-	"github.com/kestred/philomath/code/bytecode"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/kestred/philomath/code/semantics"
 	"github.com/stretchr/testify/assert"
+
+	bc "github.com/kestred/philomath/code/bytecode"
 )
 
-func evalExample(t *testing.T, input string) bytecode.Data {
+func evalExample(t *testing.T, input string) []byte {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
 	section := ast.FlattenTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
-	program := bytecode.NewProgram()
+	program := bc.NewProgram()
 	program.Extend(node)
 
 	t.Log(program.Procedures[0].Instructions)
@@ -25,68 +26,68 @@ func evalExample(t *testing.T, input string) bytecode.Data {
 }
 
 func TestEvaluateNoop(t *testing.T) {
-	var program *bytecode.Program
-	var result bytecode.Data
+	var program *bc.Program
+	var result []byte
 
 	// just a noop
-	program = bytecode.NewProgram()
-	program.Procedures[0].NextRegister = 1
-	program.Procedures[0].Instructions = []bytecode.Instruction{{Op: bytecode.NOOP}}
+	program = bc.NewProgram()
+	program.Procedures[0].NextFree = 1
+	program.Procedures[0].Instructions = []bc.Instruction{{Op: bc.NOOP}}
 	result = Evaluate(program.Procedures[0])
-	assert.Equal(t, 0, int(result))
+	assert.Equal(t, []byte(nil), result)
 
 	// interleaved noops
-	program = bytecode.NewProgram()
-	program.Constants = []bytecode.Data{0, 1, 2}
-	program.Procedures[0].ExprRegister = 3
-	program.Procedures[0].NextRegister = 4
-	program.Procedures[0].Instructions = []bytecode.Instruction{
-		{Op: bytecode.NOOP},
-		{Op: bytecode.NOOP},
-		{Op: bytecode.NOOP},
-		{Op: bytecode.LOAD_CONST, Out: 1, Left: 1},
-		{Op: bytecode.NOOP},
-		{Op: bytecode.LOAD_CONST, Out: 2, Left: 2},
-		{Op: bytecode.NOOP},
-		{Op: bytecode.I64_ADD, Out: 3, Left: 1, Right: 2},
+	program = bc.NewProgram()
+	program.Data = map[string][]byte{".LC1": bc.Pack(uint64(1)), ".LC2": bc.Pack(uint64(2))}
+	program.Procedures[0].PrevResult = bc.Rg(3, bc.Int64)
+	program.Procedures[0].NextFree = 4
+	program.Procedures[0].Instructions = []bc.Instruction{
+		{bc.NOOP, nil},
+		{bc.NOOP, nil},
+		{bc.NOOP, nil},
+		{bc.LOAD, bc.Constant(".LC1", bc.Rg(1, bc.Int64))},
+		{bc.NOOP, nil},
+		{bc.LOAD, bc.Constant(".LC2", bc.Rg(2, bc.Int64))},
+		{bc.NOOP, nil},
+		{bc.ADD, bc.Binary(bc.Rg(1, bc.Int64), bc.Rg(2, bc.Int64), bc.Rg(3, bc.Int64))},
 	}
 	result = Evaluate(program.Procedures[0])
-	assert.Equal(t, 3, int(result))
+	assert.Equal(t, bc.Pack(int64(3)), result)
 }
 
 func TestEvaluateArithmetic(t *testing.T) {
 	// constant
 	result := evalExample(t, `22;`)
-	assert.Equal(t, int64(22), bytecode.ToI64(result))
+	assert.Equal(t, bc.Pack(int64(22)), result)
 
 	// add, subtract, multiply, divide
 	result = evalExample(t, `2 * 3 + 27 / 9 - 15;`)
-	assert.Equal(t, int64(2*3+27/9-15), bytecode.ToI64(result))
-	assert.Equal(t, int64(-6), bytecode.ToI64(result))
+	assert.Equal(t, bc.Pack(int64(2*3+27/9-15)), result)
+	assert.Equal(t, bc.Pack(int64(-6)), result)
 
 	result = evalExample(t, `2.0 * 4.0 + 8.0 / 16.0 - 32.0;`)
-	assert.Equal(t, float64(2.0*4.0+8.0/16.0-32.0), bytecode.ToF64(result))
-	assert.Equal(t, float64(-23.5), bytecode.ToF64(result))
+	assert.Equal(t, bc.Pack(float64(2.0*4.0+8.0/16.0-32.0)), result)
+	assert.Equal(t, bc.Pack(float64(-23.5)), result)
 
 	result = evalExample(t, `02 * 03 + 04 / 05 - 01;`)
-	assert.Equal(t, uint64(02*03+04/05-01), bytecode.ToU64(result))
-	assert.Equal(t, uint64(5), bytecode.ToU64(result))
+	assert.Equal(t, bc.Pack(uint64(02*03+04/05-01)), result)
+	assert.Equal(t, bc.Pack(uint64(5)), result)
 
 	result = evalExample(t, `(2 + 3) + 4.0;`)
-	assert.Equal(t, float64((2+3)+4.0), bytecode.ToF64(result))
-	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
+	assert.Equal(t, bc.Pack(float64((2+3)+4.0)), result)
+	assert.Equal(t, bc.Pack(float64(9.0)), result)
 
 	result = evalExample(t, `(2 + 3.0) + 4;`)
-	assert.Equal(t, float64((2+3.0)+4), bytecode.ToF64(result))
-	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
+	assert.Equal(t, bc.Pack(float64((2+3.0)+4)), result)
+	assert.Equal(t, bc.Pack(float64(9.0)), result)
 
 	result = evalExample(t, `(02 + 03) + 4.0;`)
-	assert.Equal(t, float64((02+03)+4.0), bytecode.ToF64(result))
-	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
+	assert.Equal(t, bc.Pack(float64((02+03)+4.0)), result)
+	assert.Equal(t, bc.Pack(float64(9.0)), result)
 
 	result = evalExample(t, `(02 + 3.0) + 04;`)
-	assert.Equal(t, float64((02+3.0)+04), bytecode.ToF64(result))
-	assert.Equal(t, float64(9.0), bytecode.ToF64(result))
+	assert.Equal(t, bc.Pack(float64((02+3.0)+04)), result)
+	assert.Equal(t, bc.Pack(float64(9.0)), result)
 }
 
 func TestEncodeBlock(t *testing.T) {
@@ -100,8 +101,8 @@ func TestEncodeBlock(t *testing.T) {
 	}`)
 	const hoge = 3
 	var piyo = 0.5 * float64(hoge)
-	assert.Equal(t, float64(piyo/float64(hoge)), bytecode.ToF64(result))
-	assert.Equal(t, float64(0.5), bytecode.ToF64(result))
+	assert.Equal(t, bc.Pack(float64(piyo/float64(hoge))), result)
+	assert.Equal(t, bc.Pack(float64(0.5)), result)
 
 	// assignment Statement
 	result = evalExample(t, `{
@@ -111,8 +112,8 @@ func TestEncodeBlock(t *testing.T) {
 	}`)
 	var xyzzy = uint64(012)
 	xyzzy = uint64(0700)
-	assert.Equal(t, uint64(xyzzy), bytecode.ToU64(result))
-	assert.Equal(t, uint64(0700), bytecode.ToU64(result))
+	assert.Equal(t, bc.Pack(uint64(xyzzy)), result)
+	assert.Equal(t, bc.Pack(uint64(0700)), result)
 
 	// assignment with cast
 	result = evalExample(t, `{
@@ -122,8 +123,8 @@ func TestEncodeBlock(t *testing.T) {
 	}`)
 	var plugh = int64(1) - int64(37)
 	plugh = int64(0.25 * float64(plugh))
-	assert.Equal(t, int64(plugh), bytecode.ToI64(result))
-	assert.Equal(t, int64(-9), bytecode.ToI64(result))
+	assert.Equal(t, bc.Pack(int64(plugh)), result)
+	assert.Equal(t, bc.Pack(int64(-9)), result)
 
 	// parallel assignment (with and without casts)
 	result = evalExample(t, `{
@@ -146,6 +147,6 @@ func TestEncodeBlock(t *testing.T) {
 	xyzzy = tmp1
 	nerrf = tmp2
 	plugh = tmp3
-	assert.Equal(t, int64(nerrf), bytecode.ToI64(result))
-	assert.Equal(t, int64(0700/5), bytecode.ToI64(result))
+	assert.Equal(t, bc.Pack(int64(nerrf)), result)
+	assert.Equal(t, bc.Pack(int64(0700/5)), result)
 }

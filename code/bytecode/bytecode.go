@@ -3,7 +3,9 @@ package bytecode
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"unsafe"
 
@@ -144,6 +146,10 @@ func Pack(v interface{}) []byte {
 }
 
 func Unpack(b []byte, v interface{}) error {
+	if reflect.TypeOf(v).Kind() != reflect.Ptr {
+		return errors.New("can't unpack register into non-pointer type")
+	}
+
 	return binary.Read(bytes.NewReader(b), binary.LittleEndian, v) // FIXME: Cross-compilation endianness
 }
 
@@ -162,6 +168,14 @@ func Pretty(insts []Instruction) string {
 		fmt.Fprintln(&buf, inst)
 	}
 	return buf.String()
+}
+
+type NullaryArgs struct {
+	Rg Register
+}
+
+func Nullary(rg Register) NullaryArgs {
+	return NullaryArgs{Rg: rg}
 }
 
 type UnaryArgs struct {
@@ -186,10 +200,15 @@ func Binary(left, right, out Register) BinaryArgs {
 type ConstantArgs struct {
 	Name string
 	Out  Register
+	Ptr  bool
 }
 
 func Constant(name string, out Register) ConstantArgs {
 	return ConstantArgs{Name: name, Out: out}
+}
+
+func ConstPtr(name string, out Register) ConstantArgs {
+	return ConstantArgs{Name: name, Out: out, Ptr: true}
 }
 
 type AssemblyArgs struct {
@@ -202,6 +221,15 @@ type AssemblyArgs struct {
 	OutputRegister Register
 	InputBindings  []ast.AsmBinding
 	InputRegisters []Register
+}
+
+type ProcedureArgs struct {
+	Proc Procedure
+	Out  Register
+}
+
+func Proc(proc Procedure, out Register) ProcedureArgs {
+	return ProcedureArgs{Proc: proc, Out: out}
 }
 
 type Program struct {
@@ -378,13 +406,13 @@ func (p *Procedure) Extend(node ast.Node) {
 		utils.Assert(n.Value != ast.UnparsedValue, "An unparsed value survived until bytecode generation")
 		register := Rg(p.AssignLocation(), Pointer)
 
-		text, ok := n.Value.(string)
-		utils.Assert(ok, "A text literal is not a string value during bytecode generation")
+		text, ok := n.Value.([]byte)
+		utils.Assert(ok, "A text literal is not a byte slice during bytecode generation")
 
 		name := p.Program.NextConstantName()
-		instruction := Inst(LOAD, Constant(name, register))
+		instruction := Inst(LOAD, ConstPtr(name, register))
 
-		p.Program.DefineData(name, []byte(text))
+		p.Program.DefineData(name, text)
 		p.Instructions = append(p.Instructions, instruction)
 		endRegister = register
 

@@ -1,22 +1,36 @@
 package interpreter
 
-import bc "github.com/kestred/philomath/code/bytecode"
+import (
+	"unsafe"
 
-func Run(prog *bc.Program) bc.Data {
+	bc "github.com/kestred/philomath/code/bytecode"
+	"github.com/kestred/philomath/code/utils"
+)
+
+func Run(prog *bc.Program) []byte {
 	start := prog.Procedures[prog.Text["start_"]]
-	main := prog.Text["main"]
-	call := bc.Instruction{Op: bc.CALL, Out: start.AssignRegister(), Left: bc.Register(main)}
+	out := bc.Rg(start.AssignLocation(), start.PrevResult.Typ)
+	proc := prog.Procedures[prog.Text["main"]]
+	call := bc.Inst(bc.CALL, bc.Proc(proc, out))
 	start.Instructions = append(start.Instructions, call)
 	return Evaluate(start)
 }
 
 // HACK: for now, Evaluate will return whatever the result of the last instruction is
-func Evaluate(proc bc.Procedure) bc.Data {
-	registers := make([]bc.Data, uint(proc.NextRegister))
-	returnRegister := bc.Register(-1)
+func Evaluate(proc bc.Procedure) []byte {
+	registers := make([][]byte, uint(proc.NextFree))
+	returnRegister := bc.Rg(-1, bc.None)
 	count := len(proc.Instructions)
 	if count > 0 {
-		returnRegister = proc.Instructions[count-1].Out
+		inst := proc.Instructions[count-1]
+		switch args := inst.Args.(type) {
+		case bc.UnaryArgs:
+			returnRegister = args.Out
+		case bc.BinaryArgs:
+			returnRegister = args.Out
+		case bc.ConstantArgs:
+			returnRegister = args.Out
+		}
 	}
 
 InstructionLoop:
@@ -24,95 +38,162 @@ InstructionLoop:
 		switch inst.Op {
 		case bc.NOOP:
 			continue
-		case bc.COPY_VALUE:
-			registers[inst.Out] = registers[inst.Left]
-		case bc.LOAD_CONST:
-			registers[inst.Out] = proc.Program.Constants[inst.Left]
+		case bc.COPY:
+			args := inst.Args.(bc.UnaryArgs)
+			registers[args.Out.Loc] = registers[args.In.Loc]
+		case bc.LOAD:
+			switch args := inst.Args.(type) {
+			case bc.ConstantArgs:
+				if args.Ptr {
+					ptr := &proc.Program.Data[args.Name][0]
+					raw := uint64(uintptr(unsafe.Pointer(ptr)))
+					registers[args.Out.Loc] = bc.Pack(raw)
+				} else {
+					registers[args.Out.Loc] = proc.Program.Data[args.Name]
+				}
+			case bc.UnaryArgs:
+				panic("TODO: Load data from pointer")
+				// registers[args.Out] = proc.Program.Constants[args.Left]
+			}
 		case bc.CALL:
-			registers[inst.Out] = Evaluate(proc.Program.Procedures[inst.Left])
+			args := inst.Args.(bc.ProcedureArgs)
+			registers[args.Out.Loc] = Evaluate(args.Proc)
 		case bc.CALL_ASM:
-			asm := proc.Program.Metadata[inst.Left].(*bc.Assembly)
+			asm := inst.Args.(*bc.AssemblyArgs)
 			CallAsm(asm, registers)
 		case bc.RETURN:
-			returnRegister = inst.Out
+			returnRegister = inst.Args.(bc.NullaryArgs).Rg
 			break InstructionLoop
 
 		// signed 64-bit arithmetic
-		case bc.I64_ADD:
-			left := bc.ToI64(registers[inst.Left])
-			right := bc.ToI64(registers[inst.Right])
-			registers[inst.Out] = bc.FromI64(left + right)
-		case bc.I64_SUBTRACT:
-			left := bc.ToI64(registers[inst.Left])
-			right := bc.ToI64(registers[inst.Right])
-			registers[inst.Out] = bc.FromI64(left - right)
-		case bc.I64_MULTIPLY:
-			left := bc.ToI64(registers[inst.Left])
-			right := bc.ToI64(registers[inst.Right])
-			registers[inst.Out] = bc.FromI64(left * right)
-		case bc.I64_DIVIDE:
-			left := bc.ToI64(registers[inst.Left])
-			right := bc.ToI64(registers[inst.Right])
-			registers[inst.Out] = bc.FromI64(left / right)
-
-		// unsigned 64-bit arithmetic
-		case bc.U64_ADD:
-			left := bc.ToU64(registers[inst.Left])
-			right := bc.ToU64(registers[inst.Right])
-			registers[inst.Out] = bc.FromU64(left + right)
-		case bc.U64_SUBTRACT:
-			left := bc.ToU64(registers[inst.Left])
-			right := bc.ToU64(registers[inst.Right])
-			registers[inst.Out] = bc.FromU64(left - right)
-		case bc.U64_MULTIPLY:
-			left := bc.ToU64(registers[inst.Left])
-			right := bc.ToU64(registers[inst.Right])
-			registers[inst.Out] = bc.FromU64(left * right)
-		case bc.U64_DIVIDE:
-			left := bc.ToU64(registers[inst.Left])
-			right := bc.ToU64(registers[inst.Right])
-			registers[inst.Out] = bc.FromU64(left / right)
-
-		// floating-point 64-bit arithmetic
-		case bc.F64_ADD:
-			left := bc.ToF64(registers[inst.Left])
-			right := bc.ToF64(registers[inst.Right])
-			registers[inst.Out] = bc.FromF64(left + right)
-		case bc.F64_SUBTRACT:
-			left := bc.ToF64(registers[inst.Left])
-			right := bc.ToF64(registers[inst.Right])
-			registers[inst.Out] = bc.FromF64(left - right)
-		case bc.F64_MULTIPLY:
-			left := bc.ToF64(registers[inst.Left])
-			right := bc.ToF64(registers[inst.Right])
-			registers[inst.Out] = bc.FromF64(left * right)
-		case bc.F64_DIVIDE:
-			left := bc.ToF64(registers[inst.Left])
-			right := bc.ToF64(registers[inst.Right])
-			registers[inst.Out] = bc.FromF64(left / right)
+		case bc.ADD:
+			args := inst.Args.(bc.BinaryArgs)
+			switch args.Left.Typ {
+			case bc.Int64:
+				var left, right int64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left + right)
+			case bc.Uint64:
+				var left, right uint64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left + right)
+			case bc.Float64:
+				var left, right float64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left + right)
+			}
+		case bc.SUBTRACT:
+			args := inst.Args.(bc.BinaryArgs)
+			switch args.Left.Typ {
+			case bc.Int64:
+				var left, right int64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left - right)
+			case bc.Uint64:
+				var left, right uint64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left - right)
+			case bc.Float64:
+				var left, right float64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left - right)
+			}
+		case bc.MULTIPLY:
+			args := inst.Args.(bc.BinaryArgs)
+			switch args.Left.Typ {
+			case bc.Int64:
+				var left, right int64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left * right)
+			case bc.Uint64:
+				var left, right uint64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left * right)
+			case bc.Float64:
+				var left, right float64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left * right)
+			}
+		case bc.DIVIDE:
+			args := inst.Args.(bc.BinaryArgs)
+			switch args.Left.Typ {
+			case bc.Int64:
+				var left, right int64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left / right)
+			case bc.Uint64:
+				var left, right uint64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left / right)
+			case bc.Float64:
+				var left, right float64
+				unpackRegister(inst, registers, args.Left.Loc, &left)
+				unpackRegister(inst, registers, args.Right.Loc, &right)
+				registers[args.Out.Loc] = bc.Pack(left / right)
+			}
 
 		// conversions
-		case bc.CONVERT_F64_TO_I64:
-			value := bc.ToF64(registers[inst.Left])
-			registers[inst.Out] = bc.FromI64(int64(value))
-		case bc.CONVERT_F64_TO_U64:
-			value := bc.ToF64(registers[inst.Left])
-			registers[inst.Out] = bc.FromU64(uint64(value))
-		case bc.CONVERT_I64_TO_F64:
-			value := bc.ToI64(registers[inst.Left])
-			registers[inst.Out] = bc.FromF64(float64(value))
-		case bc.CONVERT_U64_TO_F64:
-			value := bc.ToU64(registers[inst.Left])
-			registers[inst.Out] = bc.FromF64(float64(value))
+		case bc.CAST_I64:
+			args := inst.Args.(bc.UnaryArgs)
+			switch args.In.Typ {
+			case bc.Uint64:
+				var in uint64
+				unpackRegister(inst, registers, args.In.Loc, &in)
+				registers[args.Out.Loc] = bc.Pack(int64(in))
+			case bc.Float64:
+				var in float64
+				unpackRegister(inst, registers, args.In.Loc, &in)
+				registers[args.Out.Loc] = bc.Pack(int64(in))
+			}
+		case bc.CAST_U64:
+			args := inst.Args.(bc.UnaryArgs)
+			switch args.In.Typ {
+			case bc.Int64:
+				var in int64
+				unpackRegister(inst, registers, args.In.Loc, &in)
+				registers[args.Out.Loc] = bc.Pack(uint64(in))
+			case bc.Float64:
+				var in float64
+				unpackRegister(inst, registers, args.In.Loc, &in)
+				registers[args.Out.Loc] = bc.Pack(uint64(in))
+			}
+		case bc.CAST_F64:
+			args := inst.Args.(bc.UnaryArgs)
+			switch args.In.Typ {
+			case bc.Int64:
+				var in int64
+				unpackRegister(inst, registers, args.In.Loc, &in)
+				registers[args.Out.Loc] = bc.Pack(float64(in))
+			case bc.Uint64:
+				var in uint64
+				unpackRegister(inst, registers, args.In.Loc, &in)
+				registers[args.Out.Loc] = bc.Pack(float64(in))
+			}
 
 		default:
 			panic("TODO: Unhandled opcode")
 		}
 	}
 
-	if returnRegister >= 0 {
-		return registers[returnRegister]
+	if returnRegister.Loc >= 0 {
+		return registers[returnRegister.Loc]
 	} else {
-		return 0
+		return nil
 	}
+}
+
+func unpackRegister(inst bc.Instruction, registers [][]byte, loc bc.Location, ptr interface{}) {
+	err := bc.Unpack(registers[loc], ptr)
+	utils.Assert(err == nil, `%v (at %v)`, err, inst)
 }

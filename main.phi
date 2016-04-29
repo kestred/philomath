@@ -19,8 +19,7 @@ main :: () {
   unix_stdout :: 1;
   message :: "Hello world!\n";
   length :: 14;
-
-  retval := 0;
+  result := 0;
 
   #asm {
     mov     %rax, unix_write
@@ -28,8 +27,8 @@ main :: () {
     mov     %rsi, message
     mov     %rdx, length
     syscall
-    mov     retval, %rax
+    mov     result, %rax
   }
 
-//  return retval;
+  // return result;
 }

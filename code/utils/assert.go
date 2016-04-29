@@ -57,7 +57,7 @@ func AssertionFailed(msg string, args ...interface{}) {
 		pathParts := strings.Split(file, "/")
 		path := pathParts[len(pathParts)-1]
 		if len(path) > 16 {
-			path = "(*)" + path[len(path)-14:len(path)]
+			path = "(*)" + path[len(path)-13:len(path)]
 		}
 
 		callerParts := strings.Split(runtime.FuncForPC(pc).Name(), "/")
