@@ -20,9 +20,10 @@ var (
 	PlaceholderType = BaseTyp("<placeholder>") // a placeholder until I implement more complex types
 
 	// Builtin types
+	BuiltinTypes   = make(map[string]*BaseType)
 	BuiltinEmpty   = BaseTyp("empty") // the 0-byte type
-	BuiltinText    = BaseTyp("text")
 	BuiltinChar    = BaseTyp("char")
+	BuiltinText    = BaseTyp("text")
 	BuiltinFloat   = BaseTyp("float")
 	BuiltinFloat32 = BaseTyp("f32")
 	BuiltinFloat64 = BaseTyp("f64")
@@ -87,8 +88,9 @@ type Scope interface {
 	ImplementsScope()
 }
 
-func (t *TopScope) ImplementsScope() {}
-func (b *Block) ImplementsScope()    {}
+func (t *TopScope) ImplementsScope()      {}
+func (b *Block) ImplementsScope()         {}
+func (b *ProcedureExpr) ImplementsScope() {}
 
 type Evaluable interface {
 	Node
@@ -128,6 +130,7 @@ func (d *EnumDefn) ImplementsDefn()     {}
 func (d *ConstantDefn) ImplementsDefn() {}
 func (d *OperatorDefn) ImplementsDefn() {}
 func (d *StructDefn) ImplementsDefn()   {}
+func (d *BaseType) ImplementsDefn()     {}
 
 type Stmt interface {
 	Evaluable
@@ -462,6 +465,10 @@ func Eval(expr Expr) *EvalStmt {
 	return &EvalStmt{Expr: expr}
 }
 
+func Return(expr Expr) *ReturnStmt {
+	return &ReturnStmt{Value: expr}
+}
+
 // An expression is represented by a tree of one or more of the following
 type (
 	PostfixExpr struct {
@@ -513,19 +520,11 @@ type (
 		NodeBase
 
 		// syntax
-		Params []ProcedureParam
+		Params []*MutableDecl
 		Return Type
 		Block  *Block
 
 		// semantics
-		Type Type
-	}
-
-	ProcedureParam struct {
-		NodeBase
-
-		// syntax
-		Name *Identifier
 		Type Type
 	}
 
@@ -619,7 +618,7 @@ func CallExp(proc Expr, args []Expr) *CallExpr {
 	}
 }
 
-func ProcExp(params []ProcedureParam, ret Type, block *Block) *ProcedureExpr {
+func ProcExp(params []*MutableDecl, ret Type, block *Block) *ProcedureExpr {
 	if ret == nil {
 		ret = InferredType
 	}
@@ -629,6 +628,13 @@ func ProcExp(params []ProcedureParam, ret Type, block *Block) *ProcedureExpr {
 		Return: ret,
 		Block:  block,
 		Type:   UninferredType,
+	}
+}
+
+func Param(name string, typ Type) *MutableDecl {
+	return &MutableDecl{
+		Name: Ident(name),
+		Type: typ,
 	}
 }
 
@@ -692,7 +698,7 @@ type (
 		NodeBase
 
 		// syntax
-		Name Expr
+		Name *Identifier
 	}
 
 	PointerType struct {
@@ -708,8 +714,12 @@ type (
 	}
 )
 
-func NamTyp(name Expr) *NamedType {
-	return &NamedType{Name: name}
+func ArrTyp(el Type, len Expr) *ArrayType {
+	return &ArrayType{Length: len, Element: el}
+}
+
+func NamTyp(name string) *NamedType {
+	return &NamedType{Name: Ident(name)}
 }
 
 func PtrTyp(pointerTo Type) *PointerType {
@@ -717,5 +727,7 @@ func PtrTyp(pointerTo Type) *PointerType {
 }
 
 func BaseTyp(name string) *BaseType {
-	return &BaseType{Name: name}
+	typ := &BaseType{Name: name}
+	BuiltinTypes[name] = typ
+	return typ
 }

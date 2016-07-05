@@ -1,4 +1,4 @@
-#!philomath
+#!/usr/bin/env phi
 
 /*
 unix_stdin :: 0
@@ -14,11 +14,10 @@ unix_mprotect :: 10
 unix_munmap :: 11
 */
 
-main :: () {
+// TODO: change text repr to include a length
+print :: (message: text, length: int) {
   unix_write :: 1;
   unix_stdout :: 1;
-  message :: "Hello world!\n";
-  length :: 14;
   result := 0;
 
   #asm {
@@ -30,5 +29,10 @@ main :: () {
     mov     result, %rax
   }
 
+  return result;
+}
+
+main :: () {
+  print("Hello world!\n", 14);
   // return result;
 }

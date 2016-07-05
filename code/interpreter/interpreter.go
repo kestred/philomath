@@ -11,14 +11,18 @@ func Run(prog *bc.Program) []byte {
 	start := prog.Procedures[prog.Text["start_"]]
 	out := bc.Rg(start.AssignLocation(), start.PrevResult.Typ)
 	proc := prog.Procedures[prog.Text["main"]]
-	call := bc.Inst(bc.CALL, bc.Proc(proc, out))
+	call := bc.Inst(bc.CALL, bc.Proc(proc, out, nil))
 	start.Instructions = append(start.Instructions, call)
-	return Evaluate(start)
+	return Evaluate(start, nil)
 }
 
 // HACK: for now, Evaluate will return whatever the result of the last instruction is
-func Evaluate(proc bc.Procedure) []byte {
+func Evaluate(proc bc.Procedure, args [][]byte) []byte {
 	registers := make([][]byte, uint(proc.NextFree))
+	for i, arg := range proc.Arguments {
+		registers[arg.Loc] = args[i]
+	}
+
 	returnRegister := bc.Rg(-1, bc.None)
 	count := len(proc.Instructions)
 	if count > 0 {
@@ -29,6 +33,8 @@ func Evaluate(proc bc.Procedure) []byte {
 		case bc.BinaryArgs:
 			returnRegister = args.Out
 		case bc.ConstantArgs:
+			returnRegister = args.Out
+		case bc.ProcedureArgs:
 			returnRegister = args.Out
 		}
 	}
@@ -56,8 +62,16 @@ InstructionLoop:
 				// registers[args.Out] = proc.Program.Constants[args.Left]
 			}
 		case bc.CALL:
-			args := inst.Args.(bc.ProcedureArgs)
-			registers[args.Out.Loc] = Evaluate(args.Proc)
+			proc := inst.Args.(bc.ProcedureArgs)
+			args := make([][]byte, len(proc.In))
+			for i, in := range proc.In {
+				args[i] = registers[in.Loc]
+			}
+
+			ret := Evaluate(proc.Proc, args)
+			if proc.Out.Loc >= 0 {
+				registers[proc.Out.Loc] = ret
+			}
 		case bc.CALL_ASM:
 			asm := inst.Args.(*bc.AssemblyArgs)
 			CallAsm(asm, registers)

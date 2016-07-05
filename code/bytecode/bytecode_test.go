@@ -17,6 +17,8 @@ func generateBytecode(t *testing.T, input string) *Program {
 	section := ast.FlattenTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
+	errs := semantics.CheckTypes(&section)
+	assert.Empty(t, p.Errors, "Unexpected type-checking errors")
 	program := NewProgram()
 	program.Extend(node)
 	return program

@@ -47,7 +47,9 @@ func flattenTree(node Node, parent Node) []Node {
 	case *MutableDecl:
 		nodes = append(nodes, n.Name)
 		nodes = append(nodes, flattenTree(n.Type, n)...)
-		nodes = append(nodes, flattenTree(n.Expr, n)...)
+		if n.Expr != nil {
+			nodes = append(nodes, flattenTree(n.Expr, n)...)
+		}
 
 	// definitions
 	case *ConstantDefn:
@@ -63,6 +65,8 @@ func flattenTree(node Node, parent Node) []Node {
 		for _, expr := range n.Right {
 			nodes = append(nodes, flattenTree(expr, n)...)
 		}
+	case *ReturnStmt:
+		nodes = append(nodes, flattenTree(n.Value, n)...)
 
 	// expressions
 	case *PostfixExpr:
@@ -79,7 +83,15 @@ func flattenTree(node Node, parent Node) []Node {
 		nodes = append(nodes, flattenTree(n.Subexpr, n)...)
 	case *ProcedureExpr:
 		nodes = append(nodes, n.Return)
+		for _, param := range n.Params {
+			nodes = append(nodes, flattenTree(param, n)...)
+		}
 		nodes = append(nodes, flattenTree(n.Block, n)...)
+	case *CallExpr:
+		nodes = append(nodes, flattenTree(n.Procedure, n)...)
+		for _, expr := range n.Arguments {
+			nodes = append(nodes, flattenTree(expr, n)...)
+		}
 
 	// literals
 	case *Identifier,
@@ -87,7 +99,12 @@ func flattenTree(node Node, parent Node) []Node {
 		*TextLiteral:
 		break // nothing to add
 
-	// types
+		// types
+	case *NamedType:
+		nodes = append(nodes, n.Name)
+	case *ArrayType:
+		nodes = append(nodes, flattenTree(n.Element, n)...)
+		nodes = append(nodes, flattenTree(n.Length, n)...)
 	case *BaseType:
 		break // nothing to add
 

@@ -117,6 +117,14 @@ func doRun(args []string) {
 	section := ast.FlattenTree(tree, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
+	// TODO: maybe add an errors list to Section?
+	errs := semantics.CheckTypes(&section)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			fmt.Printf("%v\n", err)
+		}
+		log.Fatalf("found %v semantic error(s)\n", len(errs))
+	}
 	program := bytecode.NewProgram()
 	program.Extend(tree)
 

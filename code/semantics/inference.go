@@ -36,6 +36,8 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 		if n.Type == ast.InferredType {
 			n.Type = typ
 		}
+	case *ast.ReturnStmt:
+		inferTypesRecursive(n.Value)
 	case *ast.EvalStmt:
 		inferTypesRecursive(n.Expr)
 	case *ast.AssignStmt:
@@ -66,6 +68,11 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 		n.Type = ast.PlaceholderType // TODO: ProcedureType(s)
 		inferTypesRecursive(n.Block)
 		return n.Type
+	case *ast.CallExpr:
+		n.Type = n.Procedure.GetType()
+		for _, arg := range n.Arguments {
+			inferTypesRecursive(arg)
+		}
 	case *ast.Identifier:
 		utils.Assert(n.Decl != nil, "An unresolved identifier survived until type inferrence")
 		switch d := n.Decl.(type) {

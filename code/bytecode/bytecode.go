@@ -13,12 +13,6 @@ import (
 	"github.com/kestred/philomath/code/utils"
 )
 
-// TODO:
-//   Putting strings in the Data segment
-//   Referencing Bss, Data, Text, and Asm from instructions
-//   Updating opcodes and instruction representation in tests
-//
-
 type Opcode int16
 type Type int16
 type Location int16
@@ -226,10 +220,11 @@ type AssemblyArgs struct {
 type ProcedureArgs struct {
 	Proc Procedure
 	Out  Register
+	In   []Register
 }
 
-func Proc(proc Procedure, out Register) ProcedureArgs {
-	return ProcedureArgs{Proc: proc, Out: out}
+func Proc(proc Procedure, out Register, in []Register) ProcedureArgs {
+	return ProcedureArgs{Proc: proc, Out: out, In: in}
 }
 
 type Program struct {
@@ -289,6 +284,8 @@ type Procedure struct {
 	Registers  map[ast.Decl]Register
 	PrevResult Register // last result
 	NextFree   Location // next assignable location
+
+	Arguments []Register
 }
 
 func (p *Procedure) Extend(node ast.Node) {
@@ -353,6 +350,10 @@ func (p *Procedure) Extend(node ast.Node) {
 
 	case *ast.EvalStmt:
 		p.Extend(n.Expr)
+
+	case *ast.ReturnStmt:
+		// FIXME: because of the current hack used for return values "return" only works if it is the last item in the function!
+		p.Extend(n.Value)
 
 	case *ast.AssignStmt:
 		utils.Assert(len(n.Left) == len(n.Right), "An unbalanced assignment survived until bytecode generation")
@@ -486,7 +487,40 @@ func (p *Procedure) Extend(node ast.Node) {
 				p.Program.Text[decl.Name.Literal] = proc.Index
 			}
 		}
+
+		proc.Arguments = make([]Register, len(n.Params))
+		for i, param := range n.Params {
+			if param.Expr != nil {
+				utils.NotImplemented("Bytecode generation for parameter default values")
+			}
+			register := Rg(proc.AssignLocation(), typeFromAst(param.Type))
+			proc.Arguments[i] = register
+			proc.Registers[param] = register
+		}
 		proc.Extend(n.Block)
+
+	case *ast.CallExpr:
+		name, ok := n.Procedure.(*ast.Identifier)
+		if !ok {
+			utils.NotImplemented("Bytecode generation for procedure calls to procedure pointers; procedure must be known at compile time")
+		}
+
+		child := p.Program.Procedures[p.Program.Text[name.Literal]]
+		utils.Assert(len(n.Arguments) == len(child.Arguments), "A procedure call with an incorrect number of arguments survived until bytecode generation")
+
+		ins := make([]Register, len(n.Arguments))
+		for i, arg := range n.Arguments {
+			p.Extend(arg)
+			ins[i] = p.PrevResult
+		}
+
+		// TODO: figure out whether we actually have a return value or not
+		out := Rg(-1, None)
+		// if HAS_RETURN {
+		out = Rg(p.AssignLocation(), None) // TODO: get the return type of the procedure
+		// }
+		p.Instructions = append(p.Instructions, Inst(CALL, Proc(child, out, ins)))
+		endRegister = out
 
 	default:
 		panic("TODO: Unhandled node type in bytecode.Generate")
@@ -509,11 +543,12 @@ func typeFromAst(t ast.Type) Type {
 		return Float64
 	case ast.InferredUnsigned:
 		return Uint64
-	case ast.InferredSigned, ast.InferredNumber:
+	case ast.InferredSigned, ast.InferredNumber, ast.BuiltinInt, ast.BuiltinInt64:
 		return Int64
+	case ast.BuiltinText:
+		return Pointer // TODO: eventually text should be a pointer/length struct
 	default:
-		panic(t.(*ast.BaseType).Name)
-		utils.NotImplemented("bytecode types for non-numeric type")
+		utils.NotImplemented("bytecode generation for for non-numeric/non-builtin types")
 		return None
 	}
 }

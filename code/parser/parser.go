@@ -321,7 +321,22 @@ func (p *Parser) parseDeclaration() ast.Decl {
 
 func (p *Parser) parseStatement() ast.Stmt {
 	if p.tok.IsKeyword() {
-		panic("TODO: Handle keyword statements")
+		switch p.tok {
+		case token.FOR:
+			panic("TODO: Handle if conditions (in parser)")
+		case token.IF:
+			panic("TODO: Handle for loops (in parser)")
+		case token.RETURN:
+			p.next() // eat 'return'
+			var expr ast.Expr
+			if p.tok != token.SEMICOLON {
+				expr = p.parseExpression()
+			}
+			p.expect(token.SEMICOLON)
+			return ast.Return(expr)
+		default:
+			panic("TODO: Unhandled keyword: " + p.lit)
+		}
 	}
 
 	exprs := p.parseExpressionList()
@@ -358,7 +373,13 @@ func (p *Parser) parseOperators(precedence ast.OpPrecedence) ast.Expr {
 	if p.tok == token.LEFT_BRACKET {
 		panic("TODO: Hande array subscript")
 	} else if p.tok == token.LEFT_PAREN {
-		panic("TODO: Handle function call")
+		p.next() // eat '('
+		var args []ast.Expr
+		if p.tok != token.RIGHT_PAREN {
+			args = p.parseExpressionList()
+		}
+		p.expect(token.RIGHT_PAREN)
+		return ast.CallExp(lhs, args)
 	} else if !p.tok.IsOperator() {
 		return lhs
 	}
@@ -453,32 +474,36 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	case token.LEFT_PAREN:
 		p.next() // eat left paren
 		var block *ast.Block
-		var returnType ast.Type
-		var parameters []ast.ProcedureParam
+		var rettyp ast.Type
+		var params []*ast.MutableDecl
 		if p.tok == token.IDENT && p.scanner.Peek() == token.COLON {
+			/* handle procedure params */
 			for p.tok == token.IDENT {
-				/* handle procedure parameters */
-				// name := p.lit
+				name := p.lit
 				p.next() // eat ident
 				p.expect(token.COLON)
-				panic("TODO: Implement type parsing")
+				typ := p.parseType()
+				params = append(params, ast.Param(name, typ))
+				if p.tok != token.RIGHT_PAREN {
+					p.expect(token.COMMA)
+				}
 			}
 		}
 
-		if len(parameters) > 0 || p.tok == token.RIGHT_PAREN {
+		if len(params) > 0 || p.tok == token.RIGHT_PAREN {
 			p.expect(token.RIGHT_PAREN) // eat right paren
 
 			/* handle procedure expression */
 			if p.tok == token.ARROW {
 				p.next() // eat arrow
-				panic("TODO: Implement type parsing")
+				rettyp = p.parseType()
 				if p.tok == token.COLON { // #[Compiler Message]
 					p.error(p.scanner.Pos(), "Use of short block syntax is not allowed after specifying a return type")
 				}
 			}
 
 			block = p.parseBlock()
-			return ast.ProcExp(parameters, returnType, block)
+			return ast.ProcExp(params, rettyp, block)
 		} else {
 			/* handle grouped expression */
 			expr := p.parseOperators(0)
@@ -504,6 +529,37 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	default:
 		p.expected("a value")
 		return nil // TODO: maybe return BadExpr?
+	}
+}
+
+func (p *Parser) parseType() ast.Type {
+	switch p.tok {
+	case token.LEFT_BRACKET:
+		p.next() // eat left bracket
+		var len ast.Expr
+		if p.tok == token.NUMBER {
+			len = p.parseBaseExpression()
+		}
+		p.expect(token.RIGHT_BRACKET)
+		typ := p.parseType()
+		return ast.ArrTyp(typ, len)
+
+	case token.LEFT_PAREN:
+		panic("TODO: parse function types")
+
+	case token.IDENT:
+		var typ ast.Type
+		if builtin, ok := ast.BuiltinTypes[p.lit]; ok {
+			typ = builtin
+		} else {
+			typ = ast.NamTyp(p.lit)
+		}
+		p.next() // eat ident
+		return typ
+
+	default:
+		p.expected("a type")
+		return nil // TODO: maybe return BadType?
 	}
 }
 
