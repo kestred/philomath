@@ -20,7 +20,7 @@ func FindParentScope(node ast.Node) ast.Scope {
 	return nil
 }
 
-func ResolveNames(cs *ast.Section) {
+func ResolveNames(cs *Section) {
 	current := FindParentScope(cs.Root)
 	var lookup = make(map[ScopedName]ast.Decl)
 	for _, node := range cs.Nodes {

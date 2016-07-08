@@ -11,7 +11,7 @@ import (
 
 // TODO: Break-out operator overload resolution
 
-func InferTypes(cs *ast.Section) {
+func InferTypes(cs *Section) {
 	inferTypesRecursive(cs.Root)
 }
 

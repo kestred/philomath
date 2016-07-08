@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	// TODO: Maybe don't rely on parser et. al. when more code is stable
-	"github.com/kestred/philomath/code/ast"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/kestred/philomath/code/semantics"
 	"github.com/stretchr/testify/assert"
@@ -14,11 +13,11 @@ func generateBytecode(t *testing.T, input string) *Program {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := ast.FlattenTree(node, nil)
+	section := semantics.FlattenTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	errs := semantics.CheckTypes(&section)
-	assert.Empty(t, p.Errors, "Unexpected type-checking errors")
+	assert.Empty(t, errs, "Unexpected type-checking errors")
 	program := NewProgram()
 	program.Extend(node)
 	return program

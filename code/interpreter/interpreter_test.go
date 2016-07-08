@@ -3,7 +3,6 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/kestred/philomath/code/ast"
 	"github.com/kestred/philomath/code/parser"
 	"github.com/kestred/philomath/code/semantics"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,7 @@ func evalExample(t *testing.T, input string) []byte {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := ast.FlattenTree(node, nil)
+	section := semantics.FlattenTree(node, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	program := bc.NewProgram()

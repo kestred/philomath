@@ -12,7 +12,7 @@ func inferAny(t *testing.T, input string) ast.Node {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := ast.FlattenTree(node, nil)
+	section := FlattenTree(node, nil)
 	ResolveNames(&section)
 	InferTypes(&section)
 	return node
@@ -110,7 +110,7 @@ func inferLiteral(t *testing.T, input string) ast.Literal {
 	p := parser.Make("example", false, []byte(input+";"))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := ast.FlattenTree(node, nil)
+	section := FlattenTree(node, nil)
 	InferTypes(&section)
 	return node.(*ast.EvalStmt).Expr.(ast.Literal)
 }
@@ -141,7 +141,7 @@ func inferExpression(t *testing.T, input string) ast.Expr {
 	p := parser.Make("example", false, []byte(input))
 	node := p.ParseEvaluable()
 	assert.Empty(t, p.Errors, "Unexpected parser errors")
-	section := ast.FlattenTree(node, nil)
+	section := FlattenTree(node, nil)
 	InferTypes(&section)
 	return node.(*ast.EvalStmt).Expr
 }

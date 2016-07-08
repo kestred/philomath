@@ -114,7 +114,7 @@ func doRun(args []string) {
 		}
 	}
 
-	section := ast.FlattenTree(tree, nil)
+	section := semantics.FlattenTree(tree, nil)
 	semantics.ResolveNames(&section)
 	semantics.InferTypes(&section)
 	// TODO: maybe add an errors list to Section?
