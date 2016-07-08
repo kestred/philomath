@@ -44,7 +44,7 @@ func ResolveNames(cs *ast.Section) {
 					n.Decl = decl
 					break
 				} else if search == nil {
-					utils.NotImplemented("out-of-order declaration lookup")
+					utils.NotImplemented("name resolution for out-of-order declarations")
 				} else {
 					search = FindParentScope(search)
 				}

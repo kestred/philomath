@@ -8,6 +8,7 @@ import (
 	"github.com/kestred/philomath/code/ast"
 	"github.com/kestred/philomath/code/scanner"
 	"github.com/kestred/philomath/code/token"
+	"github.com/kestred/philomath/code/utils"
 )
 
 // FIXME: The grammar feels like a hack because of the way functions are parsed
@@ -295,7 +296,8 @@ func (p *Parser) parseDeclaration() ast.Decl {
 		// parse mutable decl
 		p.next() // eat ":"
 		if p.tok != token.EQUALS {
-			panic("TODO: Handle typed declarations")
+			utils.NotImplemented("Parsing mutable declarations with explicit types")
+			return nil
 		}
 		p.expect(token.EQUALS)
 		expr := p.parseExpression()
@@ -307,9 +309,11 @@ func (p *Parser) parseDeclaration() ast.Decl {
 	p.expect(token.CONS)
 	switch p.tok {
 	case token.STRUCT:
-		panic("TODO: Handle structs")
+		utils.NotImplemented("Parsing struct declarations")
+		return nil
 	case token.MODULE:
-		panic("TODO: Handle modules")
+		utils.NotImplemented("Parsing module declarations")
+		return nil
 	default:
 		expr := p.parseExpression()
 		if _, isFunc := expr.(*ast.ProcedureExpr); !isFunc {
@@ -323,9 +327,9 @@ func (p *Parser) parseStatement() ast.Stmt {
 	if p.tok.IsKeyword() {
 		switch p.tok {
 		case token.FOR:
-			panic("TODO: Handle if conditions (in parser)")
+			utils.NotImplemented("Parsing for loops")
 		case token.IF:
-			panic("TODO: Handle for loops (in parser)")
+			utils.NotImplemented("Parsing if statements")
 		case token.RETURN:
 			p.next() // eat 'return'
 			var expr ast.Expr
@@ -335,7 +339,8 @@ func (p *Parser) parseStatement() ast.Stmt {
 			p.expect(token.SEMICOLON)
 			return ast.Return(expr)
 		default:
-			panic("TODO: Unhandled keyword: " + p.lit)
+			utils.Errorf("Unhandled keyword '%s' in parse statement", p.lit)
+			utils.InvalidCodePath()
 		}
 	}
 
@@ -351,7 +356,9 @@ func (p *Parser) parseStatement() ast.Stmt {
 		p.expect(token.SEMICOLON)
 		return ast.Eval(exprs[0])
 	} else {
-		panic("TODO: Produce error for expression list w/o assignment, then recover")
+		p.error(p.scanner.Pos(), `An expression list (eg. "a, b, c") is only valid as part of an assignment`)
+		p.expect(token.SEMICOLON)
+		return ast.Eval(exprs[0]) // TODO: return some sort of ast.NoOp
 	}
 }
 
@@ -371,7 +378,8 @@ func (p *Parser) parseExpression() ast.Expr {
 func (p *Parser) parseOperators(precedence ast.OpPrecedence) ast.Expr {
 	lhs := p.parseBaseExpression()
 	if p.tok == token.LEFT_BRACKET {
-		panic("TODO: Hande array subscript")
+		utils.NotImplemented("Parsing array subscripts")
+		return nil
 	} else if p.tok == token.LEFT_PAREN {
 		p.next() // eat '('
 		var args []ast.Expr
@@ -411,7 +419,8 @@ func (p *Parser) parseOperators(precedence ast.OpPrecedence) ast.Expr {
 func (p *Parser) parseBinaryOperator() *ast.OperatorDefn {
 	options, defined := p.operators.Lookup(p.lit)
 	if !defined {
-		panic("TODO: Handle undefined operators")
+		p.error(p.scanner.Pos(), "The operator '"+p.lit+"' has not been defined")
+		return ast.UndefinedOperator
 	}
 
 	var op *ast.OperatorDefn
@@ -423,7 +432,8 @@ func (p *Parser) parseBinaryOperator() *ast.OperatorDefn {
 	}
 
 	if op == nil {
-		panic("TODO: Handle operator is not an infix/postfix operator")
+		p.error(p.scanner.Pos(), "The operator '"+p.lit+"' cannot be used as an infix operator")
+		return ast.UndefinedOperator
 	}
 
 	return op
@@ -450,7 +460,8 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 	if p.tok.IsOperator() {
 		options, defined := p.operators.Lookup(p.lit)
 		if !defined {
-			panic("TODO: Handle undefined operators")
+			p.error(p.scanner.Pos(), "The operator '"+p.lit+"' has not been defined")
+			// it is ok to fallthrough here, we'll just loop over an empty list
 		}
 
 		var op *ast.OperatorDefn
@@ -462,7 +473,8 @@ func (p *Parser) parseBaseExpression() ast.Expr {
 		}
 
 		if op == nil {
-			panic("TODO: Handle operator is not a prefix operator")
+			p.error(p.scanner.Pos(), "The operator '"+p.lit+"' cannot be used as an prefix operator")
+			op = ast.UndefinedOperator
 		}
 
 		p.next() // eat operator
@@ -545,7 +557,8 @@ func (p *Parser) parseType() ast.Type {
 		return ast.ArrTyp(typ, len)
 
 	case token.LEFT_PAREN:
-		panic("TODO: parse function types")
+		utils.NotImplemented("Parsing procedure types")
+		return nil
 
 	case token.IDENT:
 		var typ ast.Type

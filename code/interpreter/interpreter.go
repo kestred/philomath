@@ -58,7 +58,7 @@ InstructionLoop:
 					registers[args.Out.Loc] = proc.Program.Data[args.Name]
 				}
 			case bc.UnaryArgs:
-				panic("TODO: Load data from pointer")
+				utils.NotImplemented("Loading data from a non-constant pointer during interpretation")
 				// registers[args.Out] = proc.Program.Constants[args.Left]
 			}
 		case bc.CALL:
@@ -196,7 +196,8 @@ InstructionLoop:
 			}
 
 		default:
-			panic("TODO: Unhandled opcode")
+			utils.Errorf("Unhandled opcode '%s' in interpreter", inst.Op)
+			utils.InvalidCodePath()
 		}
 	}
 

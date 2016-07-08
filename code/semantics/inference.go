@@ -42,7 +42,8 @@ func inferTypesRecursive(node ast.Node) ast.Type {
 		inferTypesRecursive(n.Expr)
 	case *ast.AssignStmt:
 		if len(n.Left) != len(n.Right) {
-			panic("TODO: Handle unbalanced assignment")
+			utils.Errorf("Found unbalanced assignment during type inference")
+			utils.NotImplemented(`Printing "file:line: message"-style error messages after parsing`)
 		}
 		for i := range n.Left {
 			inferTypesRecursive(n.Left[i])
@@ -129,10 +130,13 @@ func inferPrefixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
 		case ast.BuiltinUint64:
 			return ast.BuiltinInt64
 		default:
-			panic("TODO: Implement operator overload resolution for prefix -/+")
+			utils.NotImplemented("Operator overloading for prefix +/- (unary negation)")
+			return nil
 		}
 	default:
-		panic("TODO: Unhandled prefix operator in type inference")
+		utils.Errorf("Unhandled prefix operator '%s' in type inference", op.Literal)
+		utils.InvalidCodePath()
+		return nil
 	}
 }
 
@@ -143,7 +147,9 @@ func inferPostfixType(op *ast.OperatorDefn, typ ast.Type) ast.Type {
 
 	switch op {
 	default:
-		panic("TODO: Unhandled postfix operator in type inference")
+		utils.Errorf("Unhandled postfix operator '%s' in type inference", op.Literal)
+		utils.InvalidCodePath()
+		return nil
 	}
 }
 
@@ -159,7 +165,9 @@ func inferInfixType(op *ast.OperatorDefn, left ast.Type, right ast.Type) ast.Typ
 		// TODO: Implement operator overload resolution
 		return castNumbers(left, right)
 	default:
-		panic("TODO: Unhandled infix operator in type inference")
+		utils.Errorf("Unhandled infix operator '%s' in type inference", op.Literal)
+		utils.InvalidCodePath()
+		return nil
 	}
 }
 
@@ -182,28 +190,32 @@ func parseNumber(num string) (ast.Type, interface{}) {
 	if len(num) > 2 && num[0:2] == "0x" {
 		val, err := strconv.ParseUint(num, 16, 0)
 		if err == strconv.ErrRange {
-			panic("TODO: Handle hexadecimal literal can't be represented by uint64")
+			utils.Errorf("Hexadecimal literal can't be represented by a uint64")
+			utils.NotImplemented(`Printing "file:line: message"-style error messages after parsing`)
 		}
 		utils.AssertNil(err, "Failed parsing hexadecimal literal")
 		return ast.InferredUnsigned, val
 	} else if strings.Contains(num, ".") || strings.Contains(num, "e") {
 		val, err := strconv.ParseFloat(num, 0)
 		if err == strconv.ErrRange {
-			panic("TODO: Handle floating point literal can't be represented by float64")
+			utils.Errorf("Floating point literal can't be represented by a float64")
+			utils.NotImplemented(`Printing "file:line: message"-style error messages after parsing`)
 		}
 		utils.AssertNil(err, "Failed parsing float literal")
 		return ast.InferredFloat, val
 	} else if num[0] == '0' {
 		val, err := strconv.ParseUint(num, 8, 0)
 		if err == strconv.ErrRange {
-			panic("TODO: Handle octal literal can't be represented by uint64")
+			utils.Errorf("Octal literal can't be represented by a uint64")
+			utils.NotImplemented(`Printing "file:line: message"-style error messages after parsing`)
 		}
 		utils.AssertNil(err, "Failed parsing octal literal")
 		return ast.InferredUnsigned, val
 	} else {
 		val, err := strconv.ParseUint(num, 10, 0)
 		if err == strconv.ErrRange {
-			panic("TODO: Handle decimal literal can't be represented by uint64")
+			utils.Errorf("Decimal literal can't be represented by a uint64")
+			utils.NotImplemented(`Printing "file:line: message"-style error messages after parsing`)
 		}
 		utils.AssertNil(err, "Failed parsing decimal literal")
 		return ast.InferredNumber, val

@@ -38,6 +38,9 @@ var (
 	BuiltinUint32  = BaseTyp("u32")
 	BuiltinUint64  = BaseTyp("u64")
 
+	// Undefined opererator
+	UndefinedOperator = Operator("<undefined>", "<undefined>", "_undefined_", Nullary, NonAssociative, InvalidPrec)
+
 	// Logical operators
 	BuiltinLogicalOr    = Operator("Logical Or", "or", "_or_", BinaryInfix, LeftAssociative, LogicalOrPrec)
 	BuiltinLogicalAnd   = Operator("Logical And", "and", "_and_", BinaryInfix, LeftAssociative, LogicalAndPrec)
@@ -188,6 +191,7 @@ func (l *TextLiteral) GetValue() Value   { return l.Value }
 type Type interface {
 	Node
 	ImplementsType()
+	Print() string
 }
 
 func (t *ArrayType) ImplementsType()     {}
@@ -195,6 +199,12 @@ func (t *ProcedureType) ImplementsType() {}
 func (t *NamedType) ImplementsType()     {}
 func (t *PointerType) ImplementsType()   {}
 func (t *BaseType) ImplementsType()      {}
+
+func (t *ArrayType) Print() string     { return "[]" + t.Element.Print() }
+func (t *ProcedureType) Print() string { return "()" /* TODO */ }
+func (t *NamedType) Print() string     { return t.Name.Literal }
+func (t *PointerType) Print() string   { return "^" + t.PointerTo.Print() }
+func (t *BaseType) Print() string      { return t.Name }
 
 type EnumItem interface {
 	Node

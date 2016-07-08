@@ -14,6 +14,10 @@ func Puts(value interface{}) {
 	fmt.Printf("%v:%v\n", reflect.ValueOf(value).Type(), value)
 }
 
+func Errorf(msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "Error: "+msg+"\n", args...)
+}
+
 func Assert(truthy bool, msg string, args ...interface{}) {
 	if !truthy {
 		AssertionFailed(msg, args...)
@@ -42,11 +46,11 @@ func InvalidCodePath() {
 }
 
 func AssertionFailed(msg string, args ...interface{}) {
-	fmt.Printf("Assertion: "+msg+"\n", args...)
+	fmt.Fprintf(os.Stderr, "Assertion: "+msg+"\n", args...)
 
 	// print call stack
 	stackEnded := false
-	fmt.Println()
+	fmt.Fprintf(os.Stderr, "\n")
 	for i := 2; i < 30; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -62,12 +66,16 @@ func AssertionFailed(msg string, args ...interface{}) {
 
 		callerParts := strings.Split(runtime.FuncForPC(pc).Name(), "/")
 		caller := callerParts[len(callerParts)-1]
-		fmt.Printf("  %16s  %s:%d\n", path, caller, line)
+		fmt.Fprintf(os.Stderr, "  %16s  %s:%d\n", path, caller, line)
 	}
-	fmt.Println()
+	fmt.Fprintf(os.Stderr, "\n")
 
 	if !stackEnded {
-		fmt.Println("\nWhy things fail: your stack is to deep for sanity...")
+		fmt.Fprintf(os.Stderr, "\nWhy things fail: your stack is to deep for sanity...\n")
 	}
 	os.Exit(1)
+}
+
+func Typeof(v interface{}) string {
+	return fmt.Sprintf("%T", v)
 }

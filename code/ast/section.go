@@ -109,6 +109,7 @@ func flattenTree(node Node, parent Node) []Node {
 		break // nothing to add
 
 	default:
+		utils.Errorf("Unhandled node type '%s' during AST flattening", utils.Typeof(n))
 		utils.InvalidCodePath()
 	}
 

@@ -55,6 +55,7 @@ func (asc OpAssociation) String() string {
 }
 
 const (
+	InvalidPrec      OpPrecedence = -1
 	AssignmentPrec   OpPrecedence = 0
 	LogicalOrPrec    OpPrecedence = 10
 	LogicalAndPrec   OpPrecedence = 15

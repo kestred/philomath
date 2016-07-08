@@ -345,7 +345,7 @@ func (p *Procedure) Extend(node ast.Node) {
 			p.Registers[n] = p.PrevResult
 		} else {
 			p.Registers[n] = Rg(p.AssignLocation(), typeFromAst(n.Expr.GetType()))
-			utils.NotImplemented("Bytecode generation for declaration without initialization")
+			utils.NotImplemented("bytecode generation for declaration without initialization")
 		}
 
 	case *ast.EvalStmt:
@@ -373,7 +373,7 @@ func (p *Procedure) Extend(node ast.Node) {
 				p.insertCast(rhs, rightType, expr.Type)
 				p.Instructions = append(p.Instructions, Inst(COPY, Unary(p.PrevResult, lhs)))
 			} else {
-				panic("TODO: Handle non-identifier expressions as the assignee in assignment")
+				utils.NotImplemented("bytecode generation for assignment to a non-identifier expression")
 			}
 
 			return
@@ -399,7 +399,7 @@ func (p *Procedure) Extend(node ast.Node) {
 				p.insertCast(tmps[i], n.Right[i].GetType(), e.Type)
 				p.Instructions = append(p.Instructions, Inst(COPY, Unary(p.PrevResult, lhs)))
 			} else {
-				panic("TODO: Handle non-identifier expressions as the assignee in assignment")
+				utils.NotImplemented("bytecode generation for assignment to a non-identifier expression")
 			}
 		}
 
@@ -470,7 +470,11 @@ func (p *Procedure) Extend(node ast.Node) {
 				op = DIVIDE
 			}
 		default:
-			panic("TODO: Unhandle expression type in bytecode generator")
+			utils.NotImplemented(
+				fmt.Sprintf(`Bytecode generation for infix "%s %s %s"`,
+					n.Left.GetType().Print(),
+					n.Operator.Literal,
+					n.Right.GetType().Print()))
 		}
 
 		out := Rg(p.AssignLocation(), typeFromAst(n.Type))
@@ -523,7 +527,8 @@ func (p *Procedure) Extend(node ast.Node) {
 		endRegister = out
 
 	default:
-		panic("TODO: Unhandled node type in bytecode.Generate")
+		utils.Errorf("Unhandled node type '%s' in bytecode generation", utils.Typeof(n))
+		utils.InvalidCodePath()
 	}
 
 	// set the result of this expression
@@ -548,7 +553,7 @@ func typeFromAst(t ast.Type) Type {
 	case ast.BuiltinText:
 		return Pointer // TODO: eventually text should be a pointer/length struct
 	default:
-		utils.NotImplemented("bytecode generation for for non-numeric/non-builtin types")
+		utils.NotImplemented("Bytecode generation for for non-numeric/non-builtin types")
 		return None
 	}
 }
@@ -580,6 +585,8 @@ func (p *Procedure) insertCast(in Register, from ast.Type, to ast.Type) {
 		p.Instructions = append(p.Instructions, cast)
 		p.PrevResult = out
 	default:
-		panic("TODO: unhandled type in insertCast")
+		utils.NotImplemented(
+			fmt.Sprintf(`Inserting implicit cast of %s to %s during bytecode generation`,
+				from.Print(), to.Print()))
 	}
 }
