@@ -12,7 +12,12 @@ import (
 // TODO: Break-out operator overload resolution
 
 func InferTypes(cs *Section) {
+	utils.Assert(!cs.DidSteps(Step_InferTypes), "Tried to run type inference twice on the same code section")
+	utils.Assert(cs.DidSteps(Step_ResolveNames), "Tried to run type inference before name resolution")
+
 	inferTypesRecursive(cs.Root)
+
+	cs.StepsCompleted |= Step_InferTypes
 }
 
 func inferTypesRecursive(node ast.Node) ast.Type {

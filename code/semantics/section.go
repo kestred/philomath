@@ -3,11 +3,25 @@ package semantics
 import "github.com/kestred/philomath/code/ast"
 import "github.com/kestred/philomath/code/utils"
 
+type Step int
+
+const (
+	Step_ResolveNames Step = 1 << iota
+	Step_InferTypes
+	Step_CheckTypes
+)
+
 type Section struct {
-	Root     ast.Node
-	Nodes    []ast.Node
-	Parent   *Section
-	Progress int
+	Root   ast.Node
+	Nodes  []ast.Node
+	Parent *Section
+
+	StepsCompleted Step
+	StepProgress   int
+}
+
+func (cs *Section) DidSteps(steps Step) bool {
+	return (cs.StepsCompleted & steps) == steps
 }
 
 func FlattenTree(root ast.Node, parent *Section) Section {

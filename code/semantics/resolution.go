@@ -8,19 +8,9 @@ type ScopedName struct {
 	Name  string
 }
 
-func FindParentScope(node ast.Node) ast.Scope {
-	node = node.GetParent()
-	for node != nil {
-		if scope, ok := node.(ast.Scope); ok {
-			return scope
-		}
-		node = node.GetParent()
-	}
-
-	return nil
-}
-
 func ResolveNames(cs *Section) {
+	utils.Assert(!cs.DidSteps(Step_ResolveNames), "Tried to perform name resolution twice on the same code section")
+
 	current := FindParentScope(cs.Root)
 	var lookup = make(map[ScopedName]ast.Decl)
 	for _, node := range cs.Nodes {
@@ -44,11 +34,25 @@ func ResolveNames(cs *Section) {
 					n.Decl = decl
 					break
 				} else if search == nil {
-					utils.NotImplemented("name resolution for out-of-order declarations")
+					utils.NotImplemented("Name resolution for out-of-order declarations")
 				} else {
 					search = FindParentScope(search)
 				}
 			}
 		}
 	}
+
+	cs.StepsCompleted |= Step_ResolveNames
+}
+
+func FindParentScope(node ast.Node) ast.Scope {
+	node = node.GetParent()
+	for node != nil {
+		if scope, ok := node.(ast.Scope); ok {
+			return scope
+		}
+		node = node.GetParent()
+	}
+
+	return nil
 }
