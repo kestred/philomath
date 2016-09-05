@@ -1,0 +1,32 @@
+#!/usr/bin/env phi
+
+print :: (message: text, length: int) {
+  unix_write :: 1;
+  unix_stdout :: 1;
+  result := 0;
+
+  // example: inline assembly
+  #asm {
+    mov     %rax, unix_write
+    mov     %rdi, unix_stdout
+    mov     %rsi, message
+    mov     %rdx, length
+    syscall
+    mov     result, %rax
+  }
+
+  return result;
+}
+
+print_maybe :: (m: text, n: int, flag: bool) {
+  // example: conditional control flow
+  if flag {
+    print(m, n);
+  }
+}
+
+main :: () {
+  // example: procedure call
+  print_maybe("Goodbye\n", 8, false);
+  print_maybe("Hello--\n", 8, true);
+}

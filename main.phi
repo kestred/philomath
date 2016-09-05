@@ -20,6 +20,7 @@ print :: (message: text, length: int) {
   unix_stdout :: 1;
   result := 0;
 
+  // NOTE: requires GNU Assembler w/ intel syntax support
   #asm {
     mov     %rax, unix_write
     mov     %rdi, unix_stdout

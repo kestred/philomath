@@ -1,3 +1,7 @@
+(* Important:
+     This grammar is mostly representative of what is implemented but
+     not all
+*)
 (* Notes:
      In character categories and literals, whitespace must be absent.
      In all other rules whitespace is ignored.
