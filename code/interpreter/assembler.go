@@ -109,31 +109,23 @@ type Function c.Pointer
 func Assemble(asm *bytecode.AssemblyArgs) {
 	label, source := generateAssembly(asm)
 	tmpdir, err := ioutil.TempDir("", "phi-")
-	if err != nil {
-		panic(err) //return nil, err
-	}
+	utils.Assert(err == nil, "unable to create tmpdir for building inline assembly")
 	defer os.RemoveAll(tmpdir)
 
 	objpath := tmpdir + "/" + label + ".o"
 	cmd := exec.Command("/usr/bin/as", "-o", objpath)
 	cmd.Stdin = strings.NewReader(source)
-	// TODO: Collect stderr and return it if err is not nil
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
-	if err != nil {
-		panic(err) //return nil, err
-	}
+	utils.Assert(err == nil, `/usr/bin/as: %s`, err)
 
 	libpath := tmpdir + "/" + label + ".so"
 	cmd = exec.Command("/usr/bin/ld", "-o", libpath, objpath, "-shared", "--export-dynamic")
-	// TODO: Collect stderr and return it if err is not nil
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
-	if err != nil {
-		panic(err) //return nil, err
-	}
+	utils.Assert(err == nil, `/usr/bin/ld: %s`, err)
 
 	loaded := C.LoadCode(C.CString(libpath), C.CString(label))
 	if loaded.Err != nil {
@@ -143,7 +135,6 @@ func Assemble(asm *bytecode.AssemblyArgs) {
 	asm.Wrapper = loaded.Fn
 }
 
-// FIXME: stop using global; generate more sensible name
 var nextLabel uint
 
 // TODO: more intelligent asm generation
@@ -195,15 +186,7 @@ func generateAssembly(asm *bytecode.AssemblyArgs) (label string, source string) 
 
 	nextLabel += 1
 	label = fmt.Sprintf("interpreter.wrapper%d", nextLabel)
-	source = fmt.Sprintf(`
-.intel_syntax
-.global %s
-.section .text
-
-%s:
-%s
-  ret
-`, label, label, source)
+	source = formatAssembly(label, source)
 	return
 }
 
