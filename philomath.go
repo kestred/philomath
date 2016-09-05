@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,19 +14,13 @@ import (
 	"github.com/kestred/philomath/code/semantics"
 )
 
-// TODO: Replace with "optparse/argparse"-like CLI parser; the Go developers
-// should not have chosen X style command-line arguments as the builtin library.
-// The "pflag" library supports more conventional UNIX behavior but doesn't
-// support all the familar command lines that users would expect.
-import argparse "github.com/ogier/pflag"
-
-var ArgTrace = argparse.Bool("trace", false, "")
+var ArgTrace = flag.Bool("trace", false, "")
 
 func init() {
 	log.SetFlags(0)
 	log.SetPrefix("phi: ")
-	argparse.Parse()
-	argparse.Usage = usage
+	flag.Parse()
+	flag.Usage = usage
 }
 
 func usage() {
@@ -36,14 +31,12 @@ Usage:
   phi COMMAND [OPTIONS] [ARGS]
 
 Commands:
-  build   compile one or more files
-  run     interpret a philomath file
-  shell   open an interactive philomath REPL
+  run     interpret a .phi source file
 `[1:])
 }
 
 func main() {
-	args := argparse.Args()
+	args := flag.Args()
 	if len(args) == 0 {
 		usage()
 		os.Exit(1)
@@ -52,12 +45,8 @@ func main() {
 	// handle command
 	command := args[0]
 	switch command {
-	case "build":
-		log.Fatalln("TODO: Implement compilation")
 	case "run":
 		doRun(args[1:])
-	case "shell":
-		log.Fatalln("TODO: Implement REPL")
 	default:
 		if len(command) > 14 {
 			command = command[:10] + " ..."
