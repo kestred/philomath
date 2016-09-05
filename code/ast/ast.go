@@ -389,8 +389,8 @@ type (
 
 		// syntax
 		Cond Expr
-		Then Block
-		Else Block
+		Then *Block
+		Else *Block
 	}
 
 	WhileStmt struct {
@@ -398,7 +398,7 @@ type (
 
 		// syntax
 		Cond Expr
-		Do   Block
+		Do   *Block
 	}
 
 	ForStmt struct {
@@ -406,7 +406,7 @@ type (
 
 		// syntax
 		Range LoopRange
-		Do    Block
+		Do    *Block
 	}
 
 	ForRange struct {
@@ -462,6 +462,14 @@ type (
 		NodeBase
 	}
 )
+
+func If(cond Expr, then *Block, otherwise *Block) *IfStmt {
+	return &IfStmt{
+		Cond: cond,
+		Then: then,
+		Else: otherwise,
+	}
+}
 
 func Assign(left []Expr, op *OperatorDefn, right []Expr) *AssignStmt {
 	return &AssignStmt{

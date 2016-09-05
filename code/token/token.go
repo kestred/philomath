@@ -89,6 +89,7 @@ const (
 	keywords_begin
 
 	IF     // if
+	ELSE   // else
 	FOR    // for
 	IN     // in
 	DONE   // break
@@ -128,6 +129,7 @@ var tokens = [...]string{
 	RIGHT_BRACE:   "}",
 
 	IF:     "if",
+	ELSE:   "else",
 	FOR:    "for",
 	IN:     "in",
 	DONE:   "done",

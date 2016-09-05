@@ -329,7 +329,7 @@ func (p *Parser) parseStatement() ast.Stmt {
 		case token.FOR:
 			utils.NotImplemented("Parsing for loops")
 		case token.IF:
-			utils.NotImplemented("Parsing if statements")
+			return p.parseIf()
 		case token.RETURN:
 			p.next() // eat 'return'
 			var expr ast.Expr
@@ -360,6 +360,24 @@ func (p *Parser) parseStatement() ast.Stmt {
 		p.expect(token.SEMICOLON)
 		return ast.Eval(exprs[0]) // TODO: return some sort of ast.NoOp
 	}
+}
+
+func (p *Parser) parseIf() *ast.IfStmt {
+	p.expect(token.IF)
+	condition := p.parseExpression()
+	thenBlock := p.parseBlock()
+
+	var elseBlock *ast.Block
+	if p.tok == token.ELSE {
+		p.next() // eat 'else'
+		if p.tok == token.IF {
+			elseBlock = ast.Blok([]ast.Evaluable{p.parseIf()})
+		} else {
+			elseBlock = p.parseBlock()
+		}
+	}
+
+	return ast.If(condition, thenBlock, elseBlock)
 }
 
 func (p *Parser) parseExpressionList() []ast.Expr {
