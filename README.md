@@ -6,6 +6,6 @@ optimizing-compiler techniques.
 
 The code architecture is briefly described in the [implementation](Implementation.md) doc.
 
-To the extent possible under law, I wave all copyright and related or neighboring rights to Philomath.
+To the extent possible under law, I waive all copyright and related or neighboring rights to Philomath.
 
 ![Public Domain](http://i.creativecommons.org/p/zero/1.0/88x31.png)
